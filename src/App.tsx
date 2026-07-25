@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 
 interface Task {
@@ -7,11 +7,30 @@ interface Task {
   done: boolean
 }
 
-let nextId = 1
+const STORAGE_KEY = 'first-app.tasks'
+
+function loadTasks(): Task[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as Task[]
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+function nextTaskId(tasks: Task[]) {
+  return tasks.reduce((max, task) => Math.max(max, task.id), 0) + 1
+}
 
 export default function App() {
-  const [tasks, setTasks] = useState<Task[]>([])
+  const [tasks, setTasks] = useState<Task[]>(() => loadTasks())
   const [draft, setDraft] = useState('')
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks))
+  }, [tasks])
 
   const remaining = useMemo(
     () => tasks.filter((t) => !t.done).length,
@@ -21,7 +40,7 @@ export default function App() {
   function addTask() {
     const text = draft.trim()
     if (!text) return
-    setTasks((prev) => [{ id: nextId++, text, done: false }, ...prev])
+    setTasks((prev) => [{ id: nextTaskId(prev), text, done: false }, ...prev])
     setDraft('')
   }
 
