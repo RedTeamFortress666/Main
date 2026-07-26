@@ -86,20 +86,44 @@ class AuthNotifier extends StateNotifier<AuthState> {
     );
   }
 
+  static const _maxAttemptsBeforeLockout = 5;
+  static const _lockoutDuration = Duration(seconds: 30);
+  int _failedAttempts = 0;
+  DateTime? _lockoutUntil;
+
+  bool get _isLockedOut =>
+      _lockoutUntil != null && DateTime.now().isBefore(_lockoutUntil!);
+
+  void _recordFailure() {
+    _failedAttempts++;
+    if (_failedAttempts >= _maxAttemptsBeforeLockout) {
+      _lockoutUntil = DateTime.now().add(_lockoutDuration);
+      _failedAttempts = 0;
+    }
+  }
+
   Future<bool> login(String username, String password) async {
-    state = const AuthState(isLoading: true);
-    final account = await _storage.getAccount(username.toUpperCase());
-    if (account == null) {
-      state = const AuthState(error: 'INVALID CREDENTIALS');
+    if (_isLockedOut) {
+      state = const AuthState(error: 'TOO MANY ATTEMPTS — TRY AGAIN LATER');
       return false;
     }
-    final hash = EncryptionService.hashPassword(password);
-    if (hash != account.passwordHash) {
+    state = const AuthState(isLoading: true);
+    final account = await _storage.getAccount(username.toUpperCase());
+    // Same error for unknown user and bad password to avoid enumeration.
+    if (account == null ||
+        !EncryptionService.verifyPassword(password, account.passwordHash)) {
+      _recordFailure();
       await _storage.logAudit('LOGIN_FAIL', username);
       state = const AuthState(error: 'ACCESS DENIED');
       return false;
     }
-    final updated = account.copyWith(lastLogin: DateTime.now());
+    _failedAttempts = 0;
+    var updated = account.copyWith(lastLogin: DateTime.now());
+    if (EncryptionService.isLegacyHash(account.passwordHash)) {
+      updated = updated.copyWith(
+        passwordHash: EncryptionService.hashPassword(password),
+      );
+    }
     await _storage.saveAccount(updated);
     await _storage.setSessionUser(updated.username);
     await _storage.logAudit('LOGIN_OK', username);
@@ -110,12 +134,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<bool> verifyPin(String pin) async {
     final user = state.user;
     if (user == null) return false;
-    if (EncryptionService.hashPin(pin) != user.pinHash) {
+    if (_isLockedOut) return false;
+    if (!EncryptionService.verifyPin(pin, user.pinHash)) {
+      _recordFailure();
       await _storage.logAudit('PIN_FAIL', user.username);
       return false;
     }
+    _failedAttempts = 0;
     await _storage.logAudit('PIN_OK', user.username);
-    final cleared = user.copyWith(requiresPin: false);
+    var cleared = user.copyWith(requiresPin: false);
+    if (EncryptionService.isLegacyHash(user.pinHash)) {
+      cleared = cleared.copyWith(pinHash: EncryptionService.hashPin(pin));
+    }
     await _storage.saveAccount(cleared);
     state = AuthState(user: cleared);
     return true;

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -118,14 +119,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         color: NeonTheme.neonPink,
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'First install: use DEVELOPER / developer',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontSize: 11,
-                            color: Colors.white38,
-                          ),
-                    ),
+                    if (kDebugMode) ...[
+                      const SizedBox(height: 24),
+                      Text(
+                        'First install: use DEVELOPER / developer',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontSize: 11,
+                              color: Colors.white38,
+                            ),
+                      ),
+                    ],
                   ],
                 ),
               ),
