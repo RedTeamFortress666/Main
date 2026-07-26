@@ -79,7 +79,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen>
     ref.listen(unlockProvider, (prev, next) {
       if (next.showGlitch) {
         Future.delayed(const Duration(milliseconds: 500), () {
-          if (!mounted) return;
+          if (!mounted || !context.mounted) return;
           if (next.state.index >= UnlockState.partial.index) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(

@@ -43,13 +43,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
-      GoRoute(path: '/pin', builder: (_, __) => const PinScreen()),
-      GoRoute(path: '/menu', builder: (_, __) => const MainMenuScreen()),
-      GoRoute(path: '/game', builder: (_, __) => const GameScreen()),
-      GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
-      GoRoute(path: '/load', builder: (_, __) => const LoadGameScreen()),
-      GoRoute(path: '/cipher', builder: (_, __) => const CipherShell()),
+      GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
+      GoRoute(path: '/pin', builder: (_, _) => const PinScreen()),
+      GoRoute(path: '/menu', builder: (_, _) => const MainMenuScreen()),
+      GoRoute(path: '/game', builder: (_, _) => const GameScreen()),
+      GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
+      GoRoute(path: '/load', builder: (_, _) => const LoadGameScreen()),
+      GoRoute(path: '/cipher', builder: (_, _) => const CipherShell()),
     ],
   );
 });
