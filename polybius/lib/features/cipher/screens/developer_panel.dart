@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:polybius/core/constants/app_constants.dart';
 import 'package:polybius/core/models/models.dart';
 import 'package:polybius/core/providers/app_providers.dart';
@@ -36,6 +37,7 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
     final storage = ref.read(storageServiceProvider);
     final logs = await storage.getAuditLogs();
     final invites = await storage.getAllInvites();
+    if (!mounted) return;
     setState(() {
       _logs = logs;
       _invites = invites;
@@ -76,8 +78,9 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
                           tier,
                           AppConstants.developerUsername,
                         );
+                    if (!mounted) return;
                     setState(() => _lastInvite = code);
-                    _load();
+                    await _load();
                   },
                   child: Text('MINT ${tier.name.toUpperCase()}'),
                 );
@@ -111,6 +114,7 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
                         _pinController.text,
                         AppConstants.developerUsername,
                       );
+                  if (!context.mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('PIN minted')),
                   );
@@ -127,17 +131,19 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
             const SizedBox(height: 8),
             ElevatedButton(
               onPressed: () async {
+                ref.read(unlockProvider.notifier).reset();
                 await ref.read(authProvider.notifier).forcePoolReset(
                       AppConstants.developerUsername,
                     );
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Pool forced — all users logged out'),
-                      backgroundColor: NeonTheme.dangerRed,
-                    ),
-                  );
-                }
+                if (!context.mounted) return;
+                Navigator.of(context).pop();
+                context.go('/login');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Pool forced — all users logged out'),
+                    backgroundColor: NeonTheme.dangerRed,
+                  ),
+                );
               },
               style: ElevatedButton.styleFrom(backgroundColor: NeonTheme.dangerRed),
               child: const Text('FORCE POOL RESET'),

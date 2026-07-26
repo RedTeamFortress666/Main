@@ -83,6 +83,21 @@ class _PinScreenState extends ConsumerState<PinScreen> {
               ],
               const SizedBox(height: 24),
               NeonButton(label: 'VERIFY', onPressed: _submit),
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: () async {
+                  await ref.read(authProvider.notifier).logout();
+                  if (!mounted || !context.mounted) return;
+                  context.go('/login');
+                },
+                child: const Text(
+                  'SIGN OUT',
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    color: Colors.white54,
+                  ),
+                ),
+              ),
             ],
           ),
         ),

@@ -48,12 +48,14 @@ class AuthState {
     this.isLoading = false,
     this.error,
     this.needsPin = false,
+    this.isRestoring = false,
   });
 
   final UserAccount? user;
   final bool isLoading;
   final String? error;
   final bool needsPin;
+  final bool isRestoring;
 
   bool get isAuthenticated => user != null && !needsPin;
 }
@@ -66,10 +68,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final StorageService _storage;
 
   Future<void> _restoreSession() async {
+    state = const AuthState(isRestoring: true);
     final username = await _storage.getSessionUser();
-    if (username == null) return;
+    if (username == null) {
+      state = const AuthState();
+      return;
+    }
     final account = await _storage.getAccount(username);
-    if (account == null) return;
+    if (account == null) {
+      await _storage.clearSession();
+      state = const AuthState();
+      return;
+    }
     state = AuthState(
       user: account,
       needsPin: account.requiresPin,
@@ -105,7 +115,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return false;
     }
     await _storage.logAudit('PIN_OK', user.username);
-    state = AuthState(user: user);
+    final cleared = user.copyWith(requiresPin: false);
+    await _storage.saveAccount(cleared);
+    state = AuthState(user: cleared);
     return true;
   }
 
@@ -185,22 +197,46 @@ class UnlockStateData {
 }
 
 class UnlockNotifier extends StateNotifier<UnlockStateData> {
-  UnlockNotifier(this._storage) : super(const UnlockStateData());
+  UnlockNotifier(this._storage) : super(const UnlockStateData()) {
+    _loadPersisted();
+  }
 
   final StorageService _storage;
+
+  Future<void> _loadPersisted() async {
+    final saved = await _storage.getUnlockState();
+    if (saved != null) {
+      state = state.copyWith(state: saved);
+    }
+  }
+
+  void _persistUnlock() {
+    _storage.saveUnlockState(state.state);
+  }
+
+  void grantDeveloperAccess() {
+    if (state.state.index < UnlockState.developer.index) {
+      state = state.copyWith(state: UnlockState.developer);
+      _persistUnlock();
+    }
+  }
 
   void onTitleHoldStart() {
     state = state.copyWith(titleHeld: true);
   }
 
   void onTitleHoldComplete() {
+    final nextState = state.state == UnlockState.locked
+        ? UnlockState.hinted
+        : state.state;
     state = state.copyWith(
       titleHeld: false,
       showGlitch: true,
-      state: state.state == UnlockState.locked
-          ? UnlockState.hinted
-          : state.state,
+      state: nextState,
     );
+    if (nextState != UnlockState.locked) {
+      _persistUnlock();
+    }
     _storage.logAudit('UNLOCK_RITUAL', 'SYSTEM', 'Title hold completed');
   }
 
@@ -213,12 +249,14 @@ class UnlockNotifier extends StateNotifier<UnlockStateData> {
         settings.language == 'ENGLISH') {
       if (state.state.index < UnlockState.partial.index) {
         state = state.copyWith(state: UnlockState.partial);
+        _persistUnlock();
         _storage.logAudit('UNLOCK_RITUAL', 'SYSTEM', 'Difficulty 11 ritual');
       }
     }
     if (settings.difficulty == int.parse(UnlockCodes.compoundDifficulty) &&
         settings.language == UnlockCodes.compoundLanguage) {
       state = state.copyWith(state: UnlockState.unlocked, showGlitch: true);
+      _persistUnlock();
       _storage.logAudit('UNLOCK_RITUAL', 'SYSTEM', 'Compound unlock');
     }
   }
@@ -232,33 +270,44 @@ class UnlockNotifier extends StateNotifier<UnlockStateData> {
     if (upper == UnlockCodes.devB1663R || upper == UnlockCodes.devD1663R) {
       if (settings.language == UnlockCodes.ritualLanguage) {
         state = state.copyWith(state: UnlockState.developer, showGlitch: true);
+        _persistUnlock();
         await _storage.logAudit('DEV_UNLOCK', 'SYSTEM', upper);
         return;
       }
     }
     final invite = await _storage.getInvite(upper);
     if (invite != null && !invite.isUsed) {
-      state = state.copyWith(state: UnlockState.unlocked, showGlitch: true);
-      await _storage.logAudit('INVITE_UNLOCK', 'SYSTEM', upper);
-    }
-    if (userTier == UserTier.developer || userTier == UserTier.admin) {
-      state = state.copyWith(
-        state: userTier == UserTier.developer
-            ? UnlockState.developer
-            : UnlockState.unlocked,
+      if (invite.expiresAt != null &&
+          invite.expiresAt!.isBefore(DateTime.now())) {
+        await _storage.logAudit('INVITE_EXPIRED', 'SYSTEM', upper);
+        return;
+      }
+      final usedBy = userTier?.name ?? 'UNKNOWN';
+      await _storage.saveInvite(
+        invite.copyWith(isUsed: true, usedBy: usedBy),
       );
+      state = state.copyWith(state: UnlockState.unlocked, showGlitch: true);
+      _persistUnlock();
+      await _storage.logAudit('INVITE_UNLOCK', 'SYSTEM', upper);
     }
   }
 
   void triggerFakeCrash() {
     state = state.copyWith(fakeCrash: true);
     Future.delayed(const Duration(seconds: 2), () {
-      state = state.copyWith(fakeCrash: false);
+      if (state.fakeCrash) {
+        state = state.copyWith(fakeCrash: false);
+      }
     });
+  }
+
+  void dismissFakeCrash() {
+    state = state.copyWith(fakeCrash: false);
   }
 
   void reset() {
     state = const UnlockStateData();
+    _storage.clearUnlockState();
   }
 }
 
