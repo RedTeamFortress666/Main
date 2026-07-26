@@ -4,13 +4,13 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:encrypt/encrypt.dart' as enc;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:polybius/core/storage/polybius_secret_store.dart';
 
 /// Wraps AES encryption for Hive payloads and sensitive local data.
 class EncryptionService {
   EncryptionService(this._storage);
 
-  final FlutterSecureStorage _storage;
+  final PolybiusSecretStore _storage;
   static const _keyName = 'polybius_aes_key';
   static const _ivName = 'polybius_aes_iv';
 
@@ -18,16 +18,16 @@ class EncryptionService {
   enc.IV? _iv;
 
   Future<void> init() async {
-    var keyB64 = await _storage.read(key: _keyName);
-    var ivB64 = await _storage.read(key: _ivName);
+    var keyB64 = await _storage.read(_keyName);
+    var ivB64 = await _storage.read(_ivName);
     if (keyB64 == null || ivB64 == null) {
       final random = Random.secure();
       final keyBytes = List<int>.generate(32, (_) => random.nextInt(256));
       final ivBytes = List<int>.generate(16, (_) => random.nextInt(256));
       keyB64 = base64Encode(keyBytes);
       ivB64 = base64Encode(ivBytes);
-      await _storage.write(key: _keyName, value: keyB64);
-      await _storage.write(key: _ivName, value: ivB64);
+      await _storage.write(_keyName, keyB64);
+      await _storage.write(_ivName, ivB64);
     }
     _key = enc.Key(Uint8List.fromList(base64Decode(keyB64)));
     _iv = enc.IV(Uint8List.fromList(base64Decode(ivB64)));

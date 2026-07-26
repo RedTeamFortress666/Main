@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:polybius/core/constants/app_constants.dart';
+import 'package:polybius/core/storage/create_polybius_secret_store.dart';
 import 'package:polybius/core/constants/unlock_codes.dart';
 import 'package:polybius/core/crypto/encryption_service.dart';
 import 'package:polybius/core/models/models.dart';
@@ -8,10 +8,10 @@ import 'package:polybius/core/storage/storage_service.dart';
 import 'package:polybius/features/cipher/engine/cipher_engine.dart';
 import 'package:uuid/uuid.dart';
 
-final secureStorageProvider = Provider((_) => const FlutterSecureStorage());
+final secretStoreProvider = Provider((_) => createPolybiusSecretStore());
 
 final encryptionServiceProvider = Provider<EncryptionService>((ref) {
-  return EncryptionService(ref.read(secureStorageProvider));
+  return EncryptionService(ref.read(secretStoreProvider));
 });
 
 final storageServiceProvider = Provider<StorageService>((ref) {
