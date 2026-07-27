@@ -121,22 +121,37 @@ class StorageService {
   Future<InviteCode?> getInvite(String code) async {
     final box = Hive.box(invitesBox);
     final raw = box.get(code.toUpperCase());
-    if (raw == null) return null;
-    return InviteCode.fromJson(Map<dynamic, dynamic>.from(raw as Map));
+    if (raw == null || raw is! Map) return null;
+    try {
+      return InviteCode.fromJson(Map<dynamic, dynamic>.from(raw));
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<List<InviteCode>> getAllInvites() async {
     final box = Hive.box(invitesBox);
-    return box.values
-        .map((v) => InviteCode.fromJson(Map<dynamic, dynamic>.from(v as Map)))
-        .toList();
+    final invites = <InviteCode>[];
+    for (final v in box.values) {
+      if (v is! Map) continue;
+      try {
+        invites.add(InviteCode.fromJson(Map<dynamic, dynamic>.from(v)));
+      } catch (_) {
+        // Skip a single corrupt record instead of failing the whole load.
+      }
+    }
+    return invites;
   }
 
   Future<GameSettings> getSettings() async {
     final box = Hive.box(settingsBox);
     final raw = box.get('game');
-    if (raw == null) return const GameSettings();
-    return GameSettings.fromJson(Map<dynamic, dynamic>.from(raw as Map));
+    if (raw is! Map) return const GameSettings();
+    try {
+      return GameSettings.fromJson(Map<dynamic, dynamic>.from(raw));
+    } catch (_) {
+      return const GameSettings();
+    }
   }
 
   Future<void> saveSettings(GameSettings settings) async {
@@ -178,10 +193,15 @@ class StorageService {
 
   Future<List<AuditLogEntry>> getAuditLogs({int limit = 100}) async {
     final box = Hive.box(auditBox);
-    final entries = box.values
-        .map((v) =>
-            AuditLogEntry.fromJson(Map<dynamic, dynamic>.from(v as Map)))
-        .toList();
+    final entries = <AuditLogEntry>[];
+    for (final v in box.values) {
+      if (v is! Map) continue;
+      try {
+        entries.add(AuditLogEntry.fromJson(Map<dynamic, dynamic>.from(v)));
+      } catch (_) {
+        // Skip a single corrupt record instead of failing the whole load.
+      }
+    }
     entries.sort((a, b) => b.timestamp.compareTo(a.timestamp));
     return entries.take(limit).toList();
   }

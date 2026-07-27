@@ -18,6 +18,7 @@ class LoadGameScreen extends ConsumerStatefulWidget {
 class _LoadGameScreenState extends ConsumerState<LoadGameScreen> {
   final _codeController = TextEditingController();
   String? _message;
+  bool _loading = false;
 
   @override
   void dispose() {
@@ -26,26 +27,39 @@ class _LoadGameScreenState extends ConsumerState<LoadGameScreen> {
   }
 
   Future<void> _load() async {
+    if (_loading) return;
     final code = _codeController.text.trim();
     if (code.isEmpty) return;
 
-    final settings = ref.read(gameSettingsProvider);
-    final auth = ref.read(authProvider);
+    setState(() {
+      _loading = true;
+      _message = null;
+    });
 
-    await ref.read(unlockProvider.notifier).checkInviteCode(
-          code,
-          settings,
-          auth.user?.tier,
-        );
+    try {
+      final settings = ref.read(gameSettingsProvider);
+      final auth = ref.read(authProvider);
 
-    final unlock = ref.read(unlockProvider);
+      await ref.read(unlockProvider.notifier).checkInviteCode(
+            code,
+            settings,
+            auth.user?.tier,
+          );
 
-    if (unlock.state.index >= UnlockState.unlocked.index) {
-      setState(() => _message = 'SAVE FILE LOADED');
-      await Future.delayed(const Duration(milliseconds: 800));
-      if (mounted) context.go('/cipher');
-    } else {
-      setState(() => _message = 'FILE NOT FOUND');
+      final unlock = ref.read(unlockProvider);
+
+      if (!mounted) return;
+      if (unlock.state.index >= UnlockState.unlocked.index) {
+        setState(() => _message = 'SAVE FILE LOADED');
+        await Future.delayed(const Duration(milliseconds: 800));
+        if (mounted) context.go('/cipher');
+      } else {
+        setState(() => _message = 'FILE NOT FOUND');
+      }
+    } catch (_) {
+      if (mounted) setState(() => _message = 'READ ERROR — TRY AGAIN');
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -89,6 +103,7 @@ class _LoadGameScreenState extends ConsumerState<LoadGameScreen> {
                   borderSide: BorderSide(color: NeonTheme.neonCyan),
                 ),
               ),
+              enabled: !_loading,
               onSubmitted: (_) => _load(),
             ),
             if (_message != null) ...[
@@ -104,7 +119,11 @@ class _LoadGameScreenState extends ConsumerState<LoadGameScreen> {
               ),
             ],
             const SizedBox(height: 32),
-            NeonButton(label: 'LOAD', onPressed: _load, color: NeonTheme.neonGreen),
+            NeonButton(
+              label: _loading ? 'LOADING...' : 'LOAD',
+              onPressed: _loading ? null : _load,
+              color: NeonTheme.neonGreen,
+            ),
             if (kDebugMode) ...[
               const Spacer(),
               Text(
