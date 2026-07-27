@@ -7,6 +7,7 @@ import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/routing/router_refresh.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 import 'package:polybius/core/widgets/crt_widgets.dart';
+import 'package:polybius/core/widgets/splash_screen.dart';
 import 'package:polybius/features/arcade/screens/load_game_screen.dart';
 import 'package:polybius/features/arcade/screens/main_menu_screen.dart';
 import 'package:polybius/features/arcade/screens/settings_screen.dart';
@@ -19,17 +20,26 @@ final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ref.watch(routerRefreshProvider);
 
   return GoRouter(
-    initialLocation: '/login',
+    initialLocation: '/',
     refreshListenable: refresh,
     redirect: (context, state) {
       final authState = ref.read(authProvider);
       final unlockState = ref.read(unlockProvider);
       final loc = state.matchedLocation;
 
-      if (authState.isRestoring) return null;
+      // Keep the splash visible until session restore completes.
+      if (authState.isRestoring) {
+        return loc == '/' ? null : '/';
+      }
 
       final loggedIn = authState.isAuthenticated;
       final needsPin = authState.needsPin && authState.user != null;
+
+      // Route away from the splash once restore has finished.
+      if (loc == '/') {
+        if (needsPin) return '/pin';
+        return loggedIn ? '/menu' : '/login';
+      }
 
       if (!loggedIn && !needsPin && loc != '/login') return '/login';
       if (needsPin && loc != '/pin') return '/pin';
@@ -43,6 +53,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      GoRoute(path: '/', builder: (_, _) => const SplashScreen()),
       GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
       GoRoute(path: '/pin', builder: (_, _) => const PinScreen()),
       GoRoute(path: '/menu', builder: (_, _) => const MainMenuScreen()),

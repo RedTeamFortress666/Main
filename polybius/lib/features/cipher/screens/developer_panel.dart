@@ -20,6 +20,7 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
   List<AuditLogEntry> _logs = [];
   List<InviteCode> _invites = [];
   int _securityScore = 87;
+  String? _loadError;
 
   @override
   void initState() {
@@ -34,14 +35,20 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
   }
 
   Future<void> _load() async {
-    final storage = ref.read(storageServiceProvider);
-    final logs = await storage.getAuditLogs();
-    final invites = await storage.getAllInvites();
-    if (!mounted) return;
-    setState(() {
-      _logs = logs;
-      _invites = invites;
-    });
+    try {
+      final storage = ref.read(storageServiceProvider);
+      final logs = await storage.getAuditLogs();
+      final invites = await storage.getAllInvites();
+      if (!mounted) return;
+      setState(() {
+        _logs = logs;
+        _invites = invites;
+        _loadError = null;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loadError = 'Failed to load panel data');
+    }
   }
 
   @override
@@ -58,6 +65,18 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          if (_loadError != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                _loadError!,
+                style: const TextStyle(
+                  color: NeonTheme.dangerRed,
+                  fontFamily: 'monospace',
+                  fontSize: 12,
+                ),
+              ),
+            ),
           _section('RED TEAM SANDBOX', [
             _scoreBar('Security Score', _securityScore),
             _scoreBar('Cover Integrity', 94),
