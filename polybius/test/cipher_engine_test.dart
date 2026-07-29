@@ -53,5 +53,19 @@ void main() {
       expect(engine.rotors[1].stepCount, 3);
       expect(engine.rotors[2].stepCount, 3);
     });
+
+    test('same engine instance round-trips encrypt then decrypt', () {
+      const plaintext = 'MEET AT MIDNIGHT';
+      final encrypted = engine.encrypt(plaintext);
+      // Decrypt on the SAME instance (as the app's shared provider does).
+      expect(engine.decrypt(encrypted), plaintext);
+    });
+
+    test('a prior encryption does not corrupt a later decryption', () {
+      final cipherA = engine.encrypt('FIRST MESSAGE');
+      // Advancing the rotors with more work must not break decoding cipherA.
+      engine.encrypt('NOISE THAT ADVANCES THE ROTORS');
+      expect(engine.decrypt(cipherA), 'FIRST MESSAGE');
+    });
   });
 }

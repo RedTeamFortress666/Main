@@ -11,9 +11,7 @@ class CipherEngine {
   CipherEngine({DateTime? date, List<String>? pool})
       : _dateKey = DailyPool(date: date).dateKey,
         _pool = pool ?? DailyPool(date: date).generate() {
-    _rotorI = Rotor.create('I', _dateKey, 0);
-    _rotorII = Rotor.create('II', _dateKey, 1);
-    _rotorIII = Rotor.create('III', _dateKey, 2);
+    _resetRotors();
     _reflector = _buildReflector(_dateKey);
   }
 
@@ -31,6 +29,16 @@ class CipherEngine {
   List<String> get pool => List.unmodifiable(_pool);
 
   List<Rotor> get rotors => [_rotorI, _rotorII, _rotorIII];
+
+  /// Rotors are stateful and step on every character. Each encrypt/decrypt
+  /// call restarts from the date-seeded initial position so a single shared
+  /// engine instance round-trips correctly (matching the cross-device model
+  /// where sender and receiver both start from the same daily seed).
+  void _resetRotors() {
+    _rotorI = Rotor.create('I', _dateKey, 0);
+    _rotorII = Rotor.create('II', _dateKey, 1);
+    _rotorIII = Rotor.create('III', _dateKey, 2);
+  }
 
   List<int> _buildReflector(String dateKey) {
     final wiring = List<int>.generate(Rotor.alphabetSize, (i) => i);
@@ -84,6 +92,7 @@ class CipherEngine {
 
   /// Encrypt plaintext to emoji sequence (2 emojis per character).
   String encrypt(String plaintext) {
+    _resetRotors();
     final buffer = StringBuffer();
     for (final rune in plaintext.runes) {
       final char = String.fromCharCode(rune);
@@ -98,6 +107,7 @@ class CipherEngine {
 
   /// Decrypt emoji sequence back to plaintext.
   String decrypt(String emojiText) {
+    _resetRotors();
     final runes = emojiText.runes.toList();
     final buffer = StringBuffer();
     var i = 0;
