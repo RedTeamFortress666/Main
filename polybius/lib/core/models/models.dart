@@ -1,5 +1,12 @@
 import 'package:polybius/core/constants/app_constants.dart';
 
+bool _parseBool(dynamic value, {bool defaultValue = false}) {
+  if (value is bool) return value;
+  if (value is String) {
+    return value.toLowerCase() == 'true';
+  }
+  return defaultValue;
+}
 class UserAccount {
   const UserAccount({
     required this.username,
@@ -40,7 +47,7 @@ class UserAccount {
         lastLogin: json['lastLogin'] != null
             ? DateTime.parse(json['lastLogin'] as String)
             : null,
-        requiresPin: json['requiresPin'] as bool? ?? false,
+        requiresPin: _parseBool(json['requiresPin']),
       );
 
   UserAccount copyWith({
@@ -103,7 +110,26 @@ class InviteCode {
         expiresAt: json['expiresAt'] != null
             ? DateTime.parse(json['expiresAt'] as String)
             : null,
-        isUsed: json['isUsed'] as bool? ?? false,
+        isUsed: _parseBool(json['isUsed']),
+      );
+
+  InviteCode copyWith({
+    String? code,
+    InviteTier? tier,
+    String? createdBy,
+    String? usedBy,
+    DateTime? createdAt,
+    DateTime? expiresAt,
+    bool? isUsed,
+  }) =>
+      InviteCode(
+        code: code ?? this.code,
+        tier: tier ?? this.tier,
+        createdBy: createdBy ?? this.createdBy,
+        usedBy: usedBy ?? this.usedBy,
+        createdAt: createdAt ?? this.createdAt,
+        expiresAt: expiresAt ?? this.expiresAt,
+        isUsed: isUsed ?? this.isUsed,
       );
 }
 

@@ -16,6 +16,7 @@ class PinScreen extends ConsumerStatefulWidget {
 class _PinScreenState extends ConsumerState<PinScreen> {
   final _pinController = TextEditingController();
   String? _error;
+  bool _submitting = false;
 
   @override
   void dispose() {
@@ -24,12 +25,25 @@ class _PinScreenState extends ConsumerState<PinScreen> {
   }
 
   Future<void> _submit() async {
-    final ok = await ref.read(authProvider.notifier).verifyPin(_pinController.text);
-    if (!mounted) return;
-    if (ok) {
-      context.go('/menu');
-    } else {
-      setState(() => _error = 'INVALID PIN');
+    if (_submitting) return;
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+    try {
+      final ok =
+          await ref.read(authProvider.notifier).verifyPin(_pinController.text);
+      if (!mounted) return;
+      if (ok) {
+        context.go('/menu');
+      } else {
+        setState(() => _error = 'INVALID PIN');
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _error = 'VERIFICATION FAILED — TRY AGAIN');
+    } finally {
+      if (mounted) setState(() => _submitting = false);
     }
   }
 
@@ -74,6 +88,7 @@ class _PinScreenState extends ConsumerState<PinScreen> {
                       borderSide: BorderSide(color: NeonTheme.neonCyan),
                     ),
                   ),
+                  enabled: !_submitting,
                   onSubmitted: (_) => _submit(),
                 ),
               ),
@@ -82,7 +97,27 @@ class _PinScreenState extends ConsumerState<PinScreen> {
                 Text(_error!, style: const TextStyle(color: NeonTheme.dangerRed)),
               ],
               const SizedBox(height: 24),
-              NeonButton(label: 'VERIFY', onPressed: _submit),
+              NeonButton(
+                label: _submitting ? 'VERIFYING...' : 'VERIFY',
+                onPressed: _submitting ? null : _submit,
+              ),
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: _submitting
+                    ? null
+                    : () async {
+                  await ref.read(authProvider.notifier).logout();
+                  if (!mounted || !context.mounted) return;
+                  context.go('/login');
+                },
+                child: const Text(
+                  'SIGN OUT',
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    color: Colors.white54,
+                  ),
+                ),
+              ),
             ],
           ),
         ),

@@ -21,6 +21,16 @@
   font-size: 0.95rem;
 }
 
+.app__error {
+  margin: 0 0 1rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: 12px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  font-size: 0.85rem;
+}
+
 .composer {
   display: flex;
   gap: 0.5rem;
