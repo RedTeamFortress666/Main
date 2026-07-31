@@ -167,11 +167,6 @@ class PolybiusGame extends FlameGame with KeyboardEvents {
     shake(0.25);
   }
 
-  void spawnExplosion(Vector2 at, Color color, {int lines = 12}) {
-    add(Explosion(position: at.clone(), color: color, lines: lines));
-    shake(0.25);
-  }
-
   void playerHit() {
     if (player.invulnerable || _gameOver) return;
     lives--;
