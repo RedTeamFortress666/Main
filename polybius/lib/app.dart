@@ -8,9 +8,12 @@ import 'package:polybius/core/routing/router_refresh.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 import 'package:polybius/core/widgets/crt_widgets.dart';
 import 'package:polybius/core/widgets/splash_screen.dart';
+import 'package:polybius/features/arcade/screens/high_score_screen.dart';
 import 'package:polybius/features/arcade/screens/load_game_screen.dart';
 import 'package:polybius/features/arcade/screens/main_menu_screen.dart';
 import 'package:polybius/features/arcade/screens/settings_screen.dart';
+import 'package:polybius/features/auth/screens/dev_portal_screen.dart';
+import 'package:polybius/features/auth/screens/error_screen.dart';
 import 'package:polybius/features/auth/screens/login_screen.dart';
 import 'package:polybius/features/auth/screens/pin_screen.dart';
 import 'package:polybius/features/cipher/screens/cipher_shell.dart';
@@ -60,6 +63,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/game', builder: (_, _) => const GameScreen()),
       GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
       GoRoute(path: '/load', builder: (_, _) => const LoadGameScreen()),
+      GoRoute(path: '/highscore', builder: (_, _) => const HighScoreScreen()),
+      GoRoute(path: '/devportal', builder: (_, _) => const DevPortalScreen()),
+      GoRoute(path: '/error', builder: (_, _) => const ErrorScreen()),
       GoRoute(path: '/cipher', builder: (_, _) => const CipherShell()),
     ],
   );

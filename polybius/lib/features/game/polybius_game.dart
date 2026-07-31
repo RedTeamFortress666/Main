@@ -45,6 +45,7 @@ class PolybiusGame extends FlameGame with KeyboardEvents {
   int lives = 3;
   int level = 1;
   int killCount = 0;
+  int totalKills = 0;
   bool _gameOver = false;
 
   /// 0..1 hypnotic pulse used to modulate glow across the whole scene.
@@ -154,7 +155,12 @@ class PolybiusGame extends FlameGame with KeyboardEvents {
   void addScore(int points) {
     score += points;
     killCount++;
+    totalKills++;
   }
+
+  /// The hidden ERROR/dev report path is reachable only when the player loses
+  /// early — under level 3 or before destroying 6 enemies.
+  bool get errorPathEligible => level < 3 || totalKills < 6;
 
   void spawnExplosion(Vector2 at, Color color, {int lines = 12}) {
     add(Explosion(position: at.clone(), color: color, lines: lines));

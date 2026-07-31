@@ -205,6 +205,7 @@ class UnlockStateData {
     this.titleHeld = false,
     this.showGlitch = false,
     this.fakeCrash = false,
+    this.pathwayPrimed = false,
   });
 
   final UnlockState state;
@@ -212,17 +213,23 @@ class UnlockStateData {
   final bool showGlitch;
   final bool fakeCrash;
 
+  /// Set after the 6-second title hold: opens the route toward the hidden
+  /// dev access portal (difficulty 11 + Russian hold-to-select).
+  final bool pathwayPrimed;
+
   UnlockStateData copyWith({
     UnlockState? state,
     bool? titleHeld,
     bool? showGlitch,
     bool? fakeCrash,
+    bool? pathwayPrimed,
   }) =>
       UnlockStateData(
         state: state ?? this.state,
         titleHeld: titleHeld ?? this.titleHeld,
         showGlitch: showGlitch ?? this.showGlitch,
         fakeCrash: fakeCrash ?? this.fakeCrash,
+        pathwayPrimed: pathwayPrimed ?? this.pathwayPrimed,
       );
 }
 
@@ -263,6 +270,7 @@ class UnlockNotifier extends StateNotifier<UnlockStateData> {
       titleHeld: false,
       showGlitch: true,
       state: nextState,
+      pathwayPrimed: true,
     );
     if (nextState != UnlockState.locked) {
       _persistUnlock();

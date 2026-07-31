@@ -1,0 +1,184 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:polybius/core/constants/app_constants.dart';
+import 'package:polybius/core/constants/unlock_codes.dart';
+import 'package:polybius/core/providers/app_providers.dart';
+import 'package:polybius/core/theme/neon_theme.dart';
+import 'package:polybius/core/widgets/arcade_ui.dart';
+
+/// POLYBIUS dev access portal — reached via the ritual sequence
+/// (title hold -> difficulty 11 -> Russian hold-to-select). Requires a valid
+/// dev/admin account plus a recognized dev code before unlocking the engine.
+class DevPortalScreen extends ConsumerStatefulWidget {
+  const DevPortalScreen({super.key});
+
+  @override
+  ConsumerState<DevPortalScreen> createState() => _DevPortalScreenState();
+}
+
+class _DevPortalScreenState extends ConsumerState<DevPortalScreen> {
+  final _username = TextEditingController();
+  final _password = TextEditingController();
+  final _devCode = TextEditingController();
+  String? _error;
+  bool _busy = false;
+
+  @override
+  void dispose() {
+    _username.dispose();
+    _password.dispose();
+    _devCode.dispose();
+    super.dispose();
+  }
+
+  Future<void> _login() async {
+    if (_busy) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final code = _devCode.text.trim().toUpperCase();
+      final storedFile = await ref.read(storageServiceProvider).getGameFileNumber();
+      final codeValid = code == UnlockCodes.devB1663R ||
+          code == UnlockCodes.devD1663R ||
+          (storedFile != null && code == storedFile.toUpperCase());
+
+      final ok = await ref
+          .read(authProvider.notifier)
+          .login(_username.text.trim(), _password.text);
+      if (!mounted) return;
+
+      final tier = ref.read(authProvider).user?.tier;
+      final privileged =
+          tier == UserTier.developer || tier == UserTier.admin;
+
+      if (ok && privileged && codeValid) {
+        ref.read(unlockProvider.notifier).grantDeveloperAccess();
+        if (mounted) context.go('/cipher');
+      } else {
+        setState(() => _error = 'ACCESS DENIED');
+      }
+    } catch (_) {
+      if (mounted) setState(() => _error = 'ACCESS DENIED');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ArcadeScaffold(
+      accent: NeonTheme.dangerRed,
+      showFooter: false,
+      child: LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: IntrinsicHeight(
+              child: Column(
+        children: [
+          const Spacer(),
+          const Text(
+            'PØLYBĪUS',
+            style: TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 28,
+              color: NeonTheme.neonPink,
+              letterSpacing: 6,
+              shadows: [Shadow(color: NeonTheme.neonCyan, blurRadius: 16)],
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'DEV ACCESS PORTAL',
+            style: TextStyle(
+              fontFamily: 'monospace',
+              color: NeonTheme.dangerRed,
+              letterSpacing: 4,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 28),
+          _labelled('USERNAME', _username),
+          const SizedBox(height: 14),
+          _labelled('PASSWORD', _password, obscure: true),
+          const SizedBox(height: 14),
+          _labelled('DEV CODE', _devCode),
+          if (_error != null) ...[
+            const SizedBox(height: 14),
+            Text(_error!,
+                style: const TextStyle(
+                    color: NeonTheme.dangerRed,
+                    fontFamily: 'monospace',
+                    letterSpacing: 2)),
+          ],
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: ArcadeMenuButton(
+                  label: 'CANCEL',
+                  color: NeonTheme.neonPink,
+                  dense: true,
+                  onPressed: _busy ? null : () => context.pop(),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ArcadeMenuButton(
+                  label: _busy ? '...' : 'LOG IN?',
+                  color: NeonTheme.neonGreen,
+                  dense: true,
+                  onPressed: _busy ? null : _login,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'UNAUTHORISED ACCESS IS A CRIMINAL OFFENCE',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: 'monospace',
+              color: Colors.white38,
+              fontSize: 10,
+              letterSpacing: 1.5,
+            ),
+          ),
+          const Spacer(),
+        ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _labelled(String label, TextEditingController controller,
+      {bool obscure = false}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: const TextStyle(
+                color: NeonTheme.neonGreen,
+                fontFamily: 'monospace',
+                fontSize: 11,
+                letterSpacing: 2)),
+        const SizedBox(height: 4),
+        ArcadeField(
+          controller: controller,
+          obscure: obscure,
+          textAlign: TextAlign.left,
+          fontSize: 16,
+          letterSpacing: 1,
+          color: NeonTheme.neonCyan,
+          textColor: Colors.white,
+        ),
+      ],
+    );
+  }
+}

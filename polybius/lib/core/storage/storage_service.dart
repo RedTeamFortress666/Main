@@ -180,6 +180,16 @@ class StorageService {
     await box.delete('unlockState');
   }
 
+  /// The invite code / game file number bound to this copy of the game.
+  Future<String?> getGameFileNumber() async {
+    final raw = Hive.box(settingsBox).get('gameFileNumber');
+    return raw is String ? raw : null;
+  }
+
+  Future<void> setGameFileNumber(String code) async {
+    await Hive.box(settingsBox).put('gameFileNumber', code);
+  }
+
   Future<void> logAudit(String action, String actor, [String? details]) async {
     final box = Hive.box(auditBox);
     final entry = AuditLogEntry(

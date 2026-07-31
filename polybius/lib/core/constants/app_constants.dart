@@ -8,6 +8,9 @@ class AppConstants {
   static const int poolSize = 560;
   static const int halfPool = 280;
   static const int titleHoldMs = 3000;
+  static const int devTitleHoldMs = 6000;
+  static const int langSelectHoldMs = 3000;
+  static const int gameOverHoldMs = 6000;
   static const int glitchFlashMs = 120;
   static const List<String> mkUltraPhrases = [
     'PROJECT MKULTRA',

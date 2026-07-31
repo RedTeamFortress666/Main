@@ -74,6 +74,8 @@ void main() {
     // Developer login lands on the arcade menu with cipher access granted.
     final cipherButton = find.text('◈ CIPHER ◈');
     expect(cipherButton, findsOneWidget);
+    await tester.ensureVisible(cipherButton);
+    await tester.pump();
     await tester.tap(cipherButton);
     await settle(tester);
 
