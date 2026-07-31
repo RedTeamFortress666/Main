@@ -1,0 +1,14 @@
+# Android release signing configuration.
+#
+# Copy this file to android/key.properties (which is gitignored) and fill in
+# your keystore details. Generate a keystore with:
+#
+#   keytool -genkey -v -keystore ~/polybius-release.jks \
+#     -keyalg RSA -keysize 2048 -validity 10000 -alias polybius
+#
+# NEVER commit key.properties or the .jks keystore.
+
+storePassword=changeme
+keyPassword=changeme
+keyAlias=polybius
+storeFile=/absolute/path/to/polybius-release.jks
