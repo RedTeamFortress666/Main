@@ -42,10 +42,13 @@ architecture, so an x86-64 build machine yields an x86-64 bundle that will
    `flutter build linux --target-platform linux-arm64`, which still needs an
    aarch64 GTK sysroot available to CMake).
 
-**Controls on R36:** the handheld uses a d-pad/buttons (and a touchscreen on
-the Max/Pro). The game supports **touch drag** and **WASD/arrow keys**;
-physical gamepad button mapping is not yet wired up and is a follow-up before a
-comfortable handheld BETA.
+**Controls on R36:** the game supports **touch drag** (move toward finger),
+**WASD/arrow keys**, and **hardware gamepad** analog stick / d-pad via the
+`gamepads` plugin. The gamepad mapping is **best-effort and untested on the R36
+hardware** — event key names and axis ranges vary by device/driver, so expect
+to tune `_onGamepadEvent` in `lib/features/game/polybius_game.dart` (deadzone,
+axis key matching) per device. On web the gamepad plugin is inactive (no web
+backend); touch/keyboard still work.
 
 ## Android
 
@@ -58,10 +61,17 @@ flutter build appbundle --release  # Play/AAB
 # output: build/app/outputs/
 ```
 
-**Blocker for a real BETA:** `android/app/build.gradle.kts` currently signs
-release builds with the **debug** keystore (fine for `flutter run --release`,
-not acceptable for distribution). Create a keystore and a
-`android/key.properties`, then wire a real `signingConfig` before shipping.
+Release signing is now wired: if `android/key.properties` exists it is used to
+sign release builds; otherwise the build falls back to debug signing so
+`flutter run --release` still works for BETA. To ship a distributable build:
+
+```bash
+keytool -genkey -v -keystore ~/polybius-release.jks \
+  -keyalg RSA -keysize 2048 -validity 10000 -alias polybius
+cp android/key.properties.example android/key.properties   # then edit it
+```
+
+`key.properties` and `*.jks/*.keystore` are gitignored — never commit them.
 
 ## iOS
 
@@ -79,36 +89,57 @@ Bundle id is `com.polybius.polybius`.
 
 ## Security model — what is and isn't real (read before shipping)
 
-The request describes PGP-signed game copies, per-SD/USB key binding, and
-gating updates to authorised dev accounts. **A Flutter app running on a device
-the user controls cannot cryptographically enforce these properties.** Any
-client-side check (invite validation, "is this copy signed", device binding)
-can be bypassed by someone who controls the binary and storage. Treat the
-current dev/crypto-engine gating as **obfuscation and defence-in-depth, not a
-security guarantee.**
+**A Flutter app running on a device the user controls cannot cryptographically
+enforce copy-protection.** Any client-side check can be bypassed by someone who
+controls the binary and storage. The mechanisms below stop *forgery and
+tampering* (real, useful) but do NOT stop a determined user from patching the
+verifier out of their own copy — that needs a trusted server or hardware root
+of trust the app does not have.
 
-What *can* be implemented honestly (recommended design, not yet built):
+### Implemented (real signature verification)
 
-- **Detached-signature invite codes.** Embed a project **public** key in the
-  app; a dev signs invite codes / game-file-numbers with the matching private
-  key; the app verifies the signature before unlocking. This genuinely stops
-  forged invite codes (private key never ships), but does not stop a modified
-  binary from skipping the check.
-- **Signed update payloads.** Same idea for OTA/SD updates: verify a signature
-  over the payload against the embedded public key before applying. Real
-  protection against unauthorised update *content*, not against a user patching
-  the verifier out.
-- **Device-scoped data-at-rest.** Derive the storage key from a device secret
-  (platform keystore/secure enclave where available) so copied data files
-  won't decrypt on another device. On the R36 Linux handheld there is no secure
-  element, so this degrades to a machine-id-derived key (obfuscation only).
+Uses **Ed25519** detached signatures (`lib/core/crypto/signature_service.dart`).
+The app embeds only the **public** key (`kProjectSigningPublicKeyB64`); the
+private key never ships.
 
-What is **not** achievable client-side and should be dropped or moved
-server-side: preventing a determined user from getting "past the video game
-into the cryptography engine" on their own device, and truly preventing WiFi/SD
-updates — those require a trusted server or hardware root of trust the app
-does not have.
+- **Signature-verified invite tokens.** A `SignedToken` binds a game file
+  number + access tier + expiry, signed with the private key. The Load screen
+  and Dev Access Portal verify the token (and expiry) against the trusted
+  public key before honouring it. Forged codes are rejected because the private
+  key isn't in the app.
+- **Signature-verified update payloads.** `SignatureService.verifyPayload`
+  checks a detached signature over a payload's SHA-256 before it would be
+  applied. (Transport/apply is out of scope; the verification primitive is
+  here.)
+- **Trusted-key override (per-SD/USB keyset).** A dev can paste a different
+  trusted public key in the developer panel; tokens are then verified against
+  it (stored via `setTrustedPublicKey`).
+- **Device-scoped data-at-rest.** The working AES key is derived
+  `HMAC-SHA256(masterSecret, perInstallDeviceId)`. On native platforms the
+  master lives in the OS keystore (`flutter_secure_storage`) so it is genuinely
+  device-scoped; on web / keystore-less Linux (R36) it degrades to obfuscation.
+  `EncryptionService.deviceBound` reports which.
 
-The **PGP-key-to-binary encryptor/decryptor behind a dev password** is feasible
-as a utility (armored PGP <-> bytes), but the dev password only gates the UI; it
-is not a cryptographic boundary on a user-controlled device.
+### Minting signed invites / signing updates (dev, offline)
+
+```bash
+# One-time: generate your project keypair (replace the embedded public key).
+dart run tool/polybius_keys.dart
+
+# Mint a signed invite token (tier: user|agent|admin|developer):
+dart run tool/polybius_sign.dart token <privateB64> PB-XXXX developer 30
+
+# Sign an update payload file (prints a detached base64 signature):
+dart run tool/polybius_sign.dart payload <privateB64> path/to/payload
+```
+
+The dev panel can also mint signed invites and store the signing key on the dev
+device (secure storage). **The BETA keypair embedded in the app is for testing
+only — regenerate and replace it for production.**
+
+### Not achievable client-side (dropped / needs a server)
+
+Preventing a user from reaching the cipher engine on their *own* device, and
+truly blocking WiFi/SD updates, require a trusted server or hardware root of
+trust. The "PGP-key-to-binary tool behind a dev password" is feasible as a
+utility, but the dev password only gates the UI, not a cryptographic boundary.
