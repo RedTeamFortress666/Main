@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:gamepads/gamepads.dart';
 import 'package:polybius/core/constants/app_constants.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 import 'package:polybius/features/game/data/level_names.dart';
@@ -32,6 +35,11 @@ class PolybiusGame extends FlameGame with KeyboardEvents {
 
   final _random = Random();
   late PlayerShip player;
+
+  /// Left-stick / d-pad direction from a hardware gamepad (best-effort; see
+  /// BUILD.md — mapping varies by device and is untested on the R36 hardware).
+  final Vector2 gamepadDirection = Vector2.zero();
+  StreamSubscription<GamepadEvent>? _gamepadSub;
 
   double _spawnTimer = 0;
   double _glitchTimer = 0;
@@ -64,6 +72,36 @@ class PolybiusGame extends FlameGame with KeyboardEvents {
     add(player);
     add(_InputLayer());
     add(HudComponent());
+    _subscribeGamepad();
+  }
+
+  void _subscribeGamepad() {
+    if (kIsWeb) return; // gamepads plugin has no web implementation
+    try {
+      _gamepadSub = Gamepads.events.listen(_onGamepadEvent);
+    } catch (_) {
+      // No gamepad backend on this platform; keyboard/touch still work.
+    }
+  }
+
+  void _onGamepadEvent(GamepadEvent event) {
+    const deadzone = 0.28;
+    final key = event.key.toLowerCase();
+    if (event.type == KeyType.analog) {
+      final v = event.value.clamp(-1.0, 1.0);
+      final applied = v.abs() < deadzone ? 0.0 : v;
+      if (key.contains('x')) {
+        gamepadDirection.x = applied;
+      } else if (key.contains('y')) {
+        gamepadDirection.y = applied;
+      }
+    }
+  }
+
+  @override
+  void onRemove() {
+    _gamepadSub?.cancel();
+    super.onRemove();
   }
 
   @override
@@ -336,15 +374,18 @@ class PlayerShip extends PositionComponent with HasGameReference<PolybiusGame> {
     super.update(dt);
     if (_invuln > 0) _invuln -= dt;
 
-    // Movement: pointer-follow takes priority, else keyboard.
+    // Movement: pointer-follow takes priority, else keyboard, else gamepad.
+    final steer = keyboardDirection.length2 > 0
+        ? keyboardDirection
+        : game.gamepadDirection;
     if (pointerTarget != null) {
       final delta = pointerTarget! - position;
       final dist = delta.length;
       if (dist > 1) {
         position += delta.normalized() * min(dist, _speed * dt);
       }
-    } else if (keyboardDirection.length2 > 0) {
-      position += keyboardDirection.normalized() * _speed * dt;
+    } else if (steer.length2 > 0) {
+      position += steer.normalized() * _speed * dt;
     }
     position.x = position.x.clamp(16.0, game.size.x - 16);
     position.y = position.y.clamp(16.0, game.size.y - 16);
@@ -354,8 +395,8 @@ class PlayerShip extends PositionComponent with HasGameReference<PolybiusGame> {
     if (target != null) {
       final d = target.position - position;
       if (d.length2 > 0.01) _aimAngle = atan2(d.y, d.x);
-    } else if (keyboardDirection.length2 > 0) {
-      _aimAngle = atan2(keyboardDirection.y, keyboardDirection.x);
+    } else if (steer.length2 > 0) {
+      _aimAngle = atan2(steer.y, steer.x);
     }
 
     _shootCooldown -= dt;
