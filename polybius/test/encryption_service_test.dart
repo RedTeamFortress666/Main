@@ -34,6 +34,12 @@ void main() {
       expect(service.decrypt(b), 'same plaintext');
     });
 
+    test('fresh install binds the working key to a device id', () async {
+      final service = EncryptionService(_MemorySecretStore());
+      await service.init();
+      expect(service.deviceBound, isTrue);
+    });
+
     test('decrypts legacy static-IV payloads', () async {
       final store = _MemorySecretStore();
       final keyBytes = List<int>.generate(32, (i) => i);

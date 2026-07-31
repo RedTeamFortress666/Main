@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:polybius/core/constants/app_constants.dart';
 import 'package:polybius/core/constants/unlock_codes.dart';
+import 'package:polybius/core/crypto/signature_service.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 import 'package:polybius/core/widgets/arcade_ui.dart';
@@ -39,11 +40,23 @@ class _DevPortalScreenState extends ConsumerState<DevPortalScreen> {
       _error = null;
     });
     try {
-      final code = _devCode.text.trim().toUpperCase();
-      final storedFile = await ref.read(storageServiceProvider).getGameFileNumber();
-      final codeValid = code == UnlockCodes.devB1663R ||
+      final storage = ref.read(storageServiceProvider);
+      final rawCode = _devCode.text.trim();
+      final code = rawCode.toUpperCase();
+      final storedFile = await storage.getGameFileNumber();
+
+      // Strong path: a signature-verified token for a privileged tier.
+      var codeValid = code == UnlockCodes.devB1663R ||
           code == UnlockCodes.devD1663R ||
           (storedFile != null && code == storedFile.toUpperCase());
+      final token = SignedToken.tryParse(rawCode);
+      if (token != null) {
+        final trusted = await storage.getTrustedPublicKey();
+        final verified =
+            await SignatureService(publicKeyB64: trusted).verifyToken(token);
+        codeValid = codeValid ||
+            (verified && (token.tier == 'developer' || token.tier == 'admin'));
+      }
 
       final ok = await ref
           .read(authProvider.notifier)

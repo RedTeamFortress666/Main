@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:polybius/core/constants/unlock_codes.dart';
+import 'package:polybius/core/crypto/signature_service.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 import 'package:polybius/core/widgets/arcade_ui.dart';
@@ -39,14 +40,31 @@ class _LoadGameScreenState extends ConsumerState<LoadGameScreen> {
     });
 
     try {
-      final settings = ref.read(gameSettingsProvider);
-      final auth = ref.read(authProvider);
-      await ref.read(unlockProvider.notifier).checkInviteCode(
-            code,
-            settings,
-            auth.user?.tier,
-          );
-      await ref.read(storageServiceProvider).setGameFileNumber(code);
+      final storage = ref.read(storageServiceProvider);
+
+      // A signature-verified token is the strong path; a plain file number
+      // falls back to the legacy invite/dev-code check.
+      final token = SignedToken.tryParse(code);
+      if (token != null) {
+        final trusted = await storage.getTrustedPublicKey();
+        final verified =
+            await SignatureService(publicKeyB64: trusted).verifyToken(token);
+        if (!verified) {
+          if (mounted) setState(() => _message = 'INVALID / EXPIRED FILE');
+          return;
+        }
+        await storage.setActiveToken(code);
+        await storage.setGameFileNumber(token.fileNumber);
+      } else {
+        final settings = ref.read(gameSettingsProvider);
+        final auth = ref.read(authProvider);
+        await ref.read(unlockProvider.notifier).checkInviteCode(
+              code,
+              settings,
+              auth.user?.tier,
+            );
+        await storage.setGameFileNumber(code);
+      }
 
       if (!mounted) return;
       setState(() => _message = 'SAVE FILE LOADED');

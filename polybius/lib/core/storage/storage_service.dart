@@ -190,6 +190,27 @@ class StorageService {
     await Hive.box(settingsBox).put('gameFileNumber', code);
   }
 
+  /// Optional trusted public key override (per-SD/USB keyset binding). When set,
+  /// signed tokens/updates are verified against this instead of the embedded key.
+  Future<String?> getTrustedPublicKey() async {
+    final raw = Hive.box(settingsBox).get('trustedPublicKey');
+    return raw is String && raw.isNotEmpty ? raw : null;
+  }
+
+  Future<void> setTrustedPublicKey(String keyB64) async {
+    await Hive.box(settingsBox).put('trustedPublicKey', keyB64);
+  }
+
+  /// The signature-verified access token bound to this copy (base64url wire form).
+  Future<String?> getActiveToken() async {
+    final raw = Hive.box(settingsBox).get('activeToken');
+    return raw is String && raw.isNotEmpty ? raw : null;
+  }
+
+  Future<void> setActiveToken(String token) async {
+    await Hive.box(settingsBox).put('activeToken', token);
+  }
+
   Future<void> logAudit(String action, String actor, [String? details]) async {
     final box = Hive.box(auditBox);
     final entry = AuditLogEntry(

@@ -17,7 +17,13 @@ class EncryptionService {
   final PolybiusSecretStore _storage;
   static const _keyName = 'polybius_aes_key';
   static const _ivName = 'polybius_aes_iv';
+  static const _deviceIdName = 'polybius_device_id';
   static const _v2Prefix = 'v2:';
+
+  /// Reports how strongly data-at-rest is bound to this device.
+  /// - native (flutter_secure_storage): keystore-backed, genuinely device-scoped
+  /// - web/keystore-less Linux: obfuscation only (see BUILD.md)
+  bool deviceBound = false;
 
   static const _pbkdf2Iterations = 10000;
   static const _pbkdf2Prefix = 'pbkdf2';
@@ -26,12 +32,33 @@ class EncryptionService {
   enc.IV? _legacyIv;
 
   Future<void> init() async {
-    var keyB64 = await _storage.read(_keyName);
-    if (keyB64 == null) {
-      keyB64 = base64Encode(_randomBytes(32));
-      await _storage.write(_keyName, keyB64);
+    var masterB64 = await _storage.read(_keyName);
+    final freshInstall = masterB64 == null;
+    if (freshInstall) {
+      masterB64 = base64Encode(_randomBytes(32));
+      await _storage.write(_keyName, masterB64);
     }
-    _key = enc.Key(Uint8List.fromList(base64Decode(keyB64)));
+
+    // New installs bind the working key to a per-install device id via HMAC,
+    // so the working key differs from the stored master (defense in depth).
+    // Existing installs (no device id) keep using the master directly so
+    // previously-encrypted data still decrypts.
+    var deviceIdB64 = await _storage.read(_deviceIdName);
+    if (deviceIdB64 == null && freshInstall) {
+      deviceIdB64 = base64Encode(_randomBytes(16));
+      await _storage.write(_deviceIdName, deviceIdB64);
+    }
+
+    final master = base64Decode(masterB64);
+    if (deviceIdB64 != null) {
+      final derived =
+          Hmac(sha256, master).convert(base64Decode(deviceIdB64)).bytes;
+      _key = enc.Key(Uint8List.fromList(derived));
+      deviceBound = true;
+    } else {
+      _key = enc.Key(Uint8List.fromList(master));
+      deviceBound = false;
+    }
 
     // Legacy static IV: only needed to decrypt payloads written before v2.
     final ivB64 = await _storage.read(_ivName);

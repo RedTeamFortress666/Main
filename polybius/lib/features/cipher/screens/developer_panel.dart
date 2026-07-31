@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:polybius/core/constants/app_constants.dart';
+import 'package:polybius/core/crypto/signature_service.dart';
 import 'package:polybius/core/models/models.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
@@ -17,6 +20,10 @@ class DeveloperPanel extends ConsumerStatefulWidget {
 class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
   String? _lastInvite;
   final _pinController = TextEditingController();
+  final _pubKeyController = TextEditingController();
+  final _privKeyController = TextEditingController();
+  InviteTier _signTier = InviteTier.developer;
+  String? _signResult;
   List<AuditLogEntry> _logs = [];
   List<InviteCode> _invites = [];
   int _securityScore = 87;
@@ -31,7 +38,44 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
   @override
   void dispose() {
     _pinController.dispose();
+    _pubKeyController.dispose();
+    _privKeyController.dispose();
     super.dispose();
+  }
+
+  Future<void> _saveTrustedKey() async {
+    await ref
+        .read(storageServiceProvider)
+        .setTrustedPublicKey(_pubKeyController.text.trim());
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Trusted public key saved')),
+    );
+  }
+
+  Future<void> _mintSignedInvite() async {
+    final priv = _privKeyController.text.trim();
+    if (priv.isEmpty) {
+      setState(() => _signResult = 'ENTER SIGNING PRIVATE KEY');
+      return;
+    }
+    try {
+      final seed = base64Decode(priv);
+      final fileNumber =
+          'PB-${DateTime.now().millisecondsSinceEpoch.toRadixString(36).toUpperCase()}';
+      final token = await SignedToken.mint(
+        fileNumber: fileNumber,
+        tier: _signTier.name,
+        privateSeed: seed,
+        expiresAt: DateTime.now().add(const Duration(days: 30)),
+      );
+      // Keep the signing key in secure storage for reuse (dev device only).
+      await ref.read(secretStoreProvider).write('polybius_dev_private_key', priv);
+      if (!mounted) return;
+      setState(() => _signResult = token.encode());
+    } catch (_) {
+      if (mounted) setState(() => _signResult = 'INVALID PRIVATE KEY');
+    }
   }
 
   Future<void> _load() async {
@@ -115,6 +159,71 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
                   title: Text(i.code, style: const TextStyle(fontFamily: 'monospace', fontSize: 12)),
                   subtitle: Text('${i.tier.name} | used: ${i.isUsed}'),
                 )),
+          ]),
+          _section('SIGNING KEYS', [
+            const Text(
+              'Verify with the trusted public key; mint signed invite tokens '
+              'with your private key (stored on this device only).',
+              style: TextStyle(color: Colors.white54, fontSize: 11),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _pubKeyController,
+              style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
+              decoration: const InputDecoration(
+                labelText: 'Trusted public key (base64, optional override)',
+                labelStyle: TextStyle(color: NeonTheme.neonCyan, fontSize: 11),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: _saveTrustedKey,
+              child: const Text('SAVE PUBLIC KEY'),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _privKeyController,
+              obscureText: true,
+              style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
+              decoration: const InputDecoration(
+                labelText: 'Signing private key (base64)',
+                labelStyle: TextStyle(color: NeonTheme.neonPink, fontSize: 11),
+              ),
+            ),
+            Row(
+              children: [
+                DropdownButton<InviteTier>(
+                  value: _signTier,
+                  dropdownColor: NeonTheme.surface,
+                  style: const TextStyle(
+                      fontFamily: 'monospace', color: NeonTheme.neonGreen),
+                  items: InviteTier.values
+                      .map((t) => DropdownMenuItem(
+                            value: t,
+                            child: Text(t.name.toUpperCase()),
+                          ))
+                      .toList(),
+                  onChanged: (t) =>
+                      setState(() => _signTier = t ?? InviteTier.developer),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton(
+                  onPressed: _mintSignedInvite,
+                  child: const Text('MINT SIGNED INVITE'),
+                ),
+              ],
+            ),
+            if (_signResult != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: SelectableText(
+                  _signResult!,
+                  style: const TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 10,
+                    color: NeonTheme.neonGreen,
+                  ),
+                ),
+              ),
           ]),
           _section('ADMIN PIN', [
             TextField(
