@@ -99,8 +99,17 @@ of trust the app does not have.
 ### Implemented (real signature verification)
 
 Uses **Ed25519** detached signatures (`lib/core/crypto/signature_service.dart`).
-The app embeds only the **public** key (`kProjectSigningPublicKeyB64`); the
-private key never ships.
+The embedded verification key (`kProjectSigningPublicKeyB64`) is the Ed25519
+public key of the developer's OpenPGP (curve 25519) key `0x24D2A8CD`. Only the
+**public** half is in the app/repo; the private key never ships.
+
+**Crypto-engine access is portal-only.** There is no cipher button on any
+screen. The engine opens only by logging in at the dev access portal (reached
+via the ritual: hold title 6s → difficulty 11 → Russian + hold SELECT 3s) with:
+`B1-66-3R` or `D1-66-3R` (developer) · `Tr1-66-3R` (user-only, no dev panel) ·
+or an invite token signed by the project key. To mint new signed user invite
+tokens you sign with the Ed25519 seed of your key (see `polybius_sign.dart` /
+the dev panel); the raw seed is NOT stored in the repo.
 
 - **Signature-verified invite tokens.** A `SignedToken` binds a game file
   number + access tier + expiry, signed with the private key. The Load screen

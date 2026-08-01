@@ -258,6 +258,15 @@ class UnlockNotifier extends StateNotifier<UnlockStateData> {
     }
   }
 
+  /// User-tier cipher access (no dev panel) — granted by the Tr1-66-3R code or
+  /// a user-tier signed invite token.
+  void grantUserAccess() {
+    if (state.state.index < UnlockState.unlocked.index) {
+      state = state.copyWith(state: UnlockState.unlocked);
+      _persistUnlock();
+    }
+  }
+
   void onTitleHoldStart() {
     state = state.copyWith(titleHeld: true);
   }
@@ -282,22 +291,10 @@ class UnlockNotifier extends StateNotifier<UnlockStateData> {
     state = state.copyWith(showGlitch: false);
   }
 
-  void checkDifficultyRitual(GameSettings settings) {
-    if (settings.difficulty == UnlockCodes.ritualDifficulty &&
-        settings.language == 'ENGLISH') {
-      if (state.state.index < UnlockState.partial.index) {
-        state = state.copyWith(state: UnlockState.partial);
-        _persistUnlock();
-        _storage.logAudit('UNLOCK_RITUAL', 'SYSTEM', 'Difficulty 11 ritual');
-      }
-    }
-    if (settings.difficulty == int.parse(UnlockCodes.compoundDifficulty) &&
-        settings.language == UnlockCodes.compoundLanguage) {
-      state = state.copyWith(state: UnlockState.unlocked, showGlitch: true);
-      _persistUnlock();
-      _storage.logAudit('UNLOCK_RITUAL', 'SYSTEM', 'Compound unlock');
-    }
-  }
+  /// The difficulty/language settings no longer unlock the cipher on their own;
+  /// they are only part of the ritual that leads to the dev access portal,
+  /// which is the sole entry to the crypto engine.
+  void checkDifficultyRitual(GameSettings settings) {}
 
   Future<void> checkInviteCode(
     String code,

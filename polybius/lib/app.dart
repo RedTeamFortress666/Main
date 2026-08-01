@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:polybius/core/constants/unlock_codes.dart';
-import 'package:polybius/core/constants/app_constants.dart';
 import 'package:polybius/core/audio/music_service.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/routing/router_refresh.dart';
@@ -91,14 +90,8 @@ class _PolybiusAppState extends ConsumerState<PolybiusApp> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(authProvider, (prev, next) {
-      final user = next.user;
-      if (user != null &&
-          user.tier == UserTier.developer &&
-          next.isAuthenticated) {
-        ref.read(unlockProvider.notifier).grantDeveloperAccess();
-      }
-    });
+    // Note: logging in does NOT auto-open the cipher. The crypto engine is
+    // reachable only via the dev access portal with a valid access code.
 
     // Start/stop the soundtrack when the sound setting changes.
     ref.listen(gameSettingsProvider.select((s) => s.soundEnabled), (_, enabled) {

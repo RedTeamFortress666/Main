@@ -16,11 +16,12 @@ class SignatureService {
   SignatureService({String? publicKeyB64})
       : publicKeyB64 = publicKeyB64 ?? kProjectSigningPublicKeyB64;
 
-  /// BETA project verification key. Replace with your own from
-  /// `dart run tool/polybius_keys.dart` before production; the matching
-  /// private key must never ship in the app.
+  /// Project verification key: the Ed25519 public key extracted from the
+  /// developer's OpenPGP (curve 25519) key `0x24D2A8CD` (RedTeam01). Only the
+  /// PUBLIC half is embedded; the private key is never shipped. Signed invite
+  /// tokens are verified against this.
   static const String kProjectSigningPublicKeyB64 =
-      'n3VtbToT9pexGOM0VIWl8gekiUQwVYEtSKE6y9XRS90=';
+      'p36QD3iWwPwd0RelVwumpmnvEr2sFibBtnkTIfRN9V8=';
 
   final String publicKeyB64;
   static final Ed25519 _algorithm = Ed25519();

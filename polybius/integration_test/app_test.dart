@@ -81,13 +81,21 @@ void main() {
     await tester.tap(find.text('LOGIN'));
     await settle(tester);
 
-    // Developer login lands on the arcade menu with cipher access granted.
-    final cipherButton = find.text('◈ CIPHER ◈');
-    expect(cipherButton, findsOneWidget);
-    await tester.ensureVisible(cipherButton);
-    await tester.pump();
-    await tester.tap(cipherButton);
+    // The crypto engine is reachable only via the dev access portal (reached
+    // through the ritual in the real UI; navigated directly here). Log in with
+    // the developer access code B1-66-3R.
+    container.read(routerProvider).push('/devportal');
     await settle(tester);
+
+    final portalFields = find.byType(TextField);
+    await tester.enterText(portalFields.at(0), 'DEVELOPER');
+    await tester.enterText(portalFields.at(1), 'developer');
+    await tester.enterText(portalFields.at(2), 'B1-66-3R');
+    await tester.tap(find.text('LOG IN?'));
+    await settle(tester);
+
+    // Now on the cipher shell.
+    expect(find.byType(EncryptTab), findsOneWidget);
 
     // ENCRYPT tab: turn plaintext into emoji ciphertext.
     const plaintext = 'MEET AT MIDNIGHT';

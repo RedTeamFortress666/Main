@@ -42,8 +42,10 @@ class _LoadGameScreenState extends ConsumerState<LoadGameScreen> {
     try {
       final storage = ref.read(storageServiceProvider);
 
-      // A signature-verified token is the strong path; a plain file number
-      // falls back to the legacy invite/dev-code check.
+      // Loading only records the game file number bound to this copy — it
+      // never opens the cipher. The crypto engine is reachable solely through
+      // the dev access portal login. A signed token is validated before being
+      // stored so a bad/expired token is rejected here.
       final token = SignedToken.tryParse(code);
       if (token != null) {
         final trusted = await storage.getTrustedPublicKey();
@@ -56,13 +58,6 @@ class _LoadGameScreenState extends ConsumerState<LoadGameScreen> {
         await storage.setActiveToken(code);
         await storage.setGameFileNumber(token.fileNumber);
       } else {
-        final settings = ref.read(gameSettingsProvider);
-        final auth = ref.read(authProvider);
-        await ref.read(unlockProvider.notifier).checkInviteCode(
-              code,
-              settings,
-              auth.user?.tier,
-            );
         await storage.setGameFileNumber(code);
       }
 

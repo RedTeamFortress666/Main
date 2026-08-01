@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:polybius/core/constants/app_constants.dart';
-import 'package:polybius/core/constants/unlock_codes.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 import 'package:polybius/core/widgets/arcade_ui.dart';
@@ -124,20 +123,10 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen>
                 ArcadeMenuButton(
                   label: 'SETTINGS',
                   color: NeonTheme.neonOrange,
-                  onPressed: () async {
-                    await context.push('/settings');
-                    final s = ref.read(gameSettingsProvider);
-                    ref.read(unlockProvider.notifier).checkDifficultyRitual(s);
-                  },
+                  onPressed: () => context.push('/settings'),
                 ),
-                // Cipher entry on the start screen is dev-only; regular users
-                // reach the cipher through the ritual/portal flow.
-                if (unlock.state == UnlockState.developer)
-                  ArcadeMenuButton(
-                    label: '◈ CIPHER ◈',
-                    color: NeonTheme.neonPink,
-                    onPressed: () => context.push('/cipher'),
-                  ),
+                // No cipher entry on the start screen for any build: the crypto
+                // engine is reachable only via the dev access portal login.
                 const Spacer(),
                 if (kDebugMode)
                   Text(

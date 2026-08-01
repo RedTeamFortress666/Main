@@ -8,9 +8,12 @@ import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 import 'package:polybius/core/widgets/arcade_ui.dart';
 
+enum _Grant { none, user, developer }
+
 /// POLYBIUS dev access portal — reached via the ritual sequence
-/// (title hold -> difficulty 11 -> Russian hold-to-select). Requires a valid
-/// dev/admin account plus a recognized dev code before unlocking the engine.
+/// (title hold -> difficulty 11 -> Russian hold-to-select). This is the ONLY
+/// entry to the crypto engine: a valid account login plus an access code
+/// (B1-66-3R / D1-66-3R for dev, Tr1-66-3R for user, or a signed invite token).
 class DevPortalScreen extends ConsumerStatefulWidget {
   const DevPortalScreen({super.key});
 
@@ -43,35 +46,53 @@ class _DevPortalScreenState extends ConsumerState<DevPortalScreen> {
       final storage = ref.read(storageServiceProvider);
       final rawCode = _devCode.text.trim();
       final code = rawCode.toUpperCase();
-      final storedFile = await storage.getGameFileNumber();
 
-      // Strong path: a signature-verified token for a privileged tier.
-      var codeValid = code == UnlockCodes.devB1663R ||
-          code == UnlockCodes.devD1663R ||
-          (storedFile != null && code == storedFile.toUpperCase());
-      final token = SignedToken.tryParse(rawCode);
-      if (token != null) {
-        final trusted = await storage.getTrustedPublicKey();
-        final verified =
-            await SignatureService(publicKeyB64: trusted).verifyToken(token);
-        codeValid = codeValid ||
-            (verified && (token.tier == 'developer' || token.tier == 'admin'));
-      }
-
+      // A valid account login is always required.
       final ok = await ref
           .read(authProvider.notifier)
           .login(_username.text.trim(), _password.text);
       if (!mounted) return;
+      if (!ok) {
+        setState(() => _error = 'ACCESS DENIED');
+        return;
+      }
 
       final tier = ref.read(authProvider).user?.tier;
       final privileged =
           tier == UserTier.developer || tier == UserTier.admin;
 
-      if (ok && privileged && codeValid) {
-        ref.read(unlockProvider.notifier).grantDeveloperAccess();
-        if (mounted) context.go('/cipher');
+      // Resolve which access the supplied code grants.
+      //   B1-66-3R / D1-66-3R -> developer (requires privileged account)
+      //   Tr1-66-3R           -> user-only cipher (no dev panel)
+      //   signed invite token -> tier per token (dev needs privileged account)
+      _Grant grant = _Grant.none;
+      if (code == UnlockCodes.devB1663R || code == UnlockCodes.devD1663R) {
+        if (privileged) grant = _Grant.developer;
+      } else if (code == UnlockCodes.userTr1663R) {
+        grant = _Grant.user;
       } else {
-        setState(() => _error = 'ACCESS DENIED');
+        final token = SignedToken.tryParse(rawCode);
+        if (token != null) {
+          final trusted = await storage.getTrustedPublicKey();
+          final verified =
+              await SignatureService(publicKeyB64: trusted).verifyToken(token);
+          if (verified) {
+            final devTier =
+                token.tier == 'developer' || token.tier == 'admin';
+            grant = (devTier && privileged) ? _Grant.developer : _Grant.user;
+          }
+        }
+      }
+
+      switch (grant) {
+        case _Grant.developer:
+          ref.read(unlockProvider.notifier).grantDeveloperAccess();
+          if (mounted) context.go('/cipher');
+        case _Grant.user:
+          ref.read(unlockProvider.notifier).grantUserAccess();
+          if (mounted) context.go('/cipher');
+        case _Grant.none:
+          setState(() => _error = 'ACCESS DENIED');
       }
     } catch (_) {
       if (mounted) setState(() => _error = 'ACCESS DENIED');
