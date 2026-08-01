@@ -130,7 +130,9 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen>
                     ref.read(unlockProvider.notifier).checkDifficultyRitual(s);
                   },
                 ),
-                if (unlock.state.index >= UnlockState.unlocked.index)
+                // Cipher entry on the start screen is dev-only; regular users
+                // reach the cipher through the ritual/portal flow.
+                if (unlock.state == UnlockState.developer)
                   ArcadeMenuButton(
                     label: '◈ CIPHER ◈',
                     color: NeonTheme.neonPink,

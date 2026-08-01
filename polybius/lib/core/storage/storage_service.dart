@@ -48,6 +48,10 @@ class StorageService {
       await logAudit('BOOTSTRAP', AppConstants.developerUsername,
           'DEVELOPER account created on first install');
     }
+    // Embed the developer's game file number on first install.
+    if (await getGameFileNumber() == null) {
+      await setGameFileNumber(AppConstants.devGameFileNumber);
+    }
   }
 
   String _encodeJson(Map<String, dynamic> json) => jsonEncode(json);

@@ -5,6 +5,9 @@ class AppConstants {
   static const String appName = 'PØLYBĪUS';
   static const String developerUsername = 'DEVELOPER';
   static const String developerDefaultPin = '000000';
+
+  /// Game file number embedded for the developer's copy of the game.
+  static const String devGameFileNumber = 'B1-66-3R';
   static const int poolSize = 560;
   static const int halfPool = 280;
   static const int titleHoldMs = 3000;
