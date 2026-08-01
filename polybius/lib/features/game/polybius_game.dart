@@ -148,10 +148,12 @@ class PolybiusGame extends FlameGame with KeyboardEvents {
       });
     }
 
-    if (killCount >= 8 + level * 4) {
+    // Level up more slowly, and only grant a weapon upgrade every other level
+    // so firepower ramps gradually instead of spiking.
+    if (killCount >= 12 + level * 6) {
       killCount = 0;
       level = min(level + 1, levelNames.length);
-      player.upgrade();
+      if (level.isEven) player.upgrade();
       shake(0.6);
     }
   }
@@ -215,19 +217,6 @@ class PolybiusGame extends FlameGame with KeyboardEvents {
       _gameOver = true;
       onGameOver?.call(score);
     }
-  }
-
-  Enemy? nearestEnemyTo(Vector2 p) {
-    Enemy? best;
-    var bestDist = double.infinity;
-    for (final e in children.query<Enemy>()) {
-      final d = (e.position - p).length2;
-      if (d < bestDist) {
-        bestDist = d;
-        best = e;
-      }
-    }
-    return best;
   }
 
   @override
@@ -390,19 +379,17 @@ class PlayerShip extends PositionComponent with HasGameReference<PolybiusGame> {
     position.x = position.x.clamp(16.0, game.size.x - 16);
     position.y = position.y.clamp(16.0, game.size.y - 16);
 
-    // Aim at the nearest enemy for that relentless auto-fire feel.
-    final target = game.nearestEnemyTo(position);
-    if (target != null) {
-      final d = target.position - position;
-      if (d.length2 > 0.01) _aimAngle = atan2(d.y, d.x);
-    } else if (steer.length2 > 0) {
-      _aimAngle = atan2(steer.y, steer.x);
+    // Player-controlled aim: fire where you steer (drag/keys/stick), not an
+    // automatic lock onto enemies. Keep the last aim when idle.
+    final aimVec = pointerTarget != null ? (pointerTarget! - position) : steer;
+    if (aimVec.length2 > 0.5) {
+      _aimAngle = atan2(aimVec.y, aimVec.x);
     }
 
     _shootCooldown -= dt;
     if (_shootCooldown <= 0) {
       _shoot();
-      _shootCooldown = [0.24, 0.2, 0.17, 0.13, 0.1][mkLevel];
+      _shootCooldown = const [0.34, 0.30, 0.27, 0.24, 0.22][mkLevel];
     }
 
     _trail.insert(0, position.clone());
@@ -410,22 +397,17 @@ class PlayerShip extends PositionComponent with HasGameReference<PolybiusGame> {
   }
 
   void _shoot() {
-    // Spread widens with each MK upgrade: single -> radial barrage.
-    final spread = [1, 2, 3, 5, 8][mkLevel];
+    // Gentle power curve: caps at a modest 3-way spread so it never becomes an
+    // overpowered radial barrage.
+    final spread = const [1, 2, 2, 3, 3][mkLevel];
     final damage = 1 + mkLevel ~/ 2;
     if (spread == 1) {
       _fire(_aimAngle, damage);
       return;
     }
-    if (mkLevel >= 4) {
-      for (var i = 0; i < 8; i++) {
-        _fire(_aimAngle + i * pi / 4, damage);
-      }
-      return;
-    }
-    const arc = 0.5;
+    const arc = 0.42;
     for (var i = 0; i < spread; i++) {
-      final t = spread == 1 ? 0.0 : (i / (spread - 1)) - 0.5;
+      final t = (i / (spread - 1)) - 0.5;
       _fire(_aimAngle + t * arc, damage);
     }
   }
