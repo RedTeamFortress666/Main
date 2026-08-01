@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:polybius/app.dart';
+import 'package:polybius/core/audio/music_service.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/storage/polybius_secret_store.dart';
 import 'package:polybius/features/cipher/screens/decrypt_tab.dart';
@@ -20,6 +21,14 @@ class _MemorySecretStore implements PolybiusSecretStore {
 
   @override
   Future<void> write(String key, String value) async => _data[key] = value;
+}
+
+/// No-op music so the audio plugin (absent in headless tests) is never touched.
+class _SilentMusicService extends MusicService {
+  @override
+  Future<void> setEnabled(bool enabled) async {}
+  @override
+  Future<void> dispose() async {}
 }
 
 /// Pumps fixed frames instead of pumpAndSettle: the arcade menu and splash run
@@ -41,6 +50,7 @@ void main() {
     tempDir = await Directory.systemTemp.createTemp('polybius_e2e');
     container = ProviderContainer(overrides: [
       secretStoreProvider.overrideWithValue(_MemorySecretStore()),
+      musicServiceProvider.overrideWithValue(_SilentMusicService()),
     ]);
     await container.read(encryptionServiceProvider).init();
     await container.read(storageServiceProvider).init(hivePath: tempDir.path);

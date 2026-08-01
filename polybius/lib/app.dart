@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:polybius/core/constants/unlock_codes.dart';
 import 'package:polybius/core/constants/app_constants.dart';
+import 'package:polybius/core/audio/music_service.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/routing/router_refresh.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
@@ -71,11 +72,25 @@ final routerProvider = Provider<GoRouter>((ref) {
   );
 });
 
-class PolybiusApp extends ConsumerWidget {
+class PolybiusApp extends ConsumerStatefulWidget {
   const PolybiusApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PolybiusApp> createState() => _PolybiusAppState();
+}
+
+class _PolybiusAppState extends ConsumerState<PolybiusApp> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final enabled = ref.read(gameSettingsProvider).soundEnabled;
+      ref.read(musicServiceProvider).setEnabled(enabled);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     ref.listen(authProvider, (prev, next) {
       final user = next.user;
       if (user != null &&
@@ -83,6 +98,11 @@ class PolybiusApp extends ConsumerWidget {
           next.isAuthenticated) {
         ref.read(unlockProvider.notifier).grantDeveloperAccess();
       }
+    });
+
+    // Start/stop the soundtrack when the sound setting changes.
+    ref.listen(gameSettingsProvider.select((s) => s.soundEnabled), (_, enabled) {
+      ref.read(musicServiceProvider).setEnabled(enabled);
     });
 
     final router = ref.watch(routerProvider);

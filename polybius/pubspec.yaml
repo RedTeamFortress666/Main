@@ -21,6 +21,7 @@ dependencies:
   crypto: ^3.0.6
   cryptography: ^2.9.0
   gamepads: ^0.1.10+5
+  audioplayers: ^6.8.1
 
 dev_dependencies:
   flutter_test:
@@ -31,3 +32,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/audio/polybius_theme.wav
