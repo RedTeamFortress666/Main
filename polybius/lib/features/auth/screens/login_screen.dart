@@ -119,6 +119,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         color: NeonTheme.neonPink,
                       ),
                     ),
+                    TextButton(
+                      onPressed: auth.isLoading
+                          ? null
+                          : () => context.go('/register'),
+                      child: const Text(
+                        'CREATE ACCOUNT',
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          color: NeonTheme.neonCyan,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                    ),
                     if (kDebugMode) ...[
                       const SizedBox(height: 24),
                       Text(

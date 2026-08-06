@@ -16,6 +16,7 @@ import 'package:polybius/features/auth/screens/dev_portal_screen.dart';
 import 'package:polybius/features/auth/screens/error_screen.dart';
 import 'package:polybius/features/auth/screens/login_screen.dart';
 import 'package:polybius/features/auth/screens/pin_screen.dart';
+import 'package:polybius/features/auth/screens/register_screen.dart';
 import 'package:polybius/features/cipher/screens/cipher_shell.dart';
 import 'package:polybius/features/game/screens/game_screen.dart';
 
@@ -44,7 +45,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         return loggedIn ? '/menu' : '/login';
       }
 
-      if (!loggedIn && !needsPin && loc != '/login') return '/login';
+      if (!loggedIn && !needsPin && loc != '/login' && loc != '/register') {
+        return '/login';
+      }
       if (needsPin && loc != '/pin') return '/pin';
       if (loggedIn && loc == '/login') return '/menu';
       if (loggedIn && loc == '/pin') return '/menu';
@@ -58,6 +61,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(path: '/', builder: (_, _) => const SplashScreen()),
       GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
+      GoRoute(path: '/register', builder: (_, _) => const RegisterScreen()),
       GoRoute(path: '/pin', builder: (_, _) => const PinScreen()),
       GoRoute(path: '/menu', builder: (_, _) => const MainMenuScreen()),
       GoRoute(path: '/game', builder: (_, _) => const GameScreen()),

@@ -6,6 +6,9 @@ import 'package:polybius/core/crypto/encryption_service.dart';
 import 'package:polybius/core/models/models.dart';
 import 'package:polybius/core/storage/storage_service.dart';
 import 'package:polybius/features/cipher/engine/cipher_engine.dart';
+import 'package:polybius/features/cipher/engine/daily_pool.dart';
+import 'dart:convert';
+import 'dart:math';
 import 'package:uuid/uuid.dart';
 
 final secretStoreProvider = Provider((_) => createPolybiusSecretStore());
@@ -18,7 +21,43 @@ final storageServiceProvider = Provider<StorageService>((ref) {
   return StorageService(ref.read(encryptionServiceProvider));
 });
 
-final cipherEngineProvider = Provider<CipherEngine>((ref) => CipherEngine());
+/// The active cipher pool seed. Defaults to today's date so behaviour is
+/// unchanged until the user randomises or syncs a pool. Persisted so a synced
+/// pool survives restarts.
+final poolSeedProvider =
+    StateNotifierProvider<PoolSeedNotifier, String>((ref) {
+  return PoolSeedNotifier(ref.read(storageServiceProvider));
+});
+
+class PoolSeedNotifier extends StateNotifier<String> {
+  PoolSeedNotifier(this._storage) : super(DailyPool().dateKey) {
+    _load();
+  }
+
+  final StorageService _storage;
+
+  Future<void> _load() async {
+    final saved = await _storage.getPoolSeed();
+    if (saved != null) state = saved;
+  }
+
+  /// Generate a fresh random pool (new hidden mapping / rotor configuration).
+  void randomise() {
+    final random = Random.secure();
+    final bytes = List<int>.generate(16, (_) => random.nextInt(256));
+    setSeed(base64Url.encode(bytes));
+  }
+
+  void setSeed(String seed) {
+    state = seed;
+    _storage.setPoolSeed(seed);
+  }
+}
+
+final cipherEngineProvider = Provider<CipherEngine>((ref) {
+  final seed = ref.watch(poolSeedProvider);
+  return CipherEngine(seed: seed);
+});
 
 final gameSettingsProvider =
     StateNotifierProvider<GameSettingsNotifier, GameSettings>((ref) {
@@ -129,6 +168,28 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await _storage.logAudit('LOGIN_OK', username);
     state = AuthState(user: updated, needsPin: updated.requiresPin);
     return true;
+  }
+
+  /// Creates a new user-tier account. Returns null on success, or an error
+  /// message. Does not log the new user in.
+  Future<String?> register(String username, String password) async {
+    final u = username.trim().toUpperCase();
+    if (u.isEmpty || password.isEmpty) {
+      return 'ENTER A USERNAME AND PASSWORD';
+    }
+    if (password.length < 4) return 'PASSWORD TOO SHORT';
+    final existing = await _storage.getAccount(u);
+    if (existing != null) return 'ACCOUNT ALREADY EXISTS';
+    final account = UserAccount(
+      username: u,
+      passwordHash: EncryptionService.hashPassword(password),
+      pinHash: EncryptionService.hashPin('000000'),
+      tier: UserTier.agent,
+      createdAt: DateTime.now(),
+    );
+    await _storage.saveAccount(account);
+    await _storage.logAudit('REGISTER', u);
+    return null;
   }
 
   Future<bool> verifyPin(String pin) async {

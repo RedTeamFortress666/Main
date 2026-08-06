@@ -215,6 +215,16 @@ class StorageService {
     await Hive.box(settingsBox).put('activeToken', token);
   }
 
+  /// The active cipher pool seed (randomised or synced from another user).
+  Future<String?> getPoolSeed() async {
+    final raw = Hive.box(settingsBox).get('poolSeed');
+    return raw is String && raw.isNotEmpty ? raw : null;
+  }
+
+  Future<void> setPoolSeed(String seed) async {
+    await Hive.box(settingsBox).put('poolSeed', seed);
+  }
+
   Future<void> logAudit(String action, String actor, [String? details]) async {
     final box = Hive.box(auditBox);
     final entry = AuditLogEntry(

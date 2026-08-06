@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
+import 'package:polybius/features/cipher/screens/clipboard_row.dart';
 
 class EncryptTab extends ConsumerStatefulWidget {
   const EncryptTab({super.key});
@@ -42,7 +42,7 @@ class _EncryptTabState extends ConsumerState<EncryptTab> {
         children: [
           TextField(
             controller: _inputController,
-            maxLines: 4,
+            maxLines: 3,
             style: const TextStyle(fontFamily: 'monospace', color: Colors.white),
             decoration: const InputDecoration(
               labelText: 'PLAINTEXT',
@@ -50,9 +50,14 @@ class _EncryptTabState extends ConsumerState<EncryptTab> {
               border: OutlineInputBorder(),
             ),
           ),
-          const SizedBox(height: 12),
+          ClipboardRow(
+            color: NeonTheme.neonGreen,
+            getCopyText: () => _inputController.text,
+            onPaste: (text) => setState(() => _inputController.text = text),
+          ),
+          const SizedBox(height: 4),
           ElevatedButton(onPressed: _encrypt, child: const Text('ENCRYPT')),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Expanded(
             child: Container(
               padding: const EdgeInsets.all(12),
@@ -68,17 +73,11 @@ class _EncryptTabState extends ConsumerState<EncryptTab> {
               ),
             ),
           ),
-          if (_output.isNotEmpty)
-            TextButton.icon(
-              onPressed: () {
-                Clipboard.setData(ClipboardData(text: _output));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Copied to clipboard')),
-                );
-              },
-              icon: const Icon(Icons.copy, color: NeonTheme.neonCyan),
-              label: const Text('COPY', style: TextStyle(color: NeonTheme.neonCyan)),
-            ),
+          ClipboardRow(
+            color: NeonTheme.neonCyan,
+            getCopyText: () => _output,
+            onPaste: (text) => setState(() => _inputController.text = text),
+          ),
         ],
       ),
     );

@@ -36,7 +36,7 @@ class _ConnectTabState extends ConsumerState<ConnectTab> {
           const SizedBox(height: 16),
           _InfoRow('Operator', auth.user?.username ?? 'UNKNOWN'),
           _InfoRow('Tier', auth.user?.tier.name.toUpperCase() ?? 'N/A'),
-          _InfoRow('Pool Date', engine.dateKey),
+          _InfoRow('Pool ID', engine.poolId),
           _InfoRow('Platform', _platformName),
           _InfoRow('Version', _platformVersion),
           const SizedBox(height: 32),

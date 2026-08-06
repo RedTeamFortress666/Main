@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
 import 'package:polybius/core/constants/app_constants.dart';
 import 'package:polybius/features/cipher/engine/daily_pool.dart';
 import 'package:polybius/features/cipher/engine/rotor.dart';
@@ -8,14 +11,16 @@ import 'package:polybius/features/cipher/engine/rotor.dart';
 /// character index for guaranteed round-trip decryption. All three rotors step
 /// on every character processed.
 class CipherEngine {
-  CipherEngine({DateTime? date, List<String>? pool})
-      : _dateKey = DailyPool(date: date).dateKey,
-        _pool = pool ?? DailyPool(date: date).generate() {
+  CipherEngine({DateTime? date, String? seed, List<String>? pool})
+      : _seed = seed ?? DailyPool(date: date).dateKey,
+        _pool = pool ?? DailyPool(seed: seed, date: date).generate() {
     _resetRotors();
-    _reflector = _buildReflector(_dateKey);
+    _reflector = _buildReflector(_seed);
   }
 
-  final String _dateKey;
+  /// Secret seed that fully determines the pool, rotors and reflector. Never
+  /// surfaced in the UI; only [poolId] (a non-reversible short id) is shown.
+  final String _seed;
   final List<String> _pool;
   late Rotor _rotorI;
   late Rotor _rotorII;
@@ -25,19 +30,26 @@ class CipherEngine {
   static const String charset =
       'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?-_:;@#\$%&*+/=';
 
-  String get dateKey => _dateKey;
+  /// The seed itself (needed to build a shareable pool-sync token). Not shown
+  /// in any UI.
+  String get seed => _seed;
+
+  /// Non-reversible short identifier for the active pool, safe to display.
+  String get poolId =>
+      sha256.convert(utf8.encode(_seed)).toString().substring(0, 12).toUpperCase();
+
   List<String> get pool => List.unmodifiable(_pool);
 
   List<Rotor> get rotors => [_rotorI, _rotorII, _rotorIII];
 
   /// Rotors are stateful and step on every character. Each encrypt/decrypt
-  /// call restarts from the date-seeded initial position so a single shared
+  /// call restarts from the seed-derived initial position so a single shared
   /// engine instance round-trips correctly (matching the cross-device model
-  /// where sender and receiver both start from the same daily seed).
+  /// where sender and receiver both start from the same pool seed).
   void _resetRotors() {
-    _rotorI = Rotor.create('I', _dateKey, 0);
-    _rotorII = Rotor.create('II', _dateKey, 1);
-    _rotorIII = Rotor.create('III', _dateKey, 2);
+    _rotorI = Rotor.create('I', _seed, 0);
+    _rotorII = Rotor.create('II', _seed, 1);
+    _rotorIII = Rotor.create('III', _seed, 2);
   }
 
   List<int> _buildReflector(String dateKey) {
@@ -127,7 +139,7 @@ class CipherEngine {
   }
 
   CipherEngine clone() {
-    final engine = CipherEngine(date: DateTime.parse(_dateKey), pool: _pool);
+    final engine = CipherEngine(seed: _seed, pool: _pool);
     engine._rotorI = _rotorI.copy();
     engine._rotorII = _rotorII.copy();
     engine._rotorIII = _rotorIII.copy();
