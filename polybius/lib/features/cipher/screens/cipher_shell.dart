@@ -44,6 +44,53 @@ class _CipherShellState extends ConsumerState<CipherShell>
     );
   }
 
+  Future<void> _openDeveloperPanel() async {
+    final controller = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: NeonTheme.surface,
+        title: const Text('DEV ACCESS',
+            style: TextStyle(fontFamily: 'monospace', color: NeonTheme.dangerRed)),
+        content: TextField(
+          controller: controller,
+          obscureText: true,
+          autofocus: true,
+          style: const TextStyle(fontFamily: 'monospace', color: Colors.white),
+          decoration: const InputDecoration(labelText: 'Password'),
+          onSubmitted: (_) => Navigator.of(dialogContext).pop(
+            ref.read(authProvider.notifier).verifyCurrentPassword(controller.text),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('CANCEL'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(
+              ref
+                  .read(authProvider.notifier)
+                  .verifyCurrentPassword(controller.text),
+            ),
+            child: const Text('ENTER'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (ok == true && mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const DeveloperPanel()),
+      );
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ACCESS DENIED')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final unlock = ref.watch(unlockProvider);
@@ -61,6 +108,15 @@ class _CipherShellState extends ConsumerState<CipherShell>
           onPressed: () => context.go('/menu'),
         ),
         actions: [
+          TextButton.icon(
+            onPressed: () => context.go('/menu'),
+            icon: const Icon(Icons.exit_to_app, color: NeonTheme.neonYellow, size: 18),
+            label: const Text('EXIT TO ARCADE',
+                style: TextStyle(
+                    color: NeonTheme.neonYellow,
+                    fontFamily: 'monospace',
+                    fontSize: 11)),
+          ),
           IconButton(
             icon: const Icon(Icons.settings, color: NeonTheme.neonPink),
             tooltip: 'Rotor Gear',
@@ -70,12 +126,7 @@ class _CipherShellState extends ConsumerState<CipherShell>
             IconButton(
               icon: const Icon(Icons.bug_report, color: NeonTheme.dangerRed),
               tooltip: 'Developer Panel',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const DeveloperPanel()),
-                );
-              },
+              onPressed: _openDeveloperPanel,
             ),
         ],
         bottom: TabBar(

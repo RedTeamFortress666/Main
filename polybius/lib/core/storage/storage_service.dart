@@ -225,6 +225,44 @@ class StorageService {
     await Hive.box(settingsBox).put('poolSeed', seed);
   }
 
+  /// Rotor complexity (2–6 emojis per character).
+  Future<int?> getCipherComplexity() async {
+    final raw = Hive.box(settingsBox).get('cipherComplexity');
+    return raw is int ? raw : null;
+  }
+
+  Future<void> setCipherComplexity(int value) async {
+    await Hive.box(settingsBox).put('cipherComplexity', value);
+  }
+
+  /// Pool rotation window in hours (VALKYRIE sets this to 2).
+  Future<int> getPoolWindowHours() async {
+    final raw = Hive.box(settingsBox).get('poolWindowHours');
+    return raw is int ? raw : 6;
+  }
+
+  Future<void> setPoolWindowHours(int hours) async {
+    await Hive.box(settingsBox).put('poolWindowHours', hours);
+  }
+
+  Future<void> deleteAccount(String username) async {
+    await Hive.box(accountsBox).delete(username.toUpperCase());
+  }
+
+  /// VALKYRIE: wipe transient network state (invites, audit, sessions) and all
+  /// non-developer accounts, so the network can be re-established from scratch.
+  Future<void> wipeNetworkState() async {
+    await Hive.box(invitesBox).clear();
+    await Hive.box(auditBox).clear();
+    await clearSession();
+    final accounts = await getAllAccounts();
+    for (final a in accounts) {
+      if (a.tier != UserTier.developer) {
+        await deleteAccount(a.username);
+      }
+    }
+  }
+
   Future<void> logAudit(String action, String actor, [String? details]) async {
     final box = Hive.box(auditBox);
     final entry = AuditLogEntry(

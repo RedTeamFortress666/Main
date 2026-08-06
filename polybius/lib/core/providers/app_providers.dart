@@ -54,9 +54,35 @@ class PoolSeedNotifier extends StateNotifier<String> {
   }
 }
 
+/// Rotor complexity (2–6 emojis per character). Dev-configurable; persisted;
+/// carried in the pool-sync token so aligned users match.
+final cipherComplexityProvider =
+    StateNotifierProvider<CipherComplexityNotifier, int>((ref) {
+  return CipherComplexityNotifier(ref.read(storageServiceProvider));
+});
+
+class CipherComplexityNotifier extends StateNotifier<int> {
+  CipherComplexityNotifier(this._storage) : super(2) {
+    _load();
+  }
+
+  final StorageService _storage;
+
+  Future<void> _load() async {
+    final saved = await _storage.getCipherComplexity();
+    if (saved != null) state = saved.clamp(2, 6);
+  }
+
+  void setComplexity(int value) {
+    state = value.clamp(2, 6);
+    _storage.setCipherComplexity(state);
+  }
+}
+
 final cipherEngineProvider = Provider<CipherEngine>((ref) {
   final seed = ref.watch(poolSeedProvider);
-  return CipherEngine(seed: seed);
+  final complexity = ref.watch(cipherComplexityProvider);
+  return CipherEngine(seed: seed, complexity: complexity);
 });
 
 final gameSettingsProvider =
@@ -217,6 +243,34 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await _storage.logAudit('LOGOUT', user);
     await _storage.clearSession();
     state = const AuthState();
+  }
+
+  /// Confirms a password against the current account (used to gate the dev UI).
+  bool verifyCurrentPassword(String password) {
+    final user = state.user;
+    if (user == null) return false;
+    return EncryptionService.verifyPassword(password, user.passwordHash);
+  }
+
+  Future<String?> changePassword(String newPassword) async {
+    final user = state.user;
+    if (user == null) return 'NOT LOGGED IN';
+    if (newPassword.length < 4) return 'PASSWORD TOO SHORT';
+    final updated =
+        user.copyWith(passwordHash: EncryptionService.hashPassword(newPassword));
+    await _storage.saveAccount(updated);
+    await _storage.logAudit('PASSWORD_CHANGE', user.username);
+    state = AuthState(user: updated);
+    return null;
+  }
+
+  Future<void> setDisplayName(String name) async {
+    final user = state.user;
+    if (user == null) return;
+    final updated = user.copyWith(displayName: name.trim());
+    await _storage.saveAccount(updated);
+    await _storage.logAudit('RENAME', user.username, name.trim());
+    state = AuthState(user: updated);
   }
 
   Future<String> mintInvite(InviteTier tier, String createdBy) async {

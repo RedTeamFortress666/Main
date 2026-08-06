@@ -16,6 +16,7 @@ class UserAccount {
     this.createdAt,
     this.lastLogin,
     this.requiresPin = false,
+    this.displayName,
   });
 
   final String username;
@@ -26,6 +27,14 @@ class UserAccount {
   final DateTime? lastLogin;
   final bool requiresPin;
 
+  /// Operator display name (editable in the dev interface). Falls back to the
+  /// login username when unset.
+  final String? displayName;
+
+  String get name => (displayName != null && displayName!.isNotEmpty)
+      ? displayName!
+      : username;
+
   Map<String, dynamic> toJson() => {
         'username': username,
         'passwordHash': passwordHash,
@@ -34,6 +43,7 @@ class UserAccount {
         'createdAt': createdAt?.toIso8601String(),
         'lastLogin': lastLogin?.toIso8601String(),
         'requiresPin': requiresPin,
+        'displayName': displayName,
       };
 
   factory UserAccount.fromJson(Map<dynamic, dynamic> json) => UserAccount(
@@ -48,6 +58,7 @@ class UserAccount {
             ? DateTime.parse(json['lastLogin'] as String)
             : null,
         requiresPin: _parseBool(json['requiresPin']),
+        displayName: json['displayName'] as String?,
       );
 
   UserAccount copyWith({
@@ -58,6 +69,7 @@ class UserAccount {
     DateTime? createdAt,
     DateTime? lastLogin,
     bool? requiresPin,
+    String? displayName,
   }) =>
       UserAccount(
         username: username ?? this.username,
@@ -67,6 +79,7 @@ class UserAccount {
         createdAt: createdAt ?? this.createdAt,
         lastLogin: lastLogin ?? this.lastLogin,
         requiresPin: requiresPin ?? this.requiresPin,
+        displayName: displayName ?? this.displayName,
       );
 }
 

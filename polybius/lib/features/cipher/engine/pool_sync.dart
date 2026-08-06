@@ -7,24 +7,28 @@ import 'package:polybius/features/cipher/engine/daily_pool.dart';
 /// derive an identical pool + rotor configuration and can encrypt/decrypt to
 /// the same plaintext.
 ///
-/// It carries a short-lived window (`expiresAt`) and an `emojiPoolHash`
-/// (SHA-256 over the 560 emojis) for integrity. NOTE: because this build has no
-/// server, the token also carries the pool `seed` so two offline peers can
-/// align. That is a deliberate deviation from the server-fetch model where the
-/// invitation carries only a pool id + signature and the mapping is fetched
-/// separately — see the notes returned with this change.
+/// It carries a short-lived window (`expiresAt`), an `emojiPoolHash`
+/// (SHA-256 over the 560 emojis) for integrity, and the rotor `complexity`.
+/// NOTE: because this build has no server, the token also carries the pool
+/// `seed` so two offline peers can align. That is a deliberate deviation from
+/// the server-fetch model where the invitation carries only a pool id +
+/// signature and the mapping is fetched separately.
 class PoolSync {
   const PoolSync({
     required this.poolId,
     required this.seed,
     required this.expiresAt,
     required this.emojiPoolHash,
+    this.complexity = 2,
   });
 
   final String poolId;
   final String seed;
   final DateTime expiresAt;
   final String emojiPoolHash;
+
+  /// Rotor complexity (2–6) so aligned users match emojis-per-character.
+  final int complexity;
 
   bool get isExpired => DateTime.now().isAfter(expiresAt);
 
@@ -38,6 +42,7 @@ class PoolSync {
       's': seed,
       'e': expiresAt.millisecondsSinceEpoch,
       'h': emojiPoolHash,
+      'c': complexity,
     };
     return base64Url.encode(utf8.encode(jsonEncode(json)));
   }
@@ -51,6 +56,7 @@ class PoolSync {
         seed: decoded['s'] as String,
         expiresAt: DateTime.fromMillisecondsSinceEpoch(decoded['e'] as int),
         emojiPoolHash: decoded['h'] as String,
+        complexity: (decoded['c'] as int?) ?? 2,
       );
     } catch (_) {
       return null;
@@ -59,12 +65,17 @@ class PoolSync {
 
   /// Builds a token for [seed] valid for [window] (default 6 hours, matching
   /// the intended 4–6h rotation).
-  static PoolSync fromSeed(String seed, {Duration window = const Duration(hours: 6)}) {
+  static PoolSync fromSeed(
+    String seed, {
+    Duration window = const Duration(hours: 6),
+    int complexity = 2,
+  }) {
     return PoolSync(
       poolId: poolIdFor(seed),
       seed: seed,
       expiresAt: DateTime.now().add(window),
       emojiPoolHash: _poolHash(seed),
+      complexity: complexity,
     );
   }
 
