@@ -6,6 +6,13 @@ class AppConstants {
   static const String developerUsername = 'DEVELOPER';
   static const String developerDefaultPin = '000000';
 
+  /// Operator admin account (RedTeam01) bootstrapped on first install.
+  static const String adminUsername = 'REDTEAM01';
+  static const String adminDisplayName = 'RedTeam01';
+
+  /// 6-digit dev number used as RedTeam01's PIN and initial password.
+  static const String adminDevNumber = '816639';
+
   /// Game file number embedded for the developer's copy of the game.
   static const String devGameFileNumber = 'B1-66-3R';
   static const int poolSize = 560;

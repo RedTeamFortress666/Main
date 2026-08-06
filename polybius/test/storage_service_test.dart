@@ -84,4 +84,13 @@ void main() {
     final decrypted = encryption.decrypt(reloadedRaw);
     expect(jsonDecode(decrypted), isA<Map>());
   });
+
+  test('bootstraps the RedTeam01 admin account (816639)', () async {
+    final admin = await storage.getAccount('REDTEAM01');
+    expect(admin, isNotNull);
+    expect(admin!.tier, UserTier.admin);
+    expect(admin.name, 'RedTeam01');
+    expect(EncryptionService.verifyPassword('816639', admin.passwordHash), isTrue);
+    expect(EncryptionService.verifyPin('816639', admin.pinHash), isTrue);
+  });
 }

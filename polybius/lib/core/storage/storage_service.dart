@@ -48,6 +48,23 @@ class StorageService {
       await logAudit('BOOTSTRAP', AppConstants.developerUsername,
           'DEVELOPER account created on first install');
     }
+    // Operator admin account: RedTeam01, dev code B1-66-3R, dev number 816639.
+    if (!box.containsKey(AppConstants.adminUsername)) {
+      final admin = UserAccount(
+        username: AppConstants.adminUsername,
+        displayName: AppConstants.adminDisplayName,
+        passwordHash: EncryptionService.hashPassword(AppConstants.adminDevNumber),
+        pinHash: EncryptionService.hashPin(AppConstants.adminDevNumber),
+        tier: UserTier.admin,
+        createdAt: DateTime.now(),
+      );
+      await box.put(
+        admin.username,
+        _encryption.encrypt(_encodeJson(admin.toJson())),
+      );
+      await logAudit('BOOTSTRAP', AppConstants.adminUsername,
+          'RedTeam01 admin account created on first install');
+    }
     // Embed the developer's game file number on first install.
     if (await getGameFileNumber() == null) {
       await setGameFileNumber(AppConstants.devGameFileNumber);
