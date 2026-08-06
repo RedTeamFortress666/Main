@@ -83,8 +83,56 @@ jobs:
           name: polybius-linux-x64
           path: polybius-linux-x64.tar.gz
 
+  # aarch64 Linux build for ARM handhelds (R36 S / R36 Ultra run ARM Linux).
+  linux-arm64:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: ${{ env.FLUTTER_CHANNEL }}
+      - name: Install Linux build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build cmake clang pkg-config libgtk-3-dev liblzma-dev
+      - run: flutter pub get
+        working-directory: ${{ env.WORKING_DIR }}
+      - run: flutter build linux --release
+        working-directory: ${{ env.WORKING_DIR }}
+      - name: Package aarch64 Linux build (+ R36 launch script)
+        run: |
+          cd ${{ env.WORKING_DIR }}/build/linux/arm64/release/bundle
+          cp "$GITHUB_WORKSPACE/${{ env.WORKING_DIR }}/packaging/r36/polybius.sh" . || true
+          tar -czf "$GITHUB_WORKSPACE/polybius-linux-arm64.tar.gz" .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: polybius-linux-arm64
+          path: polybius-linux-arm64.tar.gz
+
+  # iOS build (unsigned). A distributable IPA requires an Apple signing
+  # identity; add code signing to produce a side-loadable/App Store build.
+  ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: ${{ env.FLUTTER_CHANNEL }}
+      - run: flutter pub get
+        working-directory: ${{ env.WORKING_DIR }}
+      - run: flutter build ios --release --no-codesign
+        working-directory: ${{ env.WORKING_DIR }}
+      - name: Package unsigned .app
+        run: |
+          cd ${{ env.WORKING_DIR }}/build/ios/iphoneos
+          zip -r "$GITHUB_WORKSPACE/polybius-ios-unsigned.zip" Runner.app
+      - uses: actions/upload-artifact@v4
+        with:
+          name: polybius-ios-unsigned
+          path: polybius-ios-unsigned.zip
+
   release:
-    needs: [web, android, linux]
+    needs: [web, android, linux, linux-arm64, ios]
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:

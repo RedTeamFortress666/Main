@@ -13,7 +13,9 @@ GitHub's runners (which already have the Android SDK etc.).
 2. When it finishes, download from the run's **Artifacts** section:
    - `polybius-web` — zipped web build
    - `polybius-android-apk` — `app-release.apk` (side-loadable)
-   - `polybius-linux-x64` — Linux desktop bundle (`.tar.gz`)
+   - `polybius-linux-x64` — Linux desktop bundle (`.tar.gz`, x86-64)
+   - `polybius-linux-arm64` — **aarch64** Linux bundle for R36 S / R36 Ultra
+   - `polybius-ios-unsigned` — unsigned iOS `Runner.app` (needs signing to install)
 
 **Publish a Release** (attaches the files to a GitHub Release)
 
@@ -53,10 +55,24 @@ flutter build linux --release
 See `BUILD.md` for prerequisites, the R36 ARM caveat, controls, and the
 security model.
 
-## Playing on the R36 Max/Pro
+## Playing on the R36 S / R36 Ultra / R36 Max/Pro
 
-The R36 is an **ARM (aarch64) Linux** handheld, so it needs an **aarch64**
-Linux build (built on the device or cross-compiled) — the x86-64 CI Linux
-artifact will not run on it. The web build is a practical alternative: serve
-`polybius-web` locally and open it in the device browser. See the R36 notes in
-`BUILD.md`.
+These are **ARM (aarch64) Linux** handhelds, so they need the **aarch64** build
+(`polybius-linux-arm64` from CI) — the x86-64 Linux artifact will not run on
+them. To install:
+
+1. Download and extract `polybius-linux-arm64.tar.gz`.
+2. Copy the whole extracted folder to your frontend's ports/apps directory on
+   the SD card (e.g. `/roms/ports/polybius/` on ArkOS/JELOS/MuOS).
+3. Launch it from the **Ports** menu (it runs `polybius.sh`, included in the
+   bundle). If your firmware needs a `.sh` in a specific ports folder, point it
+   at `polybius/polybius.sh`.
+
+Controls: touchscreen (R36 Ultra) via drag, plus d-pad/keys mapped by the
+firmware; hardware-gamepad mapping is best-effort (see `BUILD.md`). If the
+native build won't launch on your firmware, the **web build** is a fallback —
+serve `polybius-web` and open it in the device browser.
+
+> The aarch64 build is produced on a GitHub `ubuntu-24.04-arm` runner. If your
+> repo/plan lacks arm64 runners, build the aarch64 bundle on an arm64 Linux box
+> with the Flutter Linux toolchain installed.
