@@ -54,10 +54,17 @@ class PolybiusGame extends FlameGame with KeyboardEvents {
   int level = 1;
   int killCount = 0;
   int totalKills = 0;
+  int _killStreak = 0;
+  double _streakTimer = 0;
+  String? _flashText;
+  double _flashTimer = 0;
   bool _gameOver = false;
 
   /// 0..1 hypnotic pulse used to modulate glow across the whole scene.
   double get beat => 0.5 + 0.5 * sin(time * 6);
+
+  /// Big centered banner (e.g. the 3-kill-streak reward), or null.
+  String? get flashText => _flashText;
 
   @override
   Color backgroundColor() => const Color(0xFF000000);
@@ -129,9 +136,19 @@ class PolybiusGame extends FlameGame with KeyboardEvents {
 
     if (_gameOver) return;
 
+    // Kill-streak window: consecutive kills must land within this window.
+    if (_streakTimer > 0) {
+      _streakTimer -= dt;
+      if (_streakTimer <= 0) _killStreak = 0;
+    }
+    if (_flashTimer > 0) {
+      _flashTimer -= dt;
+      if (_flashTimer <= 0) _flashText = null;
+    }
+
     _spawnTimer += dt;
-    final spawnRate = max(0.28, 1.6 - difficulty * 0.09 - level * 0.06);
-    final maxEnemies = 6 + difficulty + level * 2;
+    final spawnRate = max(0.34, 1.7 - difficulty * 0.08 - level * 0.05);
+    final maxEnemies = 5 + difficulty + level * 2;
     if (_spawnTimer >= spawnRate &&
         children.query<Enemy>().length < maxEnemies) {
       _spawnTimer = 0;
@@ -184,8 +201,9 @@ class PolybiusGame extends FlameGame with KeyboardEvents {
     }
     add(Enemy(
       position: pos,
+      // Toned down: slower base speed and gentler scaling than before.
+      speed: 32 + difficulty * 4 + level * 4,
       type: type,
-      speed: 42 + difficulty * 6 + level * 5,
       color: _palette[_random.nextInt(_palette.length)],
     ));
   }
@@ -196,6 +214,17 @@ class PolybiusGame extends FlameGame with KeyboardEvents {
     score += points;
     killCount++;
     totalKills++;
+
+    // Three kills in a row (within the streak window) → speed boost + banner.
+    _killStreak++;
+    _streakTimer = 3.5;
+    if (_killStreak >= 3) {
+      _killStreak = 0;
+      player.engageBoost(4.5, 1.7);
+      _flashText = 'MIDNIGHT CLIMAX ENGAGED!';
+      _flashTimer = 1.8;
+      shake(0.4);
+    }
   }
 
   /// The hidden ERROR/dev report path is reachable only when the player loses
@@ -209,6 +238,13 @@ class PolybiusGame extends FlameGame with KeyboardEvents {
 
   void playerHit() {
     if (player.invulnerable || _gameOver) return;
+    // A collected shield absorbs the hit instead of costing a life.
+    if (player.shield > 0) {
+      player.absorbHit();
+      spawnExplosion(player.position, NeonTheme.neonGreen, lines: 12);
+      shake(0.4);
+      return;
+    }
     lives--;
     player.makeInvulnerable();
     spawnExplosion(player.position, NeonTheme.dangerRed, lines: 20);
@@ -337,6 +373,13 @@ class PlayerShip extends PositionComponent with HasGameReference<PolybiusGame> {
   double _aimAngle = -pi / 2;
   double _invuln = 0;
 
+  /// Shield charges collected from green crystal fragments; each absorbs one hit.
+  int shield = 0;
+  static const int maxShield = 3;
+
+  double _boostTimer = 0;
+  double _boostMult = 1.0;
+
   Vector2? pointerTarget;
   Vector2 keyboardDirection = Vector2.zero();
   final List<Vector2> _trail = [];
@@ -345,6 +388,18 @@ class PlayerShip extends PositionComponent with HasGameReference<PolybiusGame> {
 
   bool get invulnerable => _invuln > 0;
   void makeInvulnerable() => _invuln = 1.6;
+
+  void addShield() => shield = min(maxShield, shield + 1);
+
+  void absorbHit() {
+    if (shield > 0) shield--;
+    _invuln = 1.0;
+  }
+
+  void engageBoost(double seconds, double mult) {
+    _boostTimer = seconds;
+    _boostMult = mult;
+  }
 
   @override
   Future<void> onLoad() async {
@@ -362,8 +417,13 @@ class PlayerShip extends PositionComponent with HasGameReference<PolybiusGame> {
   void update(double dt) {
     super.update(dt);
     if (_invuln > 0) _invuln -= dt;
+    if (_boostTimer > 0) {
+      _boostTimer -= dt;
+      if (_boostTimer <= 0) _boostMult = 1.0;
+    }
 
     // Movement: pointer-follow takes priority, else keyboard, else gamepad.
+    final spd = _speed * _boostMult;
     final steer = keyboardDirection.length2 > 0
         ? keyboardDirection
         : game.gamepadDirection;
@@ -371,10 +431,10 @@ class PlayerShip extends PositionComponent with HasGameReference<PolybiusGame> {
       final delta = pointerTarget! - position;
       final dist = delta.length;
       if (dist > 1) {
-        position += delta.normalized() * min(dist, _speed * dt);
+        position += delta.normalized() * min(dist, spd * dt);
       }
     } else if (steer.length2 > 0) {
-      position += steer.normalized() * _speed * dt;
+      position += steer.normalized() * spd * dt;
     }
     position.x = position.x.clamp(16.0, game.size.x - 16);
     position.y = position.y.clamp(16.0, game.size.y - 16);
@@ -467,6 +527,23 @@ class PlayerShip extends PositionComponent with HasGameReference<PolybiusGame> {
     _glowPath(canvas, ship(), Colors.white, 2,
         glow: 4 + game.beat * 2, style: PaintingStyle.fill);
     canvas.restore();
+
+    // Shield: rotating green hex ring around the ship, one layer per charge.
+    if (shield > 0) {
+      canvas.save();
+      canvas.translate(size.x / 2, size.y / 2);
+      for (var s = 0; s < shield; s++) {
+        final ringR = size.x * (0.75 + s * 0.18) + game.beat * 2;
+        _glowPath(
+          canvas,
+          _polygonPath(6, ringR, game.time * 1.5 + s),
+          NeonTheme.neonGreen.withValues(alpha: 0.8),
+          1.6,
+          glow: 2.5,
+        );
+      }
+      canvas.restore();
+    }
   }
 }
 
@@ -551,7 +628,7 @@ class Enemy extends PositionComponent with HasGameReference<PolybiusGame> {
         _hp = 1;
       case EnemyType.charger:
         radius = 22;
-        _hp = 4;
+        _hp = 3;
     }
     size = Vector2.all(radius * 2);
   }
@@ -579,6 +656,12 @@ class Enemy extends PositionComponent with HasGameReference<PolybiusGame> {
       }[type]!;
       game.addScore(points);
       game.spawnExplosion(position, color, lines: type == EnemyType.charger ? 20 : 12);
+      // Certain enemies drop a green crystal fragment (shield pickup):
+      // chargers always, saucers sometimes.
+      if (type == EnemyType.charger ||
+          (type == EnemyType.saucer && _random.nextDouble() < 0.4)) {
+        game.add(Crystal(position: position.clone()));
+      }
       removeFromParent();
     }
   }
@@ -604,11 +687,11 @@ class Enemy extends PositionComponent with HasGameReference<PolybiusGame> {
         }
       case EnemyType.charger:
         _chargeTimer += dt;
-        if (_chargeTimer > 2.2) {
-          _velocity.setFrom(toPlayer.normalized() * speed * 4);
-          if (_chargeTimer > 2.6) _chargeTimer = 0;
+        if (_chargeTimer > 2.6) {
+          _velocity.setFrom(toPlayer.normalized() * speed * 2.6);
+          if (_chargeTimer > 3.0) _chargeTimer = 0;
         } else {
-          _velocity.setFrom(toPlayer.normalized() * speed * 0.6);
+          _velocity.setFrom(toPlayer.normalized() * speed * 0.5);
         }
     }
 
@@ -659,7 +742,7 @@ class Enemy extends PositionComponent with HasGameReference<PolybiusGame> {
         }
       case EnemyType.charger:
         canvas.rotate(_spin);
-        final charging = _chargeTimer > 2.2;
+        final charging = _chargeTimer > 2.6;
         final spike = charging ? NeonTheme.dangerRed : c;
         final path = Path();
         for (var i = 0; i <= 16; i++) {
@@ -670,6 +753,74 @@ class Enemy extends PositionComponent with HasGameReference<PolybiusGame> {
         }
         _glowPath(canvas, path, spike, charging ? 3 : 2);
     }
+    canvas.restore();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Crystal fragment (shield pickup)
+// ---------------------------------------------------------------------------
+
+/// A floating green crystal fragment dropped by certain enemies. Drifting into
+/// it grants the player a shield charge.
+class Crystal extends PositionComponent with HasGameReference<PolybiusGame> {
+  Crystal({required Vector2 position}) {
+    this.position = position;
+    anchor = Anchor.center;
+    size = Vector2.all(20);
+    final r = Random();
+    final a = r.nextDouble() * 2 * pi;
+    _velocity = Vector2(cos(a), sin(a)) * (30 + r.nextDouble() * 40);
+  }
+
+  final double radius = 10;
+  late Vector2 _velocity;
+  double _life = 9;
+  double _spin = 0;
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    _life -= dt;
+    _spin += dt * 2.5;
+    if (_life <= 0) {
+      removeFromParent();
+      return;
+    }
+
+    position += _velocity * dt;
+    // Gentle bounce inside the arena.
+    if (position.x < radius || position.x > game.size.x - radius) {
+      _velocity.x = -_velocity.x;
+    }
+    if (position.y < radius || position.y > game.size.y - radius) {
+      _velocity.y = -_velocity.y;
+    }
+    position.x = position.x.clamp(radius, game.size.x - radius);
+    position.y = position.y.clamp(radius, game.size.y - radius);
+
+    if ((game.player.position - position).length <
+        radius + game.player.size.x / 2) {
+      game.player.addShield();
+      game.spawnExplosion(position, NeonTheme.neonGreen, lines: 6);
+      removeFromParent();
+    }
+  }
+
+  @override
+  void render(Canvas canvas) {
+    canvas.save();
+    canvas.translate(size.x / 2, size.y / 2);
+    canvas.rotate(_spin);
+    final pulse = radius * (0.85 + game.beat * 0.25) * (_life < 2 ? _life / 2 : 1);
+    // Diamond crystal.
+    final path = Path()
+      ..moveTo(0, -pulse)
+      ..lineTo(pulse * 0.7, 0)
+      ..lineTo(0, pulse)
+      ..lineTo(-pulse * 0.7, 0)
+      ..close();
+    _glowPath(canvas, path, NeonTheme.neonGreen, 2, glow: 3);
     canvas.restore();
   }
 }
@@ -945,6 +1096,10 @@ class HudComponent extends PositionComponent with HasGameReference<PolybiusGame>
     draw('LIVES ${game.lives}', const Offset(12, 30), style);
     draw(shipMkNames[game.player.mkLevel], const Offset(12, 48),
         style.copyWith(color: NeonTheme.neonCyan));
+    if (game.player.shield > 0) {
+      draw('◇ SHIELD x${game.player.shield}', const Offset(12, 66),
+          style.copyWith(color: NeonTheme.neonGreen, fontSize: 12));
+    }
     draw('LV${game.level}', Offset(game.size.x - 54, 12),
         style.copyWith(color: NeonTheme.neonYellow));
 
@@ -976,6 +1131,31 @@ class HudComponent extends PositionComponent with HasGameReference<PolybiusGame>
       gtp.paint(
         canvas,
         Offset((game.size.x - gtp.width) / 2, game.size.y * 0.38),
+      );
+    }
+
+    // Big centered streak-reward banner.
+    if (game.flashText != null) {
+      final ftp = TextPainter(
+        text: TextSpan(
+          text: game.flashText,
+          style: const TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 22,
+            color: NeonTheme.neonGreen,
+            letterSpacing: 2,
+            fontWeight: FontWeight.bold,
+            shadows: [
+              Shadow(color: NeonTheme.neonGreen, blurRadius: 16),
+              Shadow(color: NeonTheme.neonCyan, blurRadius: 28),
+            ],
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout(maxWidth: game.size.x - 32);
+      ftp.paint(
+        canvas,
+        Offset((game.size.x - ftp.width) / 2, game.size.y * 0.5),
       );
     }
   }
