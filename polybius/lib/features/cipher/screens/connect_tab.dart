@@ -66,9 +66,22 @@ class _ConnectTabState extends ConsumerState<ConnectTab> {
               ),
             ],
           ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => context.push('/relay'),
+              icon: const Icon(Icons.hub, color: NeonTheme.neonPurple),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: NeonTheme.neonPurple,
+                side: const BorderSide(color: NeonTheme.neonPurple),
+              ),
+              label: const Text('RETICULUM RELAY'),
+            ),
+          ),
           const SizedBox(height: 8),
           const Text(
-            'Peer-to-peer mesh networking — coming soon',
+            'Relay ciphertext over a Reticulum mesh (needs the companion bridge).',
             style: TextStyle(color: Colors.white38, fontSize: 11),
           ),
           const Spacer(),

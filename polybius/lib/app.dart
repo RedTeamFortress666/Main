@@ -19,6 +19,7 @@ import 'package:polybius/features/auth/screens/pin_screen.dart';
 import 'package:polybius/features/auth/screens/register_screen.dart';
 import 'package:polybius/features/cipher/screens/cipher_shell.dart';
 import 'package:polybius/features/game/screens/game_screen.dart';
+import 'package:polybius/features/reticulum/reticulum_relay_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ref.watch(routerRefreshProvider);
@@ -71,6 +72,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/devportal', builder: (_, _) => const DevPortalScreen()),
       GoRoute(path: '/error', builder: (_, _) => const ErrorScreen()),
       GoRoute(path: '/cipher', builder: (_, _) => const CipherShell()),
+      GoRoute(path: '/relay', builder: (_, _) => const ReticulumRelayScreen()),
     ],
   );
 });
