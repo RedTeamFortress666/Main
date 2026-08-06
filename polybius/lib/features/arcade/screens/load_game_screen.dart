@@ -50,7 +50,7 @@ class _LoadGameScreenState extends ConsumerState<LoadGameScreen> {
       if (token != null) {
         final trusted = await storage.getTrustedPublicKey();
         final verified =
-            await SignatureService(publicKeyB64: trusted).verifyToken(token);
+            await SignatureService(modulusB64: trusted).verifyToken(token);
         if (!verified) {
           if (mounted) setState(() => _message = 'INVALID / EXPIRED FILE');
           return;

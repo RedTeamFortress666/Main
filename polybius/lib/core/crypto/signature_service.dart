@@ -1,79 +1,85 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
-import 'package:crypto/crypto.dart' as hash;
-import 'package:cryptography/cryptography.dart';
+import 'package:pointycastle/export.dart';
 
-/// Ed25519 signature verification for invite tokens and update payloads.
+/// RSA (PKCS#1 v1.5, SHA-256) signature verification for invite tokens and
+/// update payloads.
 ///
-/// The app embeds only the PUBLIC key, so it can *verify* that a token or
-/// update was signed by the holder of the matching private key, but cannot
-/// forge one. Devs mint signed tokens offline with `tool/polybius_sign.dart`.
+/// The app embeds only the project's RSA-4096 PUBLIC modulus (extracted from
+/// the developer's OpenPGP key), so it can *verify* that a token/update was
+/// signed by the holder of the matching private key, but cannot forge one.
 ///
 /// SECURITY NOTE: this stops forged invite codes and tampered update payloads.
 /// It does NOT stop someone who controls the binary from patching the verifier
-/// out — that is not achievable client-side (see BUILD.md).
+/// out — that is not achievable client-side (see BUILD.md). Also note the fixed
+/// access codes (B1-66-3R / D1-66-3R / Tr1-66-3R) are the working entry gate;
+/// signed tokens are an optional extra path.
 class SignatureService {
-  SignatureService({String? publicKeyB64})
-      : publicKeyB64 = publicKeyB64 ?? kProjectSigningPublicKeyB64;
+  SignatureService({String? modulusB64})
+      : modulusB64 = (modulusB64 == null || modulusB64.isEmpty)
+            ? kProjectRsaModulusB64
+            : modulusB64;
 
-  /// Project verification key: the Ed25519 public key extracted from the
-  /// developer's OpenPGP (curve 25519) key `0x24D2A8CD` (RedTeam01). Only the
-  /// PUBLIC half is embedded; the private key is never shipped. Signed invite
-  /// tokens are verified against this.
-  static const String kProjectSigningPublicKeyB64 =
-      'p36QD3iWwPwd0RelVwumpmnvEr2sFibBtnkTIfRN9V8=';
+  /// Project verification key: RSA-4096 modulus (base64, big-endian) of the
+  /// developer's OpenPGP key `0x24D2A8CD`'s replacement RSA key. Public only.
+  static const String kProjectRsaModulusB64 =
+      'yDGKhJJQzjs3uyeupQT/XAMyjbzA7AWdOrHQy6FiKnvHNauUqReaHeo+Gp7EQCrnRantzXAmz8K8XNggY2QO/wOzVUwKRf+N36mzXpptJ8E+AxBldO9PyYek+31Df0kZRwqGBEjWFnoXXHEHqwok+R13f6uRkmrh5yOVL4hYlQNHCLkvOdv805HJmXSyYrdZp6XMpOXGSyXihgfjS48qmYv1K6+irBe8h88IVxECvghHYnuSatYNaQA0b1XPE2ystNsldgLpPYxlLY/iQ2aaJhmjWyjnGe0cLpDdMwYjhfu+6eKF1aoV0VOhE29cvz/oeVq/YkFPtEEIDPIPBhcd7vtfDh/Wl5SSBGGWHAjOjTIOleF8Ua/WBkAAmoOzD5r2GkoLYrqfp5ff/NI0C/hH2KT7b1VGGRcLka8ciw19jtDCQzGYgujWyigW+gxDouNIWwklYfmdWEzi3uOECYzjEPXmUs0/9FEDBaWQUrOlX7VWcQGMvun115TrN2NK2cyt14SCH0Qta5eZQzl6/T/IlKmbD89tcoYsH3ldJke0mDJ2yw1+degtCPLqhcGmxW2YxoF5xZd8IT79UkZ9GFOor8hmpPZHT918bIdd+xeIkw+xBvRlAAAEcRiVu98AILiTxtVmtBX6CzH4DBTmml/ueo+UaQ+lW9VIJZnCPDoGaAs=';
 
-  final String publicKeyB64;
-  static final Ed25519 _algorithm = Ed25519();
+  static final BigInt kProjectRsaExponent = BigInt.from(65537);
 
-  Future<bool> verifyBytes(List<int> message, List<int> signature) async {
+  /// SHA-256 digest identifier (DER) for RSASigner.
+  static const String _sha256Der = '0609608648016503040201';
+
+  final String modulusB64;
+
+  RSAPublicKey get _publicKey =>
+      RSAPublicKey(_bytesToBigInt(base64Decode(modulusB64)), kProjectRsaExponent);
+
+  bool verifyBytes(List<int> message, List<int> signature) {
     try {
-      final pub = SimplePublicKey(
-        base64Decode(publicKeyB64),
-        type: KeyPairType.ed25519,
-      );
-      return await _algorithm.verify(
-        message,
-        signature: Signature(signature, publicKey: pub),
+      final signer = RSASigner(SHA256Digest(), _sha256Der)
+        ..init(false, PublicKeyParameter<RSAPublicKey>(_publicKey));
+      return signer.verifySignature(
+        Uint8List.fromList(message),
+        RSASignature(Uint8List.fromList(signature)),
       );
     } catch (_) {
       return false;
     }
   }
 
-  /// Verifies a signed invite/license token against the trusted public key,
-  /// also rejecting expired tokens.
   Future<bool> verifyToken(SignedToken token) async {
     if (token.isExpired) return false;
     return verifyBytes(utf8.encode(token.canonical), token.signature);
   }
 
-  /// Verifies a detached signature over an update payload (signed over the
-  /// SHA-256 digest so large payloads stay cheap).
-  Future<bool> verifyPayload(List<int> payload, List<int> signature) {
-    final digest = hash.sha256.convert(payload).bytes;
-    return verifyBytes(digest, signature);
+  Future<bool> verifyPayload(List<int> payload, List<int> signature) async =>
+      verifyBytes(payload, signature);
+
+  // --- Signing (offline dev key-holders / tooling / tests only) ---
+
+  static List<int> signBytes(List<int> message, RSAPrivateKey privateKey) {
+    final signer = RSASigner(SHA256Digest(), _sha256Der)
+      ..init(true, PrivateKeyParameter<RSAPrivateKey>(privateKey));
+    return signer.generateSignature(Uint8List.fromList(message)).bytes;
   }
 
-  // --- Offline signing (used by tooling / dev key-holders only) ---
+  static List<int> signPayload(List<int> payload, RSAPrivateKey privateKey) =>
+      signBytes(payload, privateKey);
 
-  static Future<List<int>> signBytes(
-      List<int> message, List<int> privateSeed) async {
-    final kp = await _algorithm.newKeyPairFromSeed(privateSeed);
-    final sig = await _algorithm.sign(message, keyPair: kp);
-    return sig.bytes;
-  }
-
-  static Future<List<int>> signPayload(
-      List<int> payload, List<int> privateSeed) {
-    final digest = hash.sha256.convert(payload).bytes;
-    return signBytes(digest, privateSeed);
+  static BigInt _bytesToBigInt(List<int> bytes) {
+    var result = BigInt.zero;
+    for (final b in bytes) {
+      result = (result << 8) | BigInt.from(b);
+    }
+    return result;
   }
 }
 
 /// A signed invite / license token binding a game file number to an access
-/// tier and expiry. Wire format is base64url(JSON) so it can be pasted or
-/// stored alongside an SD/USB copy of the game.
+/// tier and expiry. Wire format is base64url(JSON). Signatures are RSA
+/// (PKCS#1 v1.5, SHA-256) over [canonical].
 class SignedToken {
   const SignedToken({
     required this.fileNumber,
@@ -89,7 +95,6 @@ class SignedToken {
   final DateTime? expiresAt;
   final List<int> signature;
 
-  /// Canonical bytes that are signed/verified (order matters).
   String get canonical => [
         fileNumber,
         tier,
@@ -120,8 +125,7 @@ class SignedToken {
         fileNumber: decoded['f'] as String,
         tier: decoded['t'] as String,
         issuedAt: DateTime.fromMillisecondsSinceEpoch(decoded['i'] as int),
-        expiresAt:
-            e == 0 ? null : DateTime.fromMillisecondsSinceEpoch(e),
+        expiresAt: e == 0 ? null : DateTime.fromMillisecondsSinceEpoch(e),
         signature: base64Decode(decoded['s'] as String),
       );
     } catch (_) {
@@ -130,12 +134,12 @@ class SignedToken {
   }
 
   /// Mints a signed token (offline dev tooling / key-holder use only).
-  static Future<SignedToken> mint({
+  static SignedToken mint({
     required String fileNumber,
     required String tier,
-    required List<int> privateSeed,
+    required RSAPrivateKey privateKey,
     DateTime? expiresAt,
-  }) async {
+  }) {
     final issuedAt = DateTime.now();
     final unsigned = SignedToken(
       fileNumber: fileNumber,
@@ -145,7 +149,7 @@ class SignedToken {
       signature: const [],
     );
     final sig =
-        await SignatureService.signBytes(utf8.encode(unsigned.canonical), privateSeed);
+        SignatureService.signBytes(utf8.encode(unsigned.canonical), privateKey);
     return SignedToken(
       fileNumber: fileNumber,
       tier: tier,

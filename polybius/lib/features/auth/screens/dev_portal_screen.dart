@@ -75,7 +75,7 @@ class _DevPortalScreenState extends ConsumerState<DevPortalScreen> {
         if (token != null) {
           final trusted = await storage.getTrustedPublicKey();
           final verified =
-              await SignatureService(publicKeyB64: trusted).verifyToken(token);
+              await SignatureService(modulusB64: trusted).verifyToken(token);
           if (verified) {
             final devTier =
                 token.tier == 'developer' || token.tier == 'admin';
