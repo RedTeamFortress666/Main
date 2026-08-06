@@ -17,9 +17,11 @@ class DeveloperPanel extends ConsumerStatefulWidget {
 class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
   String? _lastInvite;
   final _pinController = TextEditingController();
+  final _pubKeyController = TextEditingController();
   List<AuditLogEntry> _logs = [];
   List<InviteCode> _invites = [];
   int _securityScore = 87;
+  String? _loadError;
 
   @override
   void initState() {
@@ -30,18 +32,35 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
   @override
   void dispose() {
     _pinController.dispose();
+    _pubKeyController.dispose();
     super.dispose();
   }
 
-  Future<void> _load() async {
-    final storage = ref.read(storageServiceProvider);
-    final logs = await storage.getAuditLogs();
-    final invites = await storage.getAllInvites();
+  Future<void> _saveTrustedKey() async {
+    await ref
+        .read(storageServiceProvider)
+        .setTrustedPublicKey(_pubKeyController.text.trim());
     if (!mounted) return;
-    setState(() {
-      _logs = logs;
-      _invites = invites;
-    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Trusted RSA modulus saved')),
+    );
+  }
+
+  Future<void> _load() async {
+    try {
+      final storage = ref.read(storageServiceProvider);
+      final logs = await storage.getAuditLogs();
+      final invites = await storage.getAllInvites();
+      if (!mounted) return;
+      setState(() {
+        _logs = logs;
+        _invites = invites;
+        _loadError = null;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loadError = 'Failed to load panel data');
+    }
   }
 
   @override
@@ -58,6 +77,18 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          if (_loadError != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                _loadError!,
+                style: const TextStyle(
+                  color: NeonTheme.dangerRed,
+                  fontFamily: 'monospace',
+                  fontSize: 12,
+                ),
+              ),
+            ),
           _section('RED TEAM SANDBOX', [
             _scoreBar('Security Score', _securityScore),
             _scoreBar('Cover Integrity', 94),
@@ -96,6 +127,28 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
                   title: Text(i.code, style: const TextStyle(fontFamily: 'monospace', fontSize: 12)),
                   subtitle: Text('${i.tier.name} | used: ${i.isUsed}'),
                 )),
+          ]),
+          _section('SIGNING KEY', [
+            const Text(
+              'The app verifies signed invite tokens against the embedded '
+              'RSA public key. Optionally override the trusted modulus for a '
+              'per-SD/USB keyset. Tokens are signed OFFLINE with the private '
+              'key (never entered in the app) — see tool/polybius_sign.dart.',
+              style: TextStyle(color: Colors.white54, fontSize: 11),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _pubKeyController,
+              style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
+              decoration: const InputDecoration(
+                labelText: 'Trusted RSA modulus (base64, optional override)',
+                labelStyle: TextStyle(color: NeonTheme.neonCyan, fontSize: 11),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: _saveTrustedKey,
+              child: const Text('SAVE TRUSTED MODULUS'),
+            ),
           ]),
           _section('ADMIN PIN', [
             TextField(

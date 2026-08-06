@@ -2,16 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:polybius/core/constants/unlock_codes.dart';
-import 'package:polybius/core/constants/app_constants.dart';
+import 'package:polybius/core/audio/music_service.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/routing/router_refresh.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 import 'package:polybius/core/widgets/crt_widgets.dart';
+import 'package:polybius/core/widgets/splash_screen.dart';
+import 'package:polybius/features/arcade/screens/high_score_screen.dart';
 import 'package:polybius/features/arcade/screens/load_game_screen.dart';
 import 'package:polybius/features/arcade/screens/main_menu_screen.dart';
 import 'package:polybius/features/arcade/screens/settings_screen.dart';
+import 'package:polybius/features/auth/screens/dev_portal_screen.dart';
+import 'package:polybius/features/auth/screens/error_screen.dart';
 import 'package:polybius/features/auth/screens/login_screen.dart';
 import 'package:polybius/features/auth/screens/pin_screen.dart';
+import 'package:polybius/features/auth/screens/register_screen.dart';
 import 'package:polybius/features/cipher/screens/cipher_shell.dart';
 import 'package:polybius/features/game/screens/game_screen.dart';
 
@@ -19,19 +24,30 @@ final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ref.watch(routerRefreshProvider);
 
   return GoRouter(
-    initialLocation: '/login',
+    initialLocation: '/',
     refreshListenable: refresh,
     redirect: (context, state) {
       final authState = ref.read(authProvider);
       final unlockState = ref.read(unlockProvider);
       final loc = state.matchedLocation;
 
-      if (authState.isRestoring) return null;
+      // Keep the splash visible until session restore completes.
+      if (authState.isRestoring) {
+        return loc == '/' ? null : '/';
+      }
 
       final loggedIn = authState.isAuthenticated;
       final needsPin = authState.needsPin && authState.user != null;
 
-      if (!loggedIn && !needsPin && loc != '/login') return '/login';
+      // Route away from the splash once restore has finished.
+      if (loc == '/') {
+        if (needsPin) return '/pin';
+        return loggedIn ? '/menu' : '/login';
+      }
+
+      if (!loggedIn && !needsPin && loc != '/login' && loc != '/register') {
+        return '/login';
+      }
       if (needsPin && loc != '/pin') return '/pin';
       if (loggedIn && loc == '/login') return '/menu';
       if (loggedIn && loc == '/pin') return '/menu';
@@ -43,29 +59,47 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
-      GoRoute(path: '/pin', builder: (_, __) => const PinScreen()),
-      GoRoute(path: '/menu', builder: (_, __) => const MainMenuScreen()),
-      GoRoute(path: '/game', builder: (_, __) => const GameScreen()),
-      GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
-      GoRoute(path: '/load', builder: (_, __) => const LoadGameScreen()),
-      GoRoute(path: '/cipher', builder: (_, __) => const CipherShell()),
+      GoRoute(path: '/', builder: (_, _) => const SplashScreen()),
+      GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
+      GoRoute(path: '/register', builder: (_, _) => const RegisterScreen()),
+      GoRoute(path: '/pin', builder: (_, _) => const PinScreen()),
+      GoRoute(path: '/menu', builder: (_, _) => const MainMenuScreen()),
+      GoRoute(path: '/game', builder: (_, _) => const GameScreen()),
+      GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
+      GoRoute(path: '/load', builder: (_, _) => const LoadGameScreen()),
+      GoRoute(path: '/highscore', builder: (_, _) => const HighScoreScreen()),
+      GoRoute(path: '/devportal', builder: (_, _) => const DevPortalScreen()),
+      GoRoute(path: '/error', builder: (_, _) => const ErrorScreen()),
+      GoRoute(path: '/cipher', builder: (_, _) => const CipherShell()),
     ],
   );
 });
 
-class PolybiusApp extends ConsumerWidget {
+class PolybiusApp extends ConsumerStatefulWidget {
   const PolybiusApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    ref.listen(authProvider, (prev, next) {
-      final user = next.user;
-      if (user != null &&
-          user.tier == UserTier.developer &&
-          next.isAuthenticated) {
-        ref.read(unlockProvider.notifier).grantDeveloperAccess();
-      }
+  ConsumerState<PolybiusApp> createState() => _PolybiusAppState();
+}
+
+class _PolybiusAppState extends ConsumerState<PolybiusApp> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final enabled = ref.read(gameSettingsProvider).soundEnabled;
+      ref.read(musicServiceProvider).setEnabled(enabled);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Note: logging in does NOT auto-open the cipher. The crypto engine is
+    // reachable only via the dev access portal with a valid access code.
+
+    // Start/stop the soundtrack when the sound setting changes.
+    ref.listen(gameSettingsProvider.select((s) => s.soundEnabled), (_, enabled) {
+      ref.read(musicServiceProvider).setEnabled(enabled);
     });
 
     final router = ref.watch(routerProvider);

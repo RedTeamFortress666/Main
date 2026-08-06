@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import './App.css'
 
 interface Task {
@@ -27,31 +27,36 @@ function nextTaskId(tasks: Task[]) {
 export default function App() {
   const [tasks, setTasks] = useState<Task[]>(() => loadTasks())
   const [draft, setDraft] = useState('')
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks))
-  }, [tasks])
+  const [persistError, setPersistError] = useState(false)
 
   const remaining = useMemo(
     () => tasks.filter((t) => !t.done).length,
     [tasks],
   )
 
+  const commit = useCallback((next: Task[]) => {
+    setTasks(next)
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+      setPersistError(false)
+    } catch {
+      setPersistError(true)
+    }
+  }, [])
+
   function addTask() {
     const text = draft.trim()
     if (!text) return
-    setTasks((prev) => [{ id: nextTaskId(prev), text, done: false }, ...prev])
+    commit([{ id: nextTaskId(tasks), text, done: false }, ...tasks])
     setDraft('')
   }
 
   function toggleTask(id: number) {
-    setTasks((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, done: !t.done } : t)),
-    )
+    commit(tasks.map((t) => (t.id === id ? { ...t, done: !t.done } : t)))
   }
 
   function removeTask(id: number) {
-    setTasks((prev) => prev.filter((t) => t.id !== id))
+    commit(tasks.filter((t) => t.id !== id))
   }
 
   return (
@@ -64,6 +69,12 @@ export default function App() {
             : `${remaining} of ${tasks.length} remaining`}
         </p>
       </header>
+
+      {persistError && (
+        <p className="app__error" role="alert">
+          Couldn’t save your tasks — changes may be lost when you close the page.
+        </p>
+      )}
 
       <form
         className="composer"

@@ -6,6 +6,9 @@ import 'package:polybius/core/crypto/encryption_service.dart';
 import 'package:polybius/core/models/models.dart';
 import 'package:polybius/core/storage/storage_service.dart';
 import 'package:polybius/features/cipher/engine/cipher_engine.dart';
+import 'package:polybius/features/cipher/engine/daily_pool.dart';
+import 'dart:convert';
+import 'dart:math';
 import 'package:uuid/uuid.dart';
 
 final secretStoreProvider = Provider((_) => createPolybiusSecretStore());
@@ -18,7 +21,43 @@ final storageServiceProvider = Provider<StorageService>((ref) {
   return StorageService(ref.read(encryptionServiceProvider));
 });
 
-final cipherEngineProvider = Provider<CipherEngine>((ref) => CipherEngine());
+/// The active cipher pool seed. Defaults to today's date so behaviour is
+/// unchanged until the user randomises or syncs a pool. Persisted so a synced
+/// pool survives restarts.
+final poolSeedProvider =
+    StateNotifierProvider<PoolSeedNotifier, String>((ref) {
+  return PoolSeedNotifier(ref.read(storageServiceProvider));
+});
+
+class PoolSeedNotifier extends StateNotifier<String> {
+  PoolSeedNotifier(this._storage) : super(DailyPool().dateKey) {
+    _load();
+  }
+
+  final StorageService _storage;
+
+  Future<void> _load() async {
+    final saved = await _storage.getPoolSeed();
+    if (saved != null) state = saved;
+  }
+
+  /// Generate a fresh random pool (new hidden mapping / rotor configuration).
+  void randomise() {
+    final random = Random.secure();
+    final bytes = List<int>.generate(16, (_) => random.nextInt(256));
+    setSeed(base64Url.encode(bytes));
+  }
+
+  void setSeed(String seed) {
+    state = seed;
+    _storage.setPoolSeed(seed);
+  }
+}
+
+final cipherEngineProvider = Provider<CipherEngine>((ref) {
+  final seed = ref.watch(poolSeedProvider);
+  return CipherEngine(seed: seed);
+});
 
 final gameSettingsProvider =
     StateNotifierProvider<GameSettingsNotifier, GameSettings>((ref) {
@@ -86,20 +125,44 @@ class AuthNotifier extends StateNotifier<AuthState> {
     );
   }
 
+  static const _maxAttemptsBeforeLockout = 5;
+  static const _lockoutDuration = Duration(seconds: 30);
+  int _failedAttempts = 0;
+  DateTime? _lockoutUntil;
+
+  bool get _isLockedOut =>
+      _lockoutUntil != null && DateTime.now().isBefore(_lockoutUntil!);
+
+  void _recordFailure() {
+    _failedAttempts++;
+    if (_failedAttempts >= _maxAttemptsBeforeLockout) {
+      _lockoutUntil = DateTime.now().add(_lockoutDuration);
+      _failedAttempts = 0;
+    }
+  }
+
   Future<bool> login(String username, String password) async {
-    state = const AuthState(isLoading: true);
-    final account = await _storage.getAccount(username.toUpperCase());
-    if (account == null) {
-      state = const AuthState(error: 'INVALID CREDENTIALS');
+    if (_isLockedOut) {
+      state = const AuthState(error: 'TOO MANY ATTEMPTS — TRY AGAIN LATER');
       return false;
     }
-    final hash = EncryptionService.hashPassword(password);
-    if (hash != account.passwordHash) {
+    state = const AuthState(isLoading: true);
+    final account = await _storage.getAccount(username.toUpperCase());
+    // Same error for unknown user and bad password to avoid enumeration.
+    if (account == null ||
+        !EncryptionService.verifyPassword(password, account.passwordHash)) {
+      _recordFailure();
       await _storage.logAudit('LOGIN_FAIL', username);
       state = const AuthState(error: 'ACCESS DENIED');
       return false;
     }
-    final updated = account.copyWith(lastLogin: DateTime.now());
+    _failedAttempts = 0;
+    var updated = account.copyWith(lastLogin: DateTime.now());
+    if (EncryptionService.isLegacyHash(account.passwordHash)) {
+      updated = updated.copyWith(
+        passwordHash: EncryptionService.hashPassword(password),
+      );
+    }
     await _storage.saveAccount(updated);
     await _storage.setSessionUser(updated.username);
     await _storage.logAudit('LOGIN_OK', username);
@@ -107,15 +170,43 @@ class AuthNotifier extends StateNotifier<AuthState> {
     return true;
   }
 
+  /// Creates a new user-tier account. Returns null on success, or an error
+  /// message. Does not log the new user in.
+  Future<String?> register(String username, String password) async {
+    final u = username.trim().toUpperCase();
+    if (u.isEmpty || password.isEmpty) {
+      return 'ENTER A USERNAME AND PASSWORD';
+    }
+    if (password.length < 4) return 'PASSWORD TOO SHORT';
+    final existing = await _storage.getAccount(u);
+    if (existing != null) return 'ACCOUNT ALREADY EXISTS';
+    final account = UserAccount(
+      username: u,
+      passwordHash: EncryptionService.hashPassword(password),
+      pinHash: EncryptionService.hashPin('000000'),
+      tier: UserTier.agent,
+      createdAt: DateTime.now(),
+    );
+    await _storage.saveAccount(account);
+    await _storage.logAudit('REGISTER', u);
+    return null;
+  }
+
   Future<bool> verifyPin(String pin) async {
     final user = state.user;
     if (user == null) return false;
-    if (EncryptionService.hashPin(pin) != user.pinHash) {
+    if (_isLockedOut) return false;
+    if (!EncryptionService.verifyPin(pin, user.pinHash)) {
+      _recordFailure();
       await _storage.logAudit('PIN_FAIL', user.username);
       return false;
     }
+    _failedAttempts = 0;
     await _storage.logAudit('PIN_OK', user.username);
-    final cleared = user.copyWith(requiresPin: false);
+    var cleared = user.copyWith(requiresPin: false);
+    if (EncryptionService.isLegacyHash(user.pinHash)) {
+      cleared = cleared.copyWith(pinHash: EncryptionService.hashPin(pin));
+    }
     await _storage.saveAccount(cleared);
     state = AuthState(user: cleared);
     return true;
@@ -175,6 +266,7 @@ class UnlockStateData {
     this.titleHeld = false,
     this.showGlitch = false,
     this.fakeCrash = false,
+    this.pathwayPrimed = false,
   });
 
   final UnlockState state;
@@ -182,17 +274,23 @@ class UnlockStateData {
   final bool showGlitch;
   final bool fakeCrash;
 
+  /// Set after the 6-second title hold: opens the route toward the hidden
+  /// dev access portal (difficulty 11 + Russian hold-to-select).
+  final bool pathwayPrimed;
+
   UnlockStateData copyWith({
     UnlockState? state,
     bool? titleHeld,
     bool? showGlitch,
     bool? fakeCrash,
+    bool? pathwayPrimed,
   }) =>
       UnlockStateData(
         state: state ?? this.state,
         titleHeld: titleHeld ?? this.titleHeld,
         showGlitch: showGlitch ?? this.showGlitch,
         fakeCrash: fakeCrash ?? this.fakeCrash,
+        pathwayPrimed: pathwayPrimed ?? this.pathwayPrimed,
       );
 }
 
@@ -221,6 +319,15 @@ class UnlockNotifier extends StateNotifier<UnlockStateData> {
     }
   }
 
+  /// User-tier cipher access (no dev panel) — granted by the Tr1-66-3R code or
+  /// a user-tier signed invite token.
+  void grantUserAccess() {
+    if (state.state.index < UnlockState.unlocked.index) {
+      state = state.copyWith(state: UnlockState.unlocked);
+      _persistUnlock();
+    }
+  }
+
   void onTitleHoldStart() {
     state = state.copyWith(titleHeld: true);
   }
@@ -233,6 +340,7 @@ class UnlockNotifier extends StateNotifier<UnlockStateData> {
       titleHeld: false,
       showGlitch: true,
       state: nextState,
+      pathwayPrimed: true,
     );
     if (nextState != UnlockState.locked) {
       _persistUnlock();
@@ -244,22 +352,10 @@ class UnlockNotifier extends StateNotifier<UnlockStateData> {
     state = state.copyWith(showGlitch: false);
   }
 
-  void checkDifficultyRitual(GameSettings settings) {
-    if (settings.difficulty == UnlockCodes.ritualDifficulty &&
-        settings.language == 'ENGLISH') {
-      if (state.state.index < UnlockState.partial.index) {
-        state = state.copyWith(state: UnlockState.partial);
-        _persistUnlock();
-        _storage.logAudit('UNLOCK_RITUAL', 'SYSTEM', 'Difficulty 11 ritual');
-      }
-    }
-    if (settings.difficulty == int.parse(UnlockCodes.compoundDifficulty) &&
-        settings.language == UnlockCodes.compoundLanguage) {
-      state = state.copyWith(state: UnlockState.unlocked, showGlitch: true);
-      _persistUnlock();
-      _storage.logAudit('UNLOCK_RITUAL', 'SYSTEM', 'Compound unlock');
-    }
-  }
+  /// The difficulty/language settings no longer unlock the cipher on their own;
+  /// they are only part of the ritual that leads to the dev access portal,
+  /// which is the sole entry to the crypto engine.
+  void checkDifficultyRitual(GameSettings settings) {}
 
   Future<void> checkInviteCode(
     String code,
