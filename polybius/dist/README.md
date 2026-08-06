@@ -8,6 +8,15 @@ the R36 S / R36 Ultra / R36 Max/Pro handhelds (and other ARM Linux boxes). Every
 binary inside is ARM aarch64 (verified with `file`): the `polybius` executable,
 the AOT `lib/libapp.so`, the Flutter engine, and the plugin `.so`s.
 
+`polybius-1.0.0-beta.1-r36s-port.zip` — the same aarch64 build wrapped as a
+**drop-in Port** for R36S-class RK3326 firmwares (ArkOS / ROCKNIX / JELOS). It is
+**not** a bootable OS image / `.iso` — the R36S boots its own firmware and games
+are added on top as ports. Copy the archive's `ports/` contents into your
+firmware's ports directory (e.g. `/roms/ports/`) and launch **Polybius** from the
+Ports menu. Includes an X/`xinit` launcher, a `gptokeyb` controller map, and a
+per-launch log. See the bundled `README.txt` for caveats (GTK/Mali GL support on
+RK3326 is limited, so the native app is unverified on the physical device).
+
 ## Install (Android / ARM handheld)
 
 1. Download the `.apk` file.
