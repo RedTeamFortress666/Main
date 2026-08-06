@@ -43,6 +43,31 @@ use. For two machines with no radios, add a `TCPClientInterface` /
 
 `payload` is opaque; the bridge never sees plaintext or the cipher mapping.
 
+## Two-node local test (verified)
+
+`two_node_test.py` stands up nothing itself — run two bridges over a local TCP
+link, then run it to relay a ciphertext payload A→B and assert delivery.
+
+```bash
+pip install --break-system-packages rns lxmf websockets   # or use a venv
+
+# RNS configs: node A = TCP server, node B = TCP client -> A
+mkdir -p /tmp/rns_a /tmp/rns_b /tmp/pb_a /tmp/pb_b
+printf '[reticulum]\n  enable_transport = True\n  share_instance = No\n[interfaces]\n  [[TCP Server]]\n    type = TCPServerInterface\n    interface_enabled = True\n    listen_ip = 127.0.0.1\n    listen_port = 4242\n' > /tmp/rns_a/config
+printf '[reticulum]\n  enable_transport = True\n  share_instance = No\n[interfaces]\n  [[TCP Client]]\n    type = TCPClientInterface\n    interface_enabled = True\n    target_host = 127.0.0.1\n    target_port = 4242\n' > /tmp/rns_b/config
+
+# Two bridges
+python3 polybius_bridge.py --rns-config /tmp/rns_a --storage /tmp/pb_a --port 8765 --announce &
+python3 polybius_bridge.py --rns-config /tmp/rns_b --storage /tmp/pb_b --port 8766 --announce &
+
+python3 two_node_test.py    # -> RESULT: PASS
+```
+
+This has been run on this project: node A relayed an emoji-ciphertext payload
+to node B over a live RNS/LXMF link and B received it identically on the first
+send (`RESULT: PASS`), confirming the bridge + protocol work end-to-end on a
+local two-node mesh.
+
 ## Scaffold status / to harden
 
 - **Path discovery**: sending needs a known path to the recipient (the peer must

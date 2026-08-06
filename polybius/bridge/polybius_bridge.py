@@ -34,7 +34,7 @@ import LXMF
 import websockets
 
 APP_NAME = "polybius"
-STORAGE = os.path.expanduser("~/.polybius_bridge")
+DEFAULT_STORAGE = os.path.expanduser("~/.polybius_bridge")
 
 _clients = set()
 _loop = None  # asyncio loop, set in main()
@@ -50,11 +50,12 @@ def _broadcast(obj):
 
 
 class Bridge:
-    def __init__(self, announce_on_start=False):
-        os.makedirs(STORAGE, exist_ok=True)
-        self.reticulum = RNS.Reticulum(configdir=None)
+    def __init__(self, configdir=None, storage=DEFAULT_STORAGE,
+                 announce_on_start=False):
+        os.makedirs(storage, exist_ok=True)
+        self.reticulum = RNS.Reticulum(configdir=configdir)
 
-        id_path = os.path.join(STORAGE, "identity")
+        id_path = os.path.join(storage, "identity")
         if os.path.isfile(id_path):
             self.identity = RNS.Identity.from_file(id_path)
         else:
@@ -62,7 +63,7 @@ class Bridge:
             self.identity.to_file(id_path)
 
         self.router = LXMF.LXMRouter(
-            identity=self.identity, storagepath=STORAGE
+            identity=self.identity, storagepath=storage
         )
         self.local = self.router.register_delivery_identity(
             self.identity, display_name=APP_NAME
@@ -100,6 +101,7 @@ class Bridge:
         )
         lxm = LXMF.LXMessage(
             dest, self.local, payload.encode("utf-8"), title=APP_NAME,
+            desired_method=LXMF.LXMessage.DIRECT,
         )
         self.router.handle_outbound(lxm)
 
@@ -131,11 +133,16 @@ def main():
     parser = argparse.ArgumentParser(description="Polybius Reticulum bridge")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument("--rns-config", default=None,
+                        help="RNS config directory (default ~/.reticulum)")
+    parser.add_argument("--storage", default=DEFAULT_STORAGE,
+                        help="bridge storage/identity directory")
     parser.add_argument("--announce", action="store_true",
                         help="announce this node on start so peers can reach it")
     args = parser.parse_args()
 
-    bridge = Bridge(announce_on_start=args.announce)
+    bridge = Bridge(configdir=args.rns_config, storage=args.storage,
+                    announce_on_start=args.announce)
     # Periodic re-announce so peers keep a path (best-effort).
     if args.announce:
         def _reannounce():
