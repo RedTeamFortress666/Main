@@ -40,7 +40,61 @@ architecture, so an x86-64 build machine yields an x86-64 bundle that will
    toolchain installed, or
 2. Cross-compile for aarch64 (requires an aarch64 sysroot; see
    `flutter build linux --target-platform linux-arm64`, which still needs an
-   aarch64 GTK sysroot available to CMake).
+   aarch64 GTK sysroot available to CMake), or
+3. Let CI do it: the `linux-arm64` job in `.github/workflows/release.yml` runs
+   on a native `ubuntu-24.04-arm` runner and uploads `polybius-linux-arm64`.
+
+### Cross-compiling aarch64 from an x86-64 host (how the committed bundle was made)
+
+Recent Flutter stable gates the x64→arm64 desktop cross-build behind an
+explicit "not currently supported" check, but the underlying CMake wiring
+(`clang --target=aarch64-linux-gnu` + `--target-sysroot` +
+`FLUTTER_TARGET_PLATFORM_SYSROOT`) still works. The committed
+`dist/polybius-1.0.0-beta.1-linux-arm64.tar.gz` was produced like this:
+
+```bash
+# 1. Host tools (all amd64 — no arm64 execution needed to install these):
+sudo apt-get install -y clang ninja-build cmake pkg-config \
+  binutils-aarch64-linux-gnu qemu-user-static
+
+# 2. Build an arm64 sysroot by DOWNLOADING (not installing) arm64 .debs and
+#    extracting them with dpkg-deb -x — this runs no maintainer scripts, so it
+#    works on an x86-64 box with no arm64/binfmt support:
+sudo apt-get install -y --download-only -o Dir::Cache::archives=/opt/arm64-debs \
+  libgtk-3-dev:arm64 libglib2.0-dev:arm64 liblzma-dev:arm64 libc6-dev:arm64 \
+  libstdc++-14-dev:arm64 libgstreamer1.0-dev:arm64 \
+  libgstreamer-plugins-base1.0-dev:arm64 libsecret-1-dev:arm64 libjsoncpp-dev:arm64
+for d in /opt/arm64-debs/*_arm64.deb /opt/arm64-debs/*_all.deb; do
+  sudo dpkg-deb -x "$d" /opt/arm64-sysroot; done
+# usr-merge so libc linker scripts (/lib/aarch64-linux-gnu/...) resolve:
+sudo ln -sfn usr/lib /opt/arm64-sysroot/lib
+# arch-independent bits that resolve to the host arch (X protocol headers/.pc,
+# shared-mime-info.pc) are safe to copy from the host:
+sudo cp -n /usr/share/pkgconfig/*.pc /opt/arm64-sysroot/usr/share/pkgconfig/
+sudo cp -rn /usr/include/X11/. /opt/arm64-sysroot/usr/include/X11/
+
+# 3. Provide the arm64 engine artifacts Flutter won't auto-fetch for a cross
+#    target (download from the release engine bundle for your engine.version),
+#    and wrap the arm64 gen_snapshot to run under qemu so AOT works on x64:
+#      bin/cache/artifacts/engine/linux-arm64-release/{libflutter_linux_gtk.so,flutter_linux/,gen_snapshot}
+#      bin/cache/artifacts/engine/linux-arm64/icudtl.dat   # arch-independent, copy from linux-x64
+#    gen_snapshot wrapper:
+#      #!/bin/bash
+#      exec qemu-aarch64-static -L /opt/arm64-sysroot "$(dirname "$0")/gen_snapshot.real" "$@"
+
+# 4. Build (the guard in flutter_tools/lib/src/commands/build_linux.dart that
+#    throwToolExits on x64->arm64 must be removed/commented in your local SDK):
+export PKG_CONFIG_SYSROOT_DIR=/opt/arm64-sysroot
+export PKG_CONFIG_LIBDIR=/opt/arm64-sysroot/usr/lib/aarch64-linux-gnu/pkgconfig:/opt/arm64-sysroot/usr/share/pkgconfig
+export CFLAGS=--sysroot=/opt/arm64-sysroot CXXFLAGS=--sysroot=/opt/arm64-sysroot LDFLAGS=--sysroot=/opt/arm64-sysroot
+flutter build linux --release --target-platform=linux-arm64 --target-sysroot=/opt/arm64-sysroot
+# verify: file build/linux/arm64/release/bundle/polybius  -> "ELF 64-bit ... ARM aarch64"
+```
+
+The native CI path (option 3) needs none of this and is the recommended
+producer; the cross recipe exists so a committed bundle can be made without an
+arm64 machine. Either way the result is **unverified on the physical R36
+hardware** (low-end RK3326 GPU/GTK support varies) — treat it as a BETA.
 
 **Controls on R36:** the game supports **touch drag** (move toward finger),
 **WASD/arrow keys**, and **hardware gamepad** analog stick / d-pad via the
