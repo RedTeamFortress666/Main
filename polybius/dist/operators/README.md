@@ -24,7 +24,7 @@ gpg --verify ADMIN_USER_POOL.txt.asc
 | **SpamKat2** | developer | `W1-66-3R` | [spamkat2.md](./spamkat2.md) |
 | **Gam3.0n** | developer | `B1-66-3R` | [gameon.md](./gameon.md) |
 | **KASP3R** | admin | `TR1-66-3R` | [kasper.md](./kasper.md) |
-| **T3mptress** | standard user | `80-081-35` | [temptress.md](./temptress.md) |
+| **T3mptress** | standard user | `80-081-35` | [temptress.md](./temptress.md) (APK + web portable downloads) |
 | **Admin/user pool (10)** | admin + agent | `NQ1…PW9-66-3R` | [ADMIN_USER_POOL.txt.asc](./ADMIN_USER_POOL.txt.asc) |
 
 Treat credentials as sensitive — first-install bootstrap of this BETA.
