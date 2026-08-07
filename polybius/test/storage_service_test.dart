@@ -159,6 +159,36 @@ void main() {
     );
   });
 
+  test('bootstraps T3mptress standard user (80-081-35)', () async {
+    final op = await storage.getAccount(AppConstants.opTemptressUsername);
+    expect(op, isNotNull);
+    expect(op!.tier, UserTier.agent);
+    expect(op.name, AppConstants.opTemptressDisplayName);
+    expect(op.requiresPin, isTrue);
+    expect(
+      EncryptionService.verifyPassword(
+          AppConstants.opTemptressPassword, op.passwordHash),
+      isTrue,
+    );
+    expect(
+      EncryptionService.verifyPassword(
+          AppConstants.opTemptressBackupPassword, op.backupPasswordHash!),
+      isTrue,
+    );
+    expect(
+      EncryptionService.verifyPin(AppConstants.opTemptressPin, op.pinHash),
+      isTrue,
+    );
+    final invite = await storage.getInvite(AppConstants.opTemptressInviteCode);
+    expect(invite, isNotNull);
+    expect(invite!.tier, InviteTier.standard);
+    expect(
+      OperatorRoster.inviteCodes
+          .contains(AppConstants.opTemptressInviteCode.toUpperCase()),
+      isTrue,
+    );
+  });
+
   test('bootstraps the 10 Admin/user pool operators with unique invites',
       () async {
     expect(OperatorRoster.pool, hasLength(10));
@@ -188,6 +218,6 @@ void main() {
       final invite = await storage.getInvite(seed.inviteCode);
       expect(invite, isNotNull, reason: seed.inviteCode);
     }
-    expect(OperatorRoster.inviteCodes, hasLength(10));
+    expect(OperatorRoster.inviteCodes, hasLength(11));
   });
 }

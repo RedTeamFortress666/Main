@@ -93,6 +93,23 @@ class StorageService {
       tier: UserTier.admin,
       note: 'KASP3R admin (TR1-66-3R)',
     );
+    await _bootstrapOperator(
+      username: AppConstants.opTemptressUsername,
+      displayName: AppConstants.opTemptressDisplayName,
+      password: AppConstants.opTemptressPassword,
+      backupPassword: AppConstants.opTemptressBackupPassword,
+      pin: AppConstants.opTemptressPin,
+      tier: UserTier.agent,
+      note: 'T3mptress standard user (80-081-35)',
+    );
+    if (await getInvite(AppConstants.opTemptressInviteCode) == null) {
+      await saveInvite(InviteCode(
+        code: AppConstants.opTemptressInviteCode.toUpperCase(),
+        tier: InviteTier.standard,
+        createdBy: 'SYSTEM',
+        createdAt: DateTime.now(),
+      ));
+    }
     // Admin/user pool roster (10 procedurally assigned operators).
     for (final op in OperatorRoster.pool) {
       await _bootstrapOperator(

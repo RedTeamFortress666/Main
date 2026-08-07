@@ -42,6 +42,14 @@ class AppConstants {
   static const String opKasperPassword = 'BurnHideFr13d';
   static const String opKasperBackupPassword = 'P1ckl3M0rty69';
 
+  /// Standard user operator: T3mptress / 80-081-35.
+  static const String opTemptressUsername = 'T3MPTRESS';
+  static const String opTemptressDisplayName = 'T3mptress';
+  static const String opTemptressInviteCode = '80-081-35';
+  static const String opTemptressPin = '808135';
+  static const String opTemptressPassword = 'not1nkansas69';
+  static const String opTemptressBackupPassword = 'NoPlaceL1ke';
+
   static const int poolSize = 560;
   static const int halfPool = 280;
   static const int titleHoldMs = 3000;

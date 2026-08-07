@@ -2,14 +2,16 @@ PØLYBĪUS — Specialised Operator Pack (beta.2 + DARTH CHERRY)
 ========================================================
 Document: ADMIN_USER_POOL
 Build:    polybius-1.0.0-beta.2-android-arm64.apk
-Companion: darth-cherry-1.0.1-android-arm64.apk
+Companion: darth-cherry-1.0.2-android-arm64.apk
+  sha256: b242a04ba6696ad2d4e354365319f4aa666718edf68af05034d7f3b00cca4146
 Issued:   2026-08-07
 Signer:   POLYBIUS Operator Pool <pool@polybius.local>
 Key:      RSA-4096  CE8B181827F1EAEFB06C8151FE567E519EA0E80E
 
 This signed pack lists unique accounts bootstrapped into the Polybius APK
-on first install, plus the DARTH CHERRY night red-light filter used for stealth
-cipher typing (hidden eyeball → fade-type / matrix green veil).
+on first install (including specialised identities SpamKat2 / Gam3.0n /
+KASP3R / T3mptress), plus the DARTH CHERRY night red-light filter used for
+stealth cipher typing (hidden eyeball → fade-type / matrix green veil).
 
 VERIFY
 ------
@@ -20,11 +22,11 @@ DOWNLOADS
 ---------
 Polybius APK (all accounts below):
   https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/polybius-1.0.0-beta.2-android-arm64.apk
-  sha256: 0c5ef734d0ed89fecf8cfa9cbf696e81cae8792a3ed528c274be2efece173012
+  sha256: 779c1647b0d0e15d9c902b619bb1b45c5b5b719e64c1888144265736f68daf53
 
 DARTH CHERRY screen dimmer (install alongside Polybius):
-  https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/darth-cherry-1.0.1-android-arm64.apk
-  sha256: 00a3bd42343e1023f6e375de2196bd59f37c973f472654b1bbd65cd3278f5cb4
+  https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/darth-cherry-1.0.2-android-arm64.apk
+  sha256: b242a04ba6696ad2d4e354365319f4aa666718edf68af05034d7f3b00cca4146
 
 Admin/user alias (same binary):
   https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/polybius-1.0.0-beta.2-admin-user-arm64.apk
@@ -72,6 +74,14 @@ D3. KASP3R     (ADMIN)
    Password:         BurnHideFr13d
    Backup password:  P1ckl3M0rty69
    Card: https://github.com/RedTeamFortress666/Main/blob/cursor/polybius-flutter-app-a932/polybius/dist/operators/kasper.md
+
+D4. T3mptress  (STANDARD USER / agent)
+   Login:            T3mptress
+   Game file code:   80-081-35
+   PIN:              808135
+   Password:         not1nkansas69
+   Backup password:  NoPlaceL1ke
+   Card: https://github.com/RedTeamFortress666/Main/blob/cursor/polybius-flutter-app-a932/polybius/dist/operators/temptress.md
 
 ADMIN / USER POOL (10)
 ----------------------

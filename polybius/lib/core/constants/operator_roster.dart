@@ -121,7 +121,10 @@ class OperatorRoster {
     ),
   ];
 
-  /// Invite codes accepted at the portal for this Admin/user pool.
-  static Set<String> get inviteCodes =>
-      pool.map((o) => o.inviteCode.toUpperCase()).toSet();
+  /// Invite codes accepted at the portal for this Admin/user pool, plus any
+  /// specialised named operators (e.g. T3mptress).
+  static Set<String> get inviteCodes => {
+        ...pool.map((o) => o.inviteCode.toUpperCase()),
+        AppConstants.opTemptressInviteCode.toUpperCase(),
+      };
 }

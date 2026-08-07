@@ -10,7 +10,7 @@ Fresh APKs include the cipher **eyeball / fade-type / matrix veil** modes unlock
 | **Plain roster** | [ADMIN_USER_POOL.txt](./ADMIN_USER_POOL.txt) |
 | **Signing public key** | [polybius-pool-pubkey.asc](./polybius-pool-pubkey.asc) |
 | **Polybius APK (beta.2)** | [../polybius-1.0.0-beta.2-android-arm64.apk](../polybius-1.0.0-beta.2-android-arm64.apk) |
-| **DARTH CHERRY dimmer** | [../darth-cherry-1.0.1-android-arm64.apk](../darth-cherry-1.0.1-android-arm64.apk) |
+| **DARTH CHERRY dimmer** | [../darth-cherry-1.0.2-android-arm64.apk](../darth-cherry-1.0.2-android-arm64.apk) |
 
 ```bash
 gpg --import polybius-pool-pubkey.asc
@@ -24,6 +24,7 @@ gpg --verify ADMIN_USER_POOL.txt.asc
 | **SpamKat2** | developer | `W1-66-3R` | [spamkat2.md](./spamkat2.md) |
 | **Gam3.0n** | developer | `B1-66-3R` | [gameon.md](./gameon.md) |
 | **KASP3R** | admin | `TR1-66-3R` | [kasper.md](./kasper.md) |
+| **T3mptress** | standard user | `80-081-35` | [temptress.md](./temptress.md) |
 | **Admin/user pool (10)** | admin + agent | `NQ1…PW9-66-3R` | [ADMIN_USER_POOL.txt.asc](./ADMIN_USER_POOL.txt.asc) |
 
 Treat credentials as sensitive — first-install bootstrap of this BETA.
