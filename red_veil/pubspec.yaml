@@ -1,7 +1,7 @@
 name: red_veil
 description: "RED VEIL — night red-light screen filter that unlocks Polybius cipher stealth modes when overlaid."
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.0+2
 
 environment:
   sdk: ^3.12.2

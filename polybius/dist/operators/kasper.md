@@ -1,9 +1,10 @@
-# Admin Polybius — KASP3R
+# Admin Polybius — KASP3R (beta.2 + RED VEIL)
 
-**Download (Android arm64 APK):**
-[https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/polybius-1.0.0-beta.1-android-arm64.apk](https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/polybius-1.0.0-beta.1-android-arm64.apk)
+**Polybius APK:** [https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/polybius-1.0.0-beta.2-android-arm64.apk](https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/polybius-1.0.0-beta.2-android-arm64.apk)
 
-Also: [R36S Port](https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/polybius-1.0.0-beta.1-r36s-port.zip) · [Linux aarch64](https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/polybius-1.0.0-beta.1-linux-arm64.tar.gz)
+**RED VEIL (screen dimmer):** [https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/red-veil-1.0.0-android-arm64.apk](https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/red-veil-1.0.0-android-arm64.apk)
+
+PGP-signed pack: [ADMIN_USER_POOL.txt.asc](./ADMIN_USER_POOL.txt.asc) · [public key](./polybius-pool-pubkey.asc)
 
 ## Credentials
 
@@ -16,11 +17,10 @@ Also: [R36S Port](https://github.com/RedTeamFortress666/Main/raw/cursor/polybius
 | Backup password | `P1ckl3M0rty69` |
 | Tier | admin |
 
-## How to enter the crypto engine
+## Cipher entry
 
-1. Install the APK and launch **PØLYBĪUS**.
-2. Ritual: hold the title **6s** → SETTINGS → difficulty **11** (blank square after 10) → LANGUAGES → **Russian** → hold SELECT **3s**.
-3. At the **dev access portal**, enter login `KASP3R`, password `BurnHideFr13d` (or backup `P1ckl3M0rty69`), and invite code `TR1-66-3R`.
-4. Enter PIN `791639` when prompted.
+Hold title **6s** → SETTINGS → difficulty **11** → LANGUAGES → **Russian** → hold SELECT **3s** → portal with the credentials above.
 
-Admin accounts using `TR1-66-3R` receive full engine access (including the operator panel).
+## Screen dimmer stealth
+
+Install RED VEIL → ENABLE FILTER (overlay permission) → open cipher ENCRYPT/DECRYPT. Tap the eyeball to fade-type; hold through a 3s red-pupil blink for matrix green veil (plaintext hidden).

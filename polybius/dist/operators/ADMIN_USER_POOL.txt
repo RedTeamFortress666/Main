@@ -1,112 +1,125 @@
-PØLYBĪUS — Admin / User Operator Pool
-=====================================
+PØLYBĪUS — Specialised Operator Pack (beta.2 + RED VEIL)
+========================================================
 Document: ADMIN_USER_POOL
-Build:    polybius-1.0.0-beta.1-admin-user-arm64.apk
+Build:    polybius-1.0.0-beta.2-android-arm64.apk
+Companion: red-veil-1.0.0-android-arm64.apk
 Issued:   2026-08-07
 Signer:   POLYBIUS Operator Pool <pool@polybius.local>
-Key:      RSA-4096  2E75D3BFA1C30CB82E0244807CE03A955B9FF56F
+Key:      RSA-4096  CE8B181827F1EAEFB06C8151FE567E519EA0E80E
 
-This document lists the ten procedurally assigned Admin/user accounts
-bootstrapped into the matching Android arm64 APK on first install.
-Passwords are alphanumeric, ≤12 characters, and chosen to be memorable.
-Each operator has a unique invite code for the hidden crypto-engine portal.
+This signed pack lists unique accounts bootstrapped into the Polybius APK
+on first install, plus the RED VEIL night red-light filter used for stealth
+cipher typing (hidden eyeball → fade-type / matrix green veil).
 
-VERIFY this file's cleartext signature with:
-  gpg --verify ADMIN_USER_POOL.txt.asc
-Import the accompanying public key first:
+VERIFY
+------
   gpg --import polybius-pool-pubkey.asc
+  gpg --verify ADMIN_USER_POOL.txt.asc
 
-DOWNLOAD
---------
-https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/polybius-1.0.0-beta.1-admin-user-arm64.apk
+DOWNLOADS
+---------
+Polybius APK (all accounts below):
+  https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/polybius-1.0.0-beta.2-android-arm64.apk
+  sha256: 0c5ef734d0ed89fecf8cfa9cbf696e81cae8792a3ed528c274be2efece173012
+
+RED VEIL screen dimmer (install alongside Polybius):
+  https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/red-veil-1.0.0-android-arm64.apk
+  sha256: 2349631e97c830c181dc92099801decb76bcc421f729dc9d262e90b8292ed13d
+
+Admin/user alias (same binary):
+  https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/polybius-1.0.0-beta.2-admin-user-arm64.apk
+
+HOW TO USE RED VEIL WITH POLYBIUS
+---------------------------------
+1. Install both APKs. Open RED VEIL → grant "Display over other apps" → ENABLE.
+2. Open Polybius → unlock cipher → ENCRYPT or DECRYPT.
+3. Under the red veil a hidden eyeball appears:
+   - Tap  = fade-type (letters flash then fade)
+   - Hold through a 3s red-pupil blink = matrix green veil (plaintext hidden)
+   - Tap again / disable filter = normal visible plaintext
+Without RED VEIL, Polybius shows plaintext normally.
 
 HOW TO ENTER THE CRYPTO ENGINE
 ------------------------------
-1. Install the APK and launch PØLYBĪUS.
-2. Ritual: hold title 6s → SETTINGS → difficulty 11 (blank after 10)
-   → LANGUAGES → Russian → hold SELECT 3s.
-3. At the portal enter: login · password (or backup) · invite code.
-4. Enter the 6-digit PIN when prompted.
+1. Launch PØLYBĪUS.
+2. Ritual: hold title 6s → SETTINGS → difficulty 11 → LANGUAGES → Russian
+   → hold SELECT 3s.
+3. Portal: login · password (or backup) · invite/dev code → PIN.
 
-Admin-tier operators receive full engine access with their invite code.
-Agent-tier operators receive cipher (user) access.
+DEVELOPER / ADMIN IDENTITIES
+----------------------------
 
-OPERATOR ROSTER
----------------
+D1. SpamKat2   (DEVELOPER)
+   Login:            SpamKat2
+   Dev code:         W1-66-3R
+   PIN:              810739
+   Password:         Ev1l-Schm33
+   Backup password:  LilB1tScary99
+   Card: https://github.com/RedTeamFortress666/Main/blob/cursor/polybius-flutter-app-a932/polybius/dist/operators/spamkat2.md
+
+D2. Gam3.0n    (DEVELOPER)
+   Login:            Gam3.0n
+   Dev code:         B1-66-3R
+   PIN:              816639
+   Password:         Dig1tal.Ra1n99
+   Backup password:  01-p0lyb1u5-10
+   Card: https://github.com/RedTeamFortress666/Main/blob/cursor/polybius-flutter-app-a932/polybius/dist/operators/gameon.md
+
+D3. KASP3R     (ADMIN)
+   Login:            KASP3R
+   Invite code:      TR1-66-3R
+   PIN:              791639
+   Password:         BurnHideFr13d
+   Backup password:  P1ckl3M0rty69
+   Card: https://github.com/RedTeamFortress666/Main/blob/cursor/polybius-flutter-app-a932/polybius/dist/operators/kasper.md
+
+ADMIN / USER POOL (10)
+----------------------
 
 1. NiteQueen   (ADMIN)
-   Login:            NiteQueen
-   Invite code:      NQ1-66-3R
-   PIN:              314159
-   Password:         NiteOwl42
-   Backup password:  NightOwl7
+   Login: NiteQueen     Invite: NQ1-66-3R     PIN: 314159
+   Password: NiteOwl42           Backup: NightOwl7
 
 2. Artem3s     (ADMIN)
-   Login:            Artem3s
-   Invite code:      AR2-66-3R
-   PIN:              271828
-   Password:         BowArrow7
-   Backup password:  Huntress9
+   Login: Artem3s       Invite: AR2-66-3R     PIN: 271828
+   Password: BowArrow7           Backup: Huntress9
 
 3. Cup1d!      (USER / agent)
-   Login:            Cup1d!
-   Invite code:      CU3-66-3R
-   PIN:              161803
-   Password:         LoveShot99
-   Backup password:  CupidsBow1
+   Login: Cup1d!        Invite: CU3-66-3R     PIN: 161803
+   Password: LoveShot99          Backup: CupidsBow1
 
 4. Dyslex1c    (USER / agent)
-   Login:            Dyslex1c
-   Invite code:      DX4-66-3R
-   PIN:              141421
-   Password:         SpellMix8
-   Backup password:  LexiFix99
+   Login: Dyslex1c      Invite: DX4-66-3R     PIN: 141421
+   Password: SpellMix8           Backup: LexiFix99
 
 5. WhyTwoK     (USER / agent)
-   Login:            WhyTwoK
-   Invite code:      Y2K-66-3R
-   PIN:              173205
-   Password:         PartyY2K1
-   Backup password:  TwoKWave2
+   Login: WhyTwoK       Invite: Y2K-66-3R     PIN: 173205
+   Password: PartyY2K1           Backup: TwoKWave2
 
 6. M00nFox     (USER / agent)
-   Login:            M00nFox
-   Invite code:      MF5-66-3R
-   PIN:              223606
-   Password:         MoonRun88
-   Backup password:  FoxMoon11
+   Login: M00nFox       Invite: MF5-66-3R     PIN: 223606
+   Password: MoonRun88           Backup: FoxMoon11
 
 7. V3ctorKid   (USER / agent)
-   Login:            V3ctorKid
-   Invite code:      VK6-66-3R
-   PIN:              244949
-   Password:         VecTor99
-   Backup password:  KidVector3
+   Login: V3ctorKid     Invite: VK6-66-3R     PIN: 244949
+   Password: VecTor99            Backup: KidVector3
 
 8. Gl1tchCat   (USER / agent)
-   Login:            Gl1tchCat
-   Invite code:      GC7-66-3R
-   PIN:              264575
-   Password:         CatGlitch1
-   Backup password:  GlitchMe2
+   Login: Gl1tchCat     Invite: GC7-66-3R     PIN: 264575
+   Password: CatGlitch1          Backup: GlitchMe2
 
 9. H0neyBad    (USER / agent)
-   Login:            H0neyBad
-   Invite code:      HB8-66-3R
-   PIN:              331127
-   Password:         HoneyRun7
-   Backup password:  BadHoney9
+   Login: H0neyBad      Invite: HB8-66-3R     PIN: 331127
+   Password: HoneyRun7           Backup: BadHoney9
 
 10. PixelW1z   (USER / agent)
-   Login:            PixelW1z
-   Invite code:      PW9-66-3R
-   PIN:              367879
-   Password:         PixelZap12
-   Backup password:  WizPixel5
+   Login: PixelW1z      Invite: PW9-66-3R     PIN: 367879
+   Password: PixelZap12          Backup: WizPixel5
 
 NOTES
 -----
 - Treat this document as sensitive. Distribute only to intended operators.
-- Backup passwords are alternate logins (either primary OR backup works).
-- Invite codes are case-insensitive at the portal.
-- This is a BETA build; credentials are first-install bootstrap only.
+- Backup passwords are alternate logins (primary OR backup).
+- Invite/dev codes are case-insensitive at the portal.
+- BETA build; credentials are first-install bootstrap only.
+- Screen-dimmer stealth requires RED VEIL running with overlay permission.
