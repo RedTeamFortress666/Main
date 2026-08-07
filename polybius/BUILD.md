@@ -129,15 +129,51 @@ cp android/key.properties.example android/key.properties   # then edit it
 
 ## iOS
 
-**Cannot be built on this Linux VM.** Requires macOS + Xcode + an Apple
-Developer account for signing/provisioning.
+**Cannot be built on this Linux VM** — iOS compilation needs macOS + Xcode. The
+project is fully configured for iOS, so on a Mac it builds with no extra setup:
 
 ```bash
-# on macOS:
-flutter build ipa --release
+# on macOS with Xcode installed:
+flutter pub get
+cd ios && pod install && cd ..          # or let `flutter build` do it
+flutter build ios --release --no-codesign   # unsigned, for CI / sideloading
+# or, signed, for TestFlight / App Store / on-device debug:
+flutter build ipa --release             # needs an Apple Developer signing identity
 ```
 
-Bundle id is `com.polybius.polybius`.
+The GitHub Actions `ios` job (`.github/workflows/release.yml`, `macos-latest`
+runner) builds unsigned and packages a sideloadable **`polybius-ios-unsigned.ipa`**
+(`Payload/Runner.app` layout).
+
+**Config that makes this a real iOS port (not just the scaffold):**
+
+- **Bundle id** `com.polybius.polybius`; display name **PØLYBĪUS** (`ios/Runner/Info.plist`).
+- **Deployment target iOS 13.0** (`ios/Podfile` + `Runner.xcodeproj`). Driven by
+  `audioplayers` (13.0); every other plugin is lower (`mobile_scanner` 12.0,
+  `share_plus` 12.0, `flutter_secure_storage` 9.0).
+- **Permissions / ATS** in `Info.plist`:
+  - `NSCameraUsageDescription` — the QR **pool-sync scanner** (`mobile_scanner`).
+    Without it iOS *terminates* the app the instant the camera opens.
+  - `NSLocalNetworkUsageDescription` + `NSAppTransportSecurity →
+    NSAllowsLocalNetworking` — lets the **Reticulum relay** reach a bridge on the
+    LAN over `ws://` without disabling ATS globally.
+  - `ITSAppUsesNonExemptEncryption = false` — skips the export-compliance prompt
+    on every TestFlight/sideload build. **Re-evaluate before a public App Store
+    submission**, since the app ships custom crypto.
+
+**Per-plugin iOS status:** `flutter_secure_storage` → Keychain (genuinely
+device-scoped here, unlike web/Linux); `audioplayers`, `share_plus`,
+`mobile_scanner`, `qr_flutter`, `gamepads` (via `gamepads_ios` / GameController)
+all have iOS implementations. The `gamepads` stream is guarded with `onError`, so
+no-controller devices never crash. The **Reticulum mesh** has no in-app node on
+iOS — `polybius_bridge.py` is a desktop companion — so on iOS the relay screen
+lets you set the bridge's **LAN URL** (`ws://<host>:8765`, persisted) and shows
+`MESH OFFLINE` until one is reachable.
+
+**Sideloading the unsigned IPA** (no paid account needed for personal use):
+AltStore / SideStore, Sideloadly, or TrollStore on supported iOS versions. A
+free Apple ID gives a 7-day signing certificate; a paid Developer account or
+TestFlight is needed for longer-lived installs.
 
 ---
 

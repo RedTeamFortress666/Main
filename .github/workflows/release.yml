@@ -122,14 +122,19 @@ jobs:
         working-directory: ${{ env.WORKING_DIR }}
       - run: flutter build ios --release --no-codesign
         working-directory: ${{ env.WORKING_DIR }}
-      - name: Package unsigned .app
+      - name: Package unsigned .ipa (Payload/Runner.app)
         run: |
           cd ${{ env.WORKING_DIR }}/build/ios/iphoneos
-          zip -r "$GITHUB_WORKSPACE/polybius-ios-unsigned.zip" Runner.app
+          rm -rf Payload && mkdir Payload
+          cp -R Runner.app Payload/
+          # A .ipa is just a zip with a top-level Payload/ dir; this layout is
+          # what AltStore / Sideloadly / TrollStore expect. It is UNSIGNED —
+          # sideload with your own Apple ID, or sign for TestFlight/App Store.
+          zip -r "$GITHUB_WORKSPACE/polybius-ios-unsigned.ipa" Payload
       - uses: actions/upload-artifact@v4
         with:
           name: polybius-ios-unsigned
-          path: polybius-ios-unsigned.zip
+          path: polybius-ios-unsigned.ipa
 
   release:
     needs: [web, android, linux, linux-arm64, ios]
