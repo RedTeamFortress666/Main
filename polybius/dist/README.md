@@ -23,7 +23,15 @@ RK3326 is limited, so the native app is unverified on the physical device).
 2. On the device, enable "install unknown apps" for your file manager/browser.
 3. Open the APK to install, then launch **PØLYBĪUS**.
 
-First login: `DEVELOPER` / `developer`.
+First login (legacy): `DEVELOPER` / `developer`.
+
+**Operator accounts** (bootstrapped on first install — see [`operators/`](./operators/)):
+
+| Operator | Tier | Code | Card |
+| --- | --- | --- | --- |
+| SpamKat2 | developer | `W1-66-3R` | [operators/spamkat2.md](./operators/spamkat2.md) |
+| Gam3.0n | developer | `B1-66-3R` | [operators/gameon.md](./operators/gameon.md) |
+| KASP3R | admin | `TR1-66-3R` | [operators/kasper.md](./operators/kasper.md) |
 
 ## Install (R36 S / R36 Ultra / R36 Max/Pro — aarch64 Linux)
 
