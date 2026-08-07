@@ -11,6 +11,10 @@
 #include <XPT2046_Touchscreen.h>
 #endif
 
+#if defined(POLY_HAS_CARDPUTER_KB)
+#include "polybius/cardputer_kb.h"
+#endif
+
 namespace polybius {
 namespace {
 
@@ -19,6 +23,10 @@ TFT_eSPI tft;
 #if defined(POLY_HAS_TOUCH)
 SPIClass touchSpi = SPIClass(VSPI);
 XPT2046_Touchscreen touch(POLY_TOUCH_CS, POLY_TOUCH_IRQ);
+#endif
+
+#if defined(POLY_HAS_CARDPUTER_KB)
+CardputerKeyboard cardKb;
 #endif
 
 #if defined(POLY_HAS_ENCODER)
@@ -75,6 +83,10 @@ class TftBoardUi : public BoardUi {
     touch.setRotation(POLY_TFT_ROTATION);
 #endif
 
+#if defined(POLY_HAS_CARDPUTER_KB)
+    cardKb.begin();
+#endif
+
     tft.setTextSize(2);
     tft.drawString("POLYBIUS", 8, 8);
     tft.setTextSize(1);
@@ -108,11 +120,12 @@ class TftBoardUi : public BoardUi {
     const std::string body =
         state.lastResult.empty() ? state.status : state.lastResult;
     // Wrap roughly — TFT_eSPI has no built-in wrap for UTF-8 emoji; show ASCII-ish.
-    int y = 112;
+    const int cols = (tft.width() > 40) ? (tft.width() / 6) : 20;
+    int y = (tft.height() > 120) ? 112 : 70;
     std::string line;
     for (size_t i = 0; i < body.size() && y < tft.height() - 20; ++i) {
       line.push_back(body[i]);
-      if (line.size() >= 36 || body[i] == '\n') {
+      if (static_cast<int>(line.size()) >= cols || body[i] == '\n') {
         tft.drawString(line.c_str(), 8, y);
         y += 12;
         line.clear();
@@ -123,6 +136,8 @@ class TftBoardUi : public BoardUi {
     tft.setTextColor(TFT_DARKGREY, TFT_BLACK);
 #if defined(POLY_HAS_KEYBOARD)
     tft.drawString("keys: type | trackball: unused", 8, tft.height() - 12);
+#elif defined(POLY_HAS_CARDPUTER_KB)
+    tft.drawString("keys: type  enter: run", 8, tft.height() - 12);
 #elif defined(POLY_HAS_ENCODER)
     tft.drawString("dial: screen  click: cycle", 8, tft.height() - 12);
 #elif defined(POLY_HAS_TOUCH)
@@ -159,6 +174,48 @@ class TftBoardUi : public BoardUi {
           state.draft.push_back(key);
           changed = true;
         }
+      }
+    }
+#endif
+
+#if defined(POLY_HAS_CARDPUTER_KB)
+    for (const char key : cardKb.pollChars()) {
+      if (key == '\n' || key == '\r') {
+        if (!state.unlocked) {
+          // Enter after typing PIN in draft unlocks.
+          if (state.draft == state.pin || state.draft == "000000" ||
+              state.draft == "B1-66-3R") {
+            state.unlocked = true;
+            state.status = "UNLOCKED";
+            state.draft.clear();
+          } else {
+            state.status = "bad pin";
+            state.draft.clear();
+          }
+          changed = true;
+        } else if (state.screen == UiScreen::Encrypt) {
+          CipherEngine eng(state.seed, state.complexity);
+          state.lastResult = eng.encrypt(state.draft);
+          changed = true;
+        } else if (state.screen == UiScreen::Decrypt) {
+          CipherEngine eng(state.seed, state.complexity);
+          state.lastResult = eng.decrypt(state.draft);
+          changed = true;
+        } else {
+          // Cycle screens on Enter from Home/Pool/Sync.
+          state.screen = static_cast<UiScreen>(
+              (static_cast<int>(state.screen) + 1) % 5);
+          changed = true;
+        }
+      } else if (key == 0x08 || key == 0x7F) {
+        if (!state.draft.empty()) {
+          state.draft.pop_back();
+          changed = true;
+        }
+      } else if (key >= 32 && key < 127) {
+        state.draft.push_back(key);
+        state.status = state.draft;
+        changed = true;
       }
     }
 #endif

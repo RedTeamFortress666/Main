@@ -28,6 +28,10 @@
   #define POLY_TOUCH_MISO 39
   #define POLY_TOUCH_CLK 25
   #define POLY_TOUCH_CS 33
+#elif defined(BOARD_CARDPUTER)
+  #define POLY_BOARD_NAME "Cardputer"
+  #define POLY_HAS_CARDPUTER_KB 1
+  #define POLY_TFT_ROTATION 1
 #else
   #define POLY_BOARD_NAME "UNKNOWN"
   #define POLY_TFT_ROTATION 1

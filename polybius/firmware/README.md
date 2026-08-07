@@ -7,6 +7,7 @@ Offline emoji-cipher client for:
 | `tdeck` | LilyGO **T-Deck** (ESP32-S3, 320×240) | Physical keyboard + USB serial |
 | `tembed` | LilyGO **T-Embed S3** (170×320) | Rotary encoder + USB serial |
 | `cyd` | **CYD** ESP32-2432S028 (240×320) | Touch + USB serial |
+| `cardputer` | M5Stack **Cardputer** (240×135) | Matrix keyboard + USB serial |
 
 The cipher engine is a **byte-compatible** port of the Flutter `CipherEngine` /
 `DailyPool` / `PoolSync` stack (same pools, rotors, and ciphertext as the phone
@@ -23,6 +24,7 @@ make test
 pio run -e tdeck
 pio run -e tembed
 pio run -e cyd
+pio run -e cardputer
 
 pio run -e tdeck -t upload
 pio device monitor -b 115200
@@ -65,5 +67,7 @@ firmware/
 - T-Deck / T-Embed require the peripheral **power-on** GPIO driven HIGH.
 - T-Embed here targets the **S3** revision (GPIO46 power, ST7789 SPI). Classic
   ESP32 T-Embed pinouts differ — adjust `board_pins.h` / `platformio.ini`.
+- Cardputer targets the original **74HC138 matrix** keyboard (not Cardputer ADV
+  TCA8418). USB serial works on both.
 - CYD touch coordinates vary by panel revision; use serial if taps feel off.
 - Arcade decoy, Red Veil, and Reticulum are **not** ported — cipher + pool sync only.
