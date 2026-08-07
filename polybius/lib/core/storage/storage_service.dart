@@ -252,6 +252,17 @@ class StorageService {
     await Hive.box(settingsBox).put('cipherComplexity', value);
   }
 
+  /// Reticulum bridge WebSocket URL. Defaults to the local desktop companion;
+  /// on iOS/Android point this at a bridge reachable on the LAN.
+  String getReticulumUrl() {
+    final raw = Hive.box(settingsBox).get('reticulumUrl');
+    return raw is String && raw.isNotEmpty ? raw : 'ws://127.0.0.1:8765';
+  }
+
+  Future<void> setReticulumUrl(String url) async {
+    await Hive.box(settingsBox).put('reticulumUrl', url);
+  }
+
   /// Pool rotation window in hours (VALKYRIE sets this to 2).
   Future<int> getPoolWindowHours() async {
     final raw = Hive.box(settingsBox).get('poolWindowHours');

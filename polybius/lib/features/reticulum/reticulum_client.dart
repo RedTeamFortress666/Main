@@ -40,7 +40,9 @@ class ErrorFrame extends ReticulumFrame {
 class ReticulumClient {
   ReticulumClient({this.url = 'ws://127.0.0.1:8765'});
 
-  final String url;
+  /// Target bridge URL. Mutable so callers can repoint at a LAN bridge (e.g. on
+  /// iOS/Android where 127.0.0.1 has no local bridge) before [connect].
+  String url;
 
   WebSocketChannel? _channel;
   final _incoming = StreamController<ReticulumMessage>.broadcast();
@@ -54,9 +56,10 @@ class ReticulumClient {
   Stream<String> get errors => _errors.stream;
   Stream<String> get address => _address.stream;
 
-  Future<bool> connect() async {
+  Future<bool> connect({String? url}) async {
+    if (url != null && url.isNotEmpty) this.url = url;
     try {
-      final channel = WebSocketChannel.connect(Uri.parse(url));
+      final channel = WebSocketChannel.connect(Uri.parse(this.url));
       await channel.ready;
       _channel = channel;
       connected = true;

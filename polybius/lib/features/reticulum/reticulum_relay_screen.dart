@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 import 'package:polybius/features/reticulum/reticulum_client.dart';
 
@@ -20,6 +21,7 @@ class ReticulumRelayScreen extends ConsumerStatefulWidget {
 class _ReticulumRelayScreenState extends ConsumerState<ReticulumRelayScreen> {
   final _peerController = TextEditingController();
   final _payloadController = TextEditingController();
+  final _urlController = TextEditingController();
   final List<ReticulumMessage> _received = [];
   final List<StreamSubscription> _subs = [];
 
@@ -31,10 +33,7 @@ class _ReticulumRelayScreenState extends ConsumerState<ReticulumRelayScreen> {
   @override
   void initState() {
     super.initState();
-    _connect();
-  }
-
-  Future<void> _connect() async {
+    _urlController.text = ref.read(storageServiceProvider).getReticulumUrl();
     final client = ref.read(reticulumClientProvider);
     _subs.add(client.address.listen((a) {
       if (mounted) setState(() => _address = a);
@@ -45,7 +44,16 @@ class _ReticulumRelayScreenState extends ConsumerState<ReticulumRelayScreen> {
     _subs.add(client.errors.listen((e) {
       if (mounted) setState(() => _status = e);
     }));
-    final ok = await client.connect();
+    _open();
+  }
+
+  Future<void> _open() async {
+    final client = ref.read(reticulumClientProvider);
+    final url = _urlController.text.trim();
+    setState(() => _connecting = true);
+    // Persist the chosen bridge URL so it sticks across launches.
+    await ref.read(storageServiceProvider).setReticulumUrl(url);
+    final ok = await client.connect(url: url);
     if (!mounted) return;
     setState(() {
       _connecting = false;
@@ -55,6 +63,16 @@ class _ReticulumRelayScreenState extends ConsumerState<ReticulumRelayScreen> {
     });
   }
 
+  Future<void> _reconnect() async {
+    await ref.read(reticulumClientProvider).disconnect();
+    if (!mounted) return;
+    setState(() {
+      _connected = false;
+      _address = null;
+    });
+    await _open();
+  }
+
   @override
   void dispose() {
     for (final s in _subs) {
@@ -62,6 +80,7 @@ class _ReticulumRelayScreenState extends ConsumerState<ReticulumRelayScreen> {
     }
     _peerController.dispose();
     _payloadController.dispose();
+    _urlController.dispose();
     super.dispose();
   }
 
@@ -114,6 +133,40 @@ class _ReticulumRelayScreenState extends ConsumerState<ReticulumRelayScreen> {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 12),
+          const Text('BRIDGE URL',
+              style: TextStyle(
+                  color: NeonTheme.neonPink, fontFamily: 'monospace', fontSize: 11)),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _urlController,
+                  style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    hintText: 'ws://<bridge-host>:8765',
+                    hintStyle: TextStyle(color: Colors.white24, fontSize: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              OutlinedButton.icon(
+                onPressed: _connecting ? null : _reconnect,
+                icon: const Icon(Icons.sync, size: 16),
+                label: const Text('RECONNECT', style: TextStyle(fontSize: 11)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: NeonTheme.neonCyan,
+                  side: const BorderSide(color: NeonTheme.neonCyan),
+                ),
+              ),
+            ],
+          ),
+          const Text(
+            'The bridge is a desktop companion (polybius_bridge.py). On phones,'
+            ' point this at its LAN address, e.g. ws://192.168.1.50:8765.',
+            style: TextStyle(color: Colors.white38, fontSize: 10),
           ),
           const SizedBox(height: 12),
           const Text('YOUR ADDRESS',
