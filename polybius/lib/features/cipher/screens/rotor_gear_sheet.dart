@@ -61,7 +61,7 @@ class RotorGearSheet extends ConsumerWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Pool: ${engine.dateKey} | Alphabet: ${Rotor.alphabetSize}',
+                  'Pool: ${engine.poolId} | Alphabet: ${Rotor.alphabetSize}',
                   style: const TextStyle(color: Colors.white38, fontSize: 10),
                 ),
               ],

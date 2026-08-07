@@ -1,7 +1,7 @@
 name: polybius
 description: "PØLYBĪUS — covert encrypted messaging disguised as a retro arcade shooter."
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.0-beta.1+1
 
 environment:
   sdk: ^3.12.2
@@ -19,12 +19,33 @@ dependencies:
   go_router: ^14.8.1
   uuid: ^4.5.1
   crypto: ^3.0.6
-  collection: ^1.19.1
+  cryptography: ^2.9.0
+  gamepads: ^0.1.10+5
+  audioplayers: ^6.8.1
+  qr_flutter: ^4.1.0
+  share_plus: ^12.0.2
+  mobile_scanner: ^7.4.0
+  pointycastle: ^3.9.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  integration_test:
+    sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/audio/polybius_theme.wav
+
+flutter_launcher_icons:
+  image_path: "assets/icon/polybius_icon.png"
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  web:
+    generate: true
+  min_sdk_android: 21
+  background_color_ios: "#000000"
