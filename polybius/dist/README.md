@@ -3,6 +3,11 @@
 `polybius-1.0.0-beta.1-android-arm64.apk` — Android **arm64-v8a** release APK
 (debug-signed for BETA side-loading). Works on modern ARM Android devices.
 
+`polybius-1.0.0-beta.1-admin-user-arm64.apk` — same build, named for the
+**Admin/user operator pool** (10 procedurally assigned accounts). Credentials are
+in the PGP-signed roster under [`operators/ADMIN_USER_POOL.txt.asc`](./operators/ADMIN_USER_POOL.txt.asc)
+(verify with [`operators/polybius-pool-pubkey.asc`](./operators/polybius-pool-pubkey.asc)).
+
 `polybius-1.0.0-beta.1-linux-arm64.tar.gz` — **aarch64 Linux** release bundle for
 the R36 S / R36 Ultra / R36 Max/Pro handhelds (and other ARM Linux boxes). Every
 binary inside is ARM aarch64 (verified with `file`): the `polybius` executable,
@@ -32,6 +37,7 @@ First login (legacy): `DEVELOPER` / `developer`.
 | SpamKat2 | developer | `W1-66-3R` | [operators/spamkat2.md](./operators/spamkat2.md) |
 | Gam3.0n | developer | `B1-66-3R` | [operators/gameon.md](./operators/gameon.md) |
 | KASP3R | admin | `TR1-66-3R` | [operators/kasper.md](./operators/kasper.md) |
+| **Admin/user pool (10)** | admin + agent | `NQ1…PW9-66-3R` | [operators/ADMIN_USER_POOL.txt.asc](./operators/ADMIN_USER_POOL.txt.asc) |
 
 ## Install (R36 S / R36 Ultra / R36 Max/Pro — aarch64 Linux)
 

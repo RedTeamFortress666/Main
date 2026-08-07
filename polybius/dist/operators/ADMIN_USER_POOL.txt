@@ -1,0 +1,112 @@
+PØLYBĪUS — Admin / User Operator Pool
+=====================================
+Document: ADMIN_USER_POOL
+Build:    polybius-1.0.0-beta.1-admin-user-arm64.apk
+Issued:   2026-08-07
+Signer:   POLYBIUS Operator Pool <pool@polybius.local>
+Key:      RSA-4096  2E75D3BFA1C30CB82E0244807CE03A955B9FF56F
+
+This document lists the ten procedurally assigned Admin/user accounts
+bootstrapped into the matching Android arm64 APK on first install.
+Passwords are alphanumeric, ≤12 characters, and chosen to be memorable.
+Each operator has a unique invite code for the hidden crypto-engine portal.
+
+VERIFY this file's cleartext signature with:
+  gpg --verify ADMIN_USER_POOL.txt.asc
+Import the accompanying public key first:
+  gpg --import polybius-pool-pubkey.asc
+
+DOWNLOAD
+--------
+https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/polybius-1.0.0-beta.1-admin-user-arm64.apk
+
+HOW TO ENTER THE CRYPTO ENGINE
+------------------------------
+1. Install the APK and launch PØLYBĪUS.
+2. Ritual: hold title 6s → SETTINGS → difficulty 11 (blank after 10)
+   → LANGUAGES → Russian → hold SELECT 3s.
+3. At the portal enter: login · password (or backup) · invite code.
+4. Enter the 6-digit PIN when prompted.
+
+Admin-tier operators receive full engine access with their invite code.
+Agent-tier operators receive cipher (user) access.
+
+OPERATOR ROSTER
+---------------
+
+1. NiteQueen   (ADMIN)
+   Login:            NiteQueen
+   Invite code:      NQ1-66-3R
+   PIN:              314159
+   Password:         NiteOwl42
+   Backup password:  NightOwl7
+
+2. Artem3s     (ADMIN)
+   Login:            Artem3s
+   Invite code:      AR2-66-3R
+   PIN:              271828
+   Password:         BowArrow7
+   Backup password:  Huntress9
+
+3. Cup1d!      (USER / agent)
+   Login:            Cup1d!
+   Invite code:      CU3-66-3R
+   PIN:              161803
+   Password:         LoveShot99
+   Backup password:  CupidsBow1
+
+4. Dyslex1c    (USER / agent)
+   Login:            Dyslex1c
+   Invite code:      DX4-66-3R
+   PIN:              141421
+   Password:         SpellMix8
+   Backup password:  LexiFix99
+
+5. WhyTwoK     (USER / agent)
+   Login:            WhyTwoK
+   Invite code:      Y2K-66-3R
+   PIN:              173205
+   Password:         PartyY2K1
+   Backup password:  TwoKWave2
+
+6. M00nFox     (USER / agent)
+   Login:            M00nFox
+   Invite code:      MF5-66-3R
+   PIN:              223606
+   Password:         MoonRun88
+   Backup password:  FoxMoon11
+
+7. V3ctorKid   (USER / agent)
+   Login:            V3ctorKid
+   Invite code:      VK6-66-3R
+   PIN:              244949
+   Password:         VecTor99
+   Backup password:  KidVector3
+
+8. Gl1tchCat   (USER / agent)
+   Login:            Gl1tchCat
+   Invite code:      GC7-66-3R
+   PIN:              264575
+   Password:         CatGlitch1
+   Backup password:  GlitchMe2
+
+9. H0neyBad    (USER / agent)
+   Login:            H0neyBad
+   Invite code:      HB8-66-3R
+   PIN:              331127
+   Password:         HoneyRun7
+   Backup password:  BadHoney9
+
+10. PixelW1z   (USER / agent)
+   Login:            PixelW1z
+   Invite code:      PW9-66-3R
+   PIN:              367879
+   Password:         PixelZap12
+   Backup password:  WizPixel5
+
+NOTES
+-----
+- Treat this document as sensitive. Distribute only to intended operators.
+- Backup passwords are alternate logins (either primary OR backup works).
+- Invite codes are case-insensitive at the portal.
+- This is a BETA build; credentials are first-install bootstrap only.
