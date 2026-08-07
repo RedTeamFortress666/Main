@@ -19,6 +19,10 @@ hologram when Polybius matrix mode is engaged. Overlay it on Polybius cipher
 ENCRYPT/DECRYPT to reveal the hidden eyeball (fade-type / matrix green veil).
 See [`../docs/RED_VEIL.md`](../docs/RED_VEIL.md).
 
+`esp32/` — PlatformIO firmware binaries for **LilyGO T-Deck**, **T-Embed S3**, and
+**CYD** (Cheap Yellow Display). Cipher-compatible with the Flutter app; see
+[`../firmware/README.md`](../firmware/README.md) and [`../docs/ESP32.md`](../docs/ESP32.md).
+
 `polybius-1.0.0-beta.1-linux-arm64.tar.gz` — **aarch64 Linux** release bundle for
 the R36 S / R36 Ultra / R36 Max/Pro handhelds (and other ARM Linux boxes). Every
 binary inside is ARM aarch64 (verified with `file`): the `polybius` executable,
