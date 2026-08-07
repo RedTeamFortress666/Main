@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:red_veil/death_star_display.dart';
 
 /// Local status endpoint while the filter is active (for optional tooling).
 const int kFilterStatusPort = 18766;
@@ -50,9 +51,16 @@ class _FilterControlScreenState extends State<FilterControlScreen>
 
   double _intensity = 0.55;
   bool _active = false;
+  bool _matrix = false;
   bool _busy = false;
   String? _status;
   HttpServer? _statusServer;
+
+  DeathStarLook get _look {
+    if (!_active) return DeathStarLook.idle;
+    if (_matrix) return DeathStarLook.matrix;
+    return DeathStarLook.filterOn;
+  }
 
   @override
   void initState() {
@@ -87,13 +95,29 @@ class _FilterControlScreenState extends State<FilterControlScreen>
       _statusServer = server;
       server.listen((req) async {
         try {
-          if (req.uri.path == '/veil' ||
+          if (req.method == 'POST' &&
+              (req.uri.path == '/mode' || req.uri.path == '/veil/mode')) {
+            final raw = await utf8.decoder.bind(req).join();
+            try {
+              final json = jsonDecode(raw);
+              if (json is Map && json.containsKey('matrix')) {
+                final next = json['matrix'] == true;
+                if (mounted) {
+                  setState(() => _matrix = next && _active);
+                } else {
+                  _matrix = next && _active;
+                }
+              }
+            } catch (_) {}
+            req.response.statusCode = HttpStatus.noContent;
+          } else if (req.uri.path == '/veil' ||
               req.uri.path == '/status' ||
               req.uri.path == '/') {
             final body = jsonEncode({
               'active': true,
               'tint': 'red',
               'intensity': _intensity,
+              'matrix': _matrix,
               'app': 'darth_cherry',
             });
             req.response.headers.contentType = ContentType.json;
@@ -153,6 +177,7 @@ class _FilterControlScreenState extends State<FilterControlScreen>
     if (!mounted) return;
     setState(() {
       _active = true;
+      _matrix = false;
       _status = isAndroid
           ? 'FILTER ON — cherry red veil over your screen.'
           : 'FILTER ON (preview). On Android this overlays other apps.';
@@ -183,10 +208,12 @@ class _FilterControlScreenState extends State<FilterControlScreen>
     if (mounted) {
       setState(() {
         _active = false;
+        _matrix = false;
         _status = 'FILTER OFF';
       });
     } else {
       _active = false;
+      _matrix = false;
     }
   }
 
@@ -203,97 +230,105 @@ class _FilterControlScreenState extends State<FilterControlScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 16),
-              Center(
-                child: Image.asset(
-                  'assets/icons/darth_cherry.png',
-                  width: 120,
-                  height: 120,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, _, _) => const Icon(
-                    Icons.brightness_2,
-                    size: 72,
-                    color: Color(0xFFFF2A2A),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final starSize =
+                (constraints.maxHeight * 0.28).clamp(120.0, 200.0);
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const SizedBox(height: 8),
+                      Center(
+                        child: DeathStarDisplay(
+                          look: _look,
+                          size: starSize,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'DARTH CHERRY',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 32,
+                          letterSpacing: 4,
+                          color: Color(0xFFFF2A2A),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'night red-light filter',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Color(0xFFAA4444),
+                          letterSpacing: 3,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      const Text(
+                        'A cherry-red screen veil for late hours — easier on night vision, '
+                        'warmer on the eyes. Enable the filter to dim and tint your display; '
+                        'on Android it floats over other apps without blocking touch.',
+                        style:
+                            TextStyle(color: Color(0xFFCC8888), height: 1.5),
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        'INTENSITY  ${(_intensity * 100).round()}%',
+                        style: const TextStyle(
+                          color: Color(0xFFFF6666),
+                          fontSize: 12,
+                        ),
+                      ),
+                      Slider(
+                        value: _intensity,
+                        min: 0.15,
+                        max: 0.85,
+                        activeColor: const Color(0xFFFF2A2A),
+                        inactiveColor: const Color(0xFF4A1010),
+                        onChanged: _updateIntensity,
+                      ),
+                      const Spacer(),
+                      if (_status != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: Text(
+                            _status!,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Color(0xFFFFAA88),
+                              fontSize: 12,
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ElevatedButton(
+                        onPressed: _busy ? null : _toggle,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _active
+                              ? const Color(0xFF4A1010)
+                              : const Color(0xFF8B0000),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 18),
+                        ),
+                        child: Text(
+                          _active ? 'DISABLE FILTER' : 'ENABLE FILTER',
+                          style: const TextStyle(letterSpacing: 2),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
-              const Text(
-                'DARTH CHERRY',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 32,
-                  letterSpacing: 4,
-                  color: Color(0xFFFF2A2A),
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'night red-light filter',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Color(0xFFAA4444),
-                  letterSpacing: 3,
-                  fontSize: 12,
-                ),
-              ),
-              const SizedBox(height: 28),
-              const Text(
-                'A cherry-red screen veil for late hours — easier on night vision, '
-                'warmer on the eyes. Enable the filter to dim and tint your display; '
-                'on Android it floats over other apps without blocking touch.',
-                style: TextStyle(color: Color(0xFFCC8888), height: 1.5),
-              ),
-              const SizedBox(height: 28),
-              Text(
-                'INTENSITY  ${(_intensity * 100).round()}%',
-                style: const TextStyle(color: Color(0xFFFF6666), fontSize: 12),
-              ),
-              Slider(
-                value: _intensity,
-                min: 0.15,
-                max: 0.85,
-                activeColor: const Color(0xFFFF2A2A),
-                inactiveColor: const Color(0xFF4A1010),
-                onChanged: _updateIntensity,
-              ),
-              const Spacer(),
-              if (_status != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: Text(
-                    _status!,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Color(0xFFFFAA88),
-                      fontSize: 12,
-                      height: 1.4,
-                    ),
-                  ),
-                ),
-              ElevatedButton(
-                onPressed: _busy ? null : _toggle,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _active
-                      ? const Color(0xFF4A1010)
-                      : const Color(0xFF8B0000),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 18),
-                ),
-                child: Text(
-                  _active ? 'DISABLE FILTER' : 'ENABLE FILTER',
-                  style: const TextStyle(letterSpacing: 2),
-                ),
-              ),
-              const SizedBox(height: 24),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );

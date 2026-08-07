@@ -5,10 +5,10 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Matches [kVeilBeaconPort] in the red_veil companion app.
+/// Matches the DARTH CHERRY companion status port.
 const int kRedVeilBeaconPort = 18766;
 
-/// Stealth typing modes revealed only while RED VEIL is overlaid.
+/// Stealth typing modes revealed only while the night filter is overlaid.
 enum VeilMode {
   /// Normal visible plaintext (default).
   normal,
@@ -52,7 +52,7 @@ class VeilNotifier extends StateNotifier<VeilState> {
   Timer? _poll;
   HttpClient? _client;
 
-  /// Start polling the RED VEIL beacon. Call when the cipher shell opens.
+  /// Start polling the night-filter beacon. Call when the cipher shell opens.
   void startWatching() {
     if (kIsWeb) return;
     _poll?.cancel();
@@ -98,7 +98,9 @@ class VeilNotifier extends StateNotifier<VeilState> {
   void _setFilter(bool active) {
     if (!active && state.filterActive) {
       // Closing the dimmer drops matrix/echo — plaintext returns to normal.
+      final wasMatrix = state.mode == VeilMode.matrix;
       state = const VeilState();
+      if (wasMatrix) unawaited(_signalMatrix(false));
     } else if (active != state.filterActive) {
       state = state.copyWith(filterActive: active);
     }
@@ -106,23 +108,46 @@ class VeilNotifier extends StateNotifier<VeilState> {
 
   void setMode(VeilMode mode) {
     if (!state.filterActive && mode != VeilMode.normal) return;
+    final prev = state.mode;
     state = state.copyWith(mode: mode);
+    if (prev != mode) {
+      unawaited(_signalMatrix(mode == VeilMode.matrix));
+    }
   }
 
   void toggleEcho() {
     if (!state.filterActive) return;
     if (state.mode == VeilMode.matrix) {
-      state = state.copyWith(mode: VeilMode.normal);
+      setMode(VeilMode.normal);
       return;
     }
-    state = state.copyWith(
-      mode: state.mode == VeilMode.echo ? VeilMode.normal : VeilMode.echo,
-    );
+    setMode(state.mode == VeilMode.echo ? VeilMode.normal : VeilMode.echo);
   }
 
   void engageMatrix() {
     if (!state.filterActive) return;
-    state = state.copyWith(mode: VeilMode.matrix);
+    setMode(VeilMode.matrix);
+  }
+
+  /// Silently tells the night-filter companion to flip its Death Star hologram
+  /// colour (green ↔ red) when matrix veil engages. No UI coupling.
+  Future<void> _signalMatrix(bool matrix) async {
+    if (kIsWeb) return;
+    final client = _client ??
+        (HttpClient()..connectionTimeout = const Duration(milliseconds: 400));
+    try {
+      final req = await client.postUrl(
+        Uri.parse('http://127.0.0.1:$kRedVeilBeaconPort/mode'),
+      );
+      req.headers.contentType = ContentType.json;
+      req.headers.set(HttpHeaders.connectionHeader, 'close');
+      req.write(jsonEncode({'matrix': matrix}));
+      final res =
+          await req.close().timeout(const Duration(milliseconds: 500));
+      await res.drain<void>();
+    } catch (_) {
+      // Filter app may be closed — ignore.
+    }
   }
 
   /// Test / debug: force filter presence without the beacon.

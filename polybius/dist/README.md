@@ -12,9 +12,12 @@ PGP-signed roster [`operators/ADMIN_USER_POOL.txt.asc`](./operators/ADMIN_USER_P
 `polybius-1.0.0-beta.1-android-arm64.apk` / `polybius-1.0.0-beta.1-admin-user-arm64.apk`
 — aliases of the beta.2 build (same sha256).
 
-`darth-cherry-1.0.1-android-arm64.apk` — companion **DARTH CHERRY** night red-light
-filter. Overlay it on Polybius cipher ENCRYPT/DECRYPT to reveal the hidden
-eyeball (fade-type / matrix green veil). See [`../docs/RED_VEIL.md`](../docs/RED_VEIL.md).
+`darth-cherry-1.0.2-android-arm64.apk` — companion **DARTH CHERRY** night red-light
+filter (aliased as `darth-cherry-1.0.1-…` / `red-veil-1.0.0-…`). Home screen Death
+Star: plain + green beam when off; green hologram when the filter is on; red
+hologram when Polybius matrix mode is engaged. Overlay it on Polybius cipher
+ENCRYPT/DECRYPT to reveal the hidden eyeball (fade-type / matrix green veil).
+See [`../docs/RED_VEIL.md`](../docs/RED_VEIL.md).
 
 `polybius-1.0.0-beta.1-linux-arm64.tar.gz` — **aarch64 Linux** release bundle for
 the R36 S / R36 Ultra / R36 Max/Pro handhelds (and other ARM Linux boxes). Every

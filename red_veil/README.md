@@ -9,6 +9,9 @@ the eyes, easier on night vision.
 - Android: touch-through system overlay (`Display over other apps`) so you can
   keep using other apps underneath
 - Simple on/off control
+- Death Star on the home screen: plain grey station firing a green beam when
+  the filter is off; green hologram when on; red hologram when a companion
+  signals matrix mode
 
 ## Build
 
