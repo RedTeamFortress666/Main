@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:polybius/core/constants/app_constants.dart';
+import 'package:polybius/core/constants/operator_roster.dart';
 import 'package:polybius/core/crypto/encryption_service.dart';
 import 'package:polybius/core/models/models.dart';
 import 'package:polybius/core/storage/polybius_secret_store.dart';
@@ -156,5 +157,37 @@ void main() {
       EncryptionService.verifyPin(AppConstants.opKasperPin, op.pinHash),
       isTrue,
     );
+  });
+
+  test('bootstraps the 10 Admin/user pool operators with unique invites',
+      () async {
+    expect(OperatorRoster.pool, hasLength(10));
+    final codes = <String>{};
+    for (final seed in OperatorRoster.pool) {
+      expect(seed.password.length, lessThanOrEqualTo(12));
+      expect(seed.backupPassword.length, lessThanOrEqualTo(12));
+      expect(seed.pin.length, 6);
+      expect(codes.add(seed.inviteCode.toUpperCase()), isTrue);
+
+      final op = await storage.getAccount(seed.username);
+      expect(op, isNotNull, reason: seed.displayName);
+      expect(op!.tier, seed.tier);
+      expect(op.name, seed.displayName);
+      expect(op.requiresPin, isTrue);
+      expect(
+        EncryptionService.verifyPassword(seed.password, op.passwordHash),
+        isTrue,
+      );
+      expect(
+        EncryptionService.verifyPassword(
+            seed.backupPassword, op.backupPasswordHash!),
+        isTrue,
+      );
+      expect(EncryptionService.verifyPin(seed.pin, op.pinHash), isTrue);
+
+      final invite = await storage.getInvite(seed.inviteCode);
+      expect(invite, isNotNull, reason: seed.inviteCode);
+    }
+    expect(OperatorRoster.inviteCodes, hasLength(10));
   });
 }

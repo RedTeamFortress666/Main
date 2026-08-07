@@ -5,8 +5,9 @@
 /// Russian + hold SELECT 3s). Accepted codes:
 /// - `B1-66-3R` / `D1-66-3R` / `W1-66-3R` → developer access (full engine +
 ///   dev panel; requires a developer or admin account)
-/// - `Tr1-66-3R` → user-only access for agent accounts; privileged (admin /
-///   developer) accounts receive full engine access
+/// - `Tr1-66-3R` and the Admin/user pool invite codes (`OperatorRoster`) →
+///   user-only access for agent accounts; privileged (admin/developer)
+///   accounts receive full engine access
 /// - or a valid invite token signed by the project key (SignedToken)
 library;
 

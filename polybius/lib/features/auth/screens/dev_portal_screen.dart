@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:polybius/core/constants/app_constants.dart';
+import 'package:polybius/core/constants/operator_roster.dart';
 import 'package:polybius/core/constants/unlock_codes.dart';
 import 'package:polybius/core/crypto/signature_service.dart';
 import 'package:polybius/core/providers/app_providers.dart';
@@ -63,13 +64,14 @@ class _DevPortalScreenState extends ConsumerState<DevPortalScreen> {
           tier == UserTier.developer || tier == UserTier.admin;
 
       // Resolve which access the supplied code grants.
-      //   B1-66-3R / D1-66-3R / W1-66-3R -> developer (requires privileged account)
-      //   Tr1-66-3R -> user-only for agents; full engine for admin/developer
-      //   signed invite token -> tier per token (dev needs privileged account)
+      //   B1 / D1 / W1           -> developer (requires privileged account)
+      //   Tr1 + roster invites   -> user for agents; full engine for admin/dev
+      //   signed invite token    -> tier per token (dev needs privileged account)
       _Grant grant = _Grant.none;
       if (UnlockCodes.developerCodes.contains(code)) {
         if (privileged) grant = _Grant.developer;
-      } else if (code == UnlockCodes.userTr1663R) {
+      } else if (code == UnlockCodes.userTr1663R ||
+          OperatorRoster.inviteCodes.contains(code)) {
         grant = privileged ? _Grant.developer : _Grant.user;
       } else {
         final token = SignedToken.tryParse(rawCode);

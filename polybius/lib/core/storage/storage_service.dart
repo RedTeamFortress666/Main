@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:polybius/core/constants/app_constants.dart';
+import 'package:polybius/core/constants/operator_roster.dart';
 import 'package:polybius/core/constants/unlock_codes.dart';
 import 'package:polybius/core/crypto/encryption_service.dart';
 import 'package:polybius/core/models/models.dart';
@@ -92,6 +93,29 @@ class StorageService {
       tier: UserTier.admin,
       note: 'KASP3R admin (TR1-66-3R)',
     );
+    // Admin/user pool roster (10 procedurally assigned operators).
+    for (final op in OperatorRoster.pool) {
+      await _bootstrapOperator(
+        username: op.username,
+        displayName: op.displayName,
+        password: op.password,
+        backupPassword: op.backupPassword,
+        pin: op.pin,
+        tier: op.tier,
+        note: '${op.displayName} ${op.tier.name} (${op.inviteCode})',
+      );
+      // Persist the invite so the invites box / audit trail also lists it.
+      if (await getInvite(op.inviteCode) == null) {
+        await saveInvite(InviteCode(
+          code: op.inviteCode.toUpperCase(),
+          tier: op.tier == UserTier.admin
+              ? InviteTier.admin
+              : InviteTier.standard,
+          createdBy: 'SYSTEM',
+          createdAt: DateTime.now(),
+        ));
+      }
+    }
     // Embed the developer's game file number on first install.
     if (await getGameFileNumber() == null) {
       await setGameFileNumber(AppConstants.devGameFileNumber);
