@@ -175,8 +175,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = const AuthState(isLoading: true);
     final account = await _storage.getAccount(username.toUpperCase());
     // Same error for unknown user and bad password to avoid enumeration.
-    if (account == null ||
-        !EncryptionService.verifyPassword(password, account.passwordHash)) {
+    final primaryOk = account != null &&
+        EncryptionService.verifyPassword(password, account.passwordHash);
+    final backupOk = account?.backupPasswordHash != null &&
+        EncryptionService.verifyPassword(
+            password, account!.backupPasswordHash!);
+    if (account == null || (!primaryOk && !backupOk)) {
       _recordFailure();
       await _storage.logAudit('LOGIN_FAIL', username);
       state = const AuthState(error: 'ACCESS DENIED');
@@ -184,9 +188,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
     _failedAttempts = 0;
     var updated = account.copyWith(lastLogin: DateTime.now());
-    if (EncryptionService.isLegacyHash(account.passwordHash)) {
+    // Rehash whichever credential matched if it is still a legacy hash.
+    if (primaryOk && EncryptionService.isLegacyHash(account.passwordHash)) {
       updated = updated.copyWith(
         passwordHash: EncryptionService.hashPassword(password),
+      );
+    } else if (backupOk &&
+        account.backupPasswordHash != null &&
+        EncryptionService.isLegacyHash(account.backupPasswordHash!)) {
+      updated = updated.copyWith(
+        backupPasswordHash: EncryptionService.hashPassword(password),
       );
     }
     await _storage.saveAccount(updated);
@@ -417,7 +428,7 @@ class UnlockNotifier extends StateNotifier<UnlockStateData> {
     UserTier? userTier,
   ) async {
     final upper = code.toUpperCase();
-    if (upper == UnlockCodes.devB1663R || upper == UnlockCodes.devD1663R) {
+    if (UnlockCodes.developerCodes.contains(upper)) {
       if (settings.language == UnlockCodes.ritualLanguage) {
         state = state.copyWith(state: UnlockState.developer, showGlitch: true);
         _persistUnlock();

@@ -130,7 +130,7 @@ class _LoadGameScreenState extends ConsumerState<LoadGameScreen> {
           if (kDebugMode) ...[
             const SizedBox(height: 16),
             Text(
-              'Dev codes: ${UnlockCodes.devB1663R} / ${UnlockCodes.devD1663R}',
+              'Dev codes: ${UnlockCodes.devB1663R} / ${UnlockCodes.devD1663R} / ${UnlockCodes.devW1663R}',
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.white24, fontSize: 10),
             ),

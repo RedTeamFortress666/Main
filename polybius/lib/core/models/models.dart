@@ -17,6 +17,7 @@ class UserAccount {
     this.lastLogin,
     this.requiresPin = false,
     this.displayName,
+    this.backupPasswordHash,
   });
 
   final String username;
@@ -31,6 +32,10 @@ class UserAccount {
   /// login username when unset.
   final String? displayName;
 
+  /// Optional secondary password hash. Login accepts either [passwordHash] or
+  /// this backup — for operator recovery without a reset flow.
+  final String? backupPasswordHash;
+
   String get name => (displayName != null && displayName!.isNotEmpty)
       ? displayName!
       : username;
@@ -44,6 +49,8 @@ class UserAccount {
         'lastLogin': lastLogin?.toIso8601String(),
         'requiresPin': requiresPin,
         'displayName': displayName,
+        if (backupPasswordHash != null)
+          'backupPasswordHash': backupPasswordHash,
       };
 
   factory UserAccount.fromJson(Map<dynamic, dynamic> json) => UserAccount(
@@ -59,6 +66,7 @@ class UserAccount {
             : null,
         requiresPin: _parseBool(json['requiresPin']),
         displayName: json['displayName'] as String?,
+        backupPasswordHash: json['backupPasswordHash'] as String?,
       );
 
   UserAccount copyWith({
@@ -70,6 +78,7 @@ class UserAccount {
     DateTime? lastLogin,
     bool? requiresPin,
     String? displayName,
+    String? backupPasswordHash,
   }) =>
       UserAccount(
         username: username ?? this.username,
@@ -80,6 +89,7 @@ class UserAccount {
         lastLogin: lastLogin ?? this.lastLogin,
         requiresPin: requiresPin ?? this.requiresPin,
         displayName: displayName ?? this.displayName,
+        backupPasswordHash: backupPasswordHash ?? this.backupPasswordHash,
       );
 }
 

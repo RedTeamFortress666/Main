@@ -65,10 +65,65 @@ class StorageService {
       await logAudit('BOOTSTRAP', AppConstants.adminUsername,
           'RedTeam01 admin account created on first install');
     }
+    await _bootstrapOperator(
+      username: AppConstants.opSpamKatUsername,
+      displayName: AppConstants.opSpamKatDisplayName,
+      password: AppConstants.opSpamKatPassword,
+      backupPassword: AppConstants.opSpamKatBackupPassword,
+      pin: AppConstants.opSpamKatPin,
+      tier: UserTier.developer,
+      note: 'SpamKat2 developer (W1-66-3R)',
+    );
+    await _bootstrapOperator(
+      username: AppConstants.opGameOnUsername,
+      displayName: AppConstants.opGameOnDisplayName,
+      password: AppConstants.opGameOnPassword,
+      backupPassword: AppConstants.opGameOnBackupPassword,
+      pin: AppConstants.opGameOnPin,
+      tier: UserTier.developer,
+      note: 'Gam3.0n developer (B1-66-3R)',
+    );
+    await _bootstrapOperator(
+      username: AppConstants.opKasperUsername,
+      displayName: AppConstants.opKasperDisplayName,
+      password: AppConstants.opKasperPassword,
+      backupPassword: AppConstants.opKasperBackupPassword,
+      pin: AppConstants.opKasperPin,
+      tier: UserTier.admin,
+      note: 'KASP3R admin (TR1-66-3R)',
+    );
     // Embed the developer's game file number on first install.
     if (await getGameFileNumber() == null) {
       await setGameFileNumber(AppConstants.devGameFileNumber);
     }
+  }
+
+  Future<void> _bootstrapOperator({
+    required String username,
+    required String displayName,
+    required String password,
+    required String backupPassword,
+    required String pin,
+    required UserTier tier,
+    required String note,
+  }) async {
+    final box = Hive.box(accountsBox);
+    if (box.containsKey(username)) return;
+    final account = UserAccount(
+      username: username,
+      displayName: displayName,
+      passwordHash: EncryptionService.hashPassword(password),
+      backupPasswordHash: EncryptionService.hashPassword(backupPassword),
+      pinHash: EncryptionService.hashPin(pin),
+      tier: tier,
+      requiresPin: true,
+      createdAt: DateTime.now(),
+    );
+    await box.put(
+      account.username,
+      _encryption.encrypt(_encodeJson(account.toJson())),
+    );
+    await logAudit('BOOTSTRAP', username, note);
   }
 
   String _encodeJson(Map<String, dynamic> json) => jsonEncode(json);

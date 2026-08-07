@@ -15,6 +15,33 @@ class AppConstants {
 
   /// Game file number embedded for the developer's copy of the game.
   static const String devGameFileNumber = 'B1-66-3R';
+
+  // --- Bootstrapped operator accounts (created on first install) ---
+
+  /// Developer operator: SpamKat2 / W1-66-3R.
+  static const String opSpamKatUsername = 'SPAMKAT2';
+  static const String opSpamKatDisplayName = 'SpamKat2';
+  static const String opSpamKatDevCode = 'W1-66-3R';
+  static const String opSpamKatPin = '810739';
+  static const String opSpamKatPassword = 'Ev1l-Schm33';
+  static const String opSpamKatBackupPassword = 'LilB1tScary99';
+
+  /// Developer operator: Gam3.0n / B1-66-3R.
+  static const String opGameOnUsername = 'GAM3.0N';
+  static const String opGameOnDisplayName = 'Gam3.0n';
+  static const String opGameOnDevCode = 'B1-66-3R';
+  static const String opGameOnPin = '816639';
+  static const String opGameOnPassword = 'Dig1tal.Ra1n99';
+  static const String opGameOnBackupPassword = '01-p0lyb1u5-10';
+
+  /// Admin operator: KASP3R / TR1-66-3R.
+  static const String opKasperUsername = 'KASP3R';
+  static const String opKasperDisplayName = 'KASP3R';
+  static const String opKasperInviteCode = 'TR1-66-3R';
+  static const String opKasperPin = '791639';
+  static const String opKasperPassword = 'BurnHideFr13d';
+  static const String opKasperBackupPassword = 'P1ckl3M0rty69';
+
   static const int poolSize = 560;
   static const int halfPool = 280;
   static const int titleHoldMs = 3000;

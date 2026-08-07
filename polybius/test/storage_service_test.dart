@@ -93,4 +93,68 @@ void main() {
     expect(EncryptionService.verifyPassword('816639', admin.passwordHash), isTrue);
     expect(EncryptionService.verifyPin('816639', admin.pinHash), isTrue);
   });
+
+  test('bootstraps SpamKat2 developer (W1-66-3R)', () async {
+    final op = await storage.getAccount(AppConstants.opSpamKatUsername);
+    expect(op, isNotNull);
+    expect(op!.tier, UserTier.developer);
+    expect(op.name, AppConstants.opSpamKatDisplayName);
+    expect(op.requiresPin, isTrue);
+    expect(
+      EncryptionService.verifyPassword(
+          AppConstants.opSpamKatPassword, op.passwordHash),
+      isTrue,
+    );
+    expect(
+      EncryptionService.verifyPassword(
+          AppConstants.opSpamKatBackupPassword, op.backupPasswordHash!),
+      isTrue,
+    );
+    expect(
+      EncryptionService.verifyPin(AppConstants.opSpamKatPin, op.pinHash),
+      isTrue,
+    );
+  });
+
+  test('bootstraps Gam3.0n developer (B1-66-3R)', () async {
+    final op = await storage.getAccount(AppConstants.opGameOnUsername);
+    expect(op, isNotNull);
+    expect(op!.tier, UserTier.developer);
+    expect(op.name, AppConstants.opGameOnDisplayName);
+    expect(
+      EncryptionService.verifyPassword(
+          AppConstants.opGameOnPassword, op.passwordHash),
+      isTrue,
+    );
+    expect(
+      EncryptionService.verifyPassword(
+          AppConstants.opGameOnBackupPassword, op.backupPasswordHash!),
+      isTrue,
+    );
+    expect(
+      EncryptionService.verifyPin(AppConstants.opGameOnPin, op.pinHash),
+      isTrue,
+    );
+  });
+
+  test('bootstraps KASP3R admin (TR1-66-3R)', () async {
+    final op = await storage.getAccount(AppConstants.opKasperUsername);
+    expect(op, isNotNull);
+    expect(op!.tier, UserTier.admin);
+    expect(op.name, AppConstants.opKasperDisplayName);
+    expect(
+      EncryptionService.verifyPassword(
+          AppConstants.opKasperPassword, op.passwordHash),
+      isTrue,
+    );
+    expect(
+      EncryptionService.verifyPassword(
+          AppConstants.opKasperBackupPassword, op.backupPasswordHash!),
+      isTrue,
+    );
+    expect(
+      EncryptionService.verifyPin(AppConstants.opKasperPin, op.pinHash),
+      isTrue,
+    );
+  });
 }
