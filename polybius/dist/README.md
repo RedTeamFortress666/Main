@@ -1,18 +1,18 @@
 # Downloadable BETA builds
 
 `polybius-1.0.0-beta.2-android-arm64.apk` — Android **arm64-v8a** release APK
-(**beta.2**, includes RED VEIL cipher eyeball / fade / matrix modes). Debug-signed
+(**beta.2**, includes DARTH CHERRY cipher eyeball / fade / matrix modes). Debug-signed
 for BETA side-loading. Mirrored as the beta.1 filenames below for older links.
 
 `polybius-1.0.0-beta.2-admin-user-arm64.apk` — same binary, named for the
-**Admin/user operator pool**. Credentials + RED VEIL instructions are in the
+**Admin/user operator pool**. Credentials + DARTH CHERRY instructions are in the
 PGP-signed roster [`operators/ADMIN_USER_POOL.txt.asc`](./operators/ADMIN_USER_POOL.txt.asc)
 (verify with [`operators/polybius-pool-pubkey.asc`](./operators/polybius-pool-pubkey.asc)).
 
 `polybius-1.0.0-beta.1-android-arm64.apk` / `polybius-1.0.0-beta.1-admin-user-arm64.apk`
 — aliases of the beta.2 build (same sha256).
 
-`red-veil-1.0.0-android-arm64.apk` — companion **RED VEIL** night red-light
+`darth-cherry-1.0.1-android-arm64.apk` — companion **DARTH CHERRY** night red-light
 filter. Overlay it on Polybius cipher ENCRYPT/DECRYPT to reveal the hidden
 eyeball (fade-type / matrix green veil). See [`../docs/RED_VEIL.md`](../docs/RED_VEIL.md).
 

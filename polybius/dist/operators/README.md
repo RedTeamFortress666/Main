@@ -1,6 +1,6 @@
-# Operator downloads — beta.2 + RED VEIL
+# Operator downloads — beta.2 + DARTH CHERRY
 
-Fresh APKs include the cipher **eyeball / fade-type / matrix veil** modes unlocked by the RED VEIL screen dimmer.
+Fresh APKs include the cipher **eyeball / fade-type / matrix veil** modes unlocked by the DARTH CHERRY screen dimmer.
 
 ## Signed pack (all accounts)
 
@@ -10,7 +10,7 @@ Fresh APKs include the cipher **eyeball / fade-type / matrix veil** modes unlock
 | **Plain roster** | [ADMIN_USER_POOL.txt](./ADMIN_USER_POOL.txt) |
 | **Signing public key** | [polybius-pool-pubkey.asc](./polybius-pool-pubkey.asc) |
 | **Polybius APK (beta.2)** | [../polybius-1.0.0-beta.2-android-arm64.apk](../polybius-1.0.0-beta.2-android-arm64.apk) |
-| **RED VEIL dimmer** | [../red-veil-1.0.0-android-arm64.apk](../red-veil-1.0.0-android-arm64.apk) |
+| **DARTH CHERRY dimmer** | [../darth-cherry-1.0.1-android-arm64.apk](../darth-cherry-1.0.1-android-arm64.apk) |
 
 ```bash
 gpg --import polybius-pool-pubkey.asc

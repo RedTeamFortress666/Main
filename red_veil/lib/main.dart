@@ -6,21 +6,21 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// Local beacon Polybius polls to detect an active red filter overlay.
-const int kVeilBeaconPort = 18766;
+/// Local status endpoint while the filter is active (for optional tooling).
+const int kFilterStatusPort = 18766;
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const RedVeilApp());
+  runApp(const DarthCherryApp());
 }
 
-class RedVeilApp extends StatelessWidget {
-  const RedVeilApp({super.key});
+class DarthCherryApp extends StatelessWidget {
+  const DarthCherryApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'RED VEIL',
+      title: 'DARTH CHERRY',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
@@ -32,19 +32,19 @@ class RedVeilApp extends StatelessWidget {
         ),
         fontFamily: 'monospace',
       ),
-      home: const VeilControlScreen(),
+      home: const FilterControlScreen(),
     );
   }
 }
 
-class VeilControlScreen extends StatefulWidget {
-  const VeilControlScreen({super.key});
+class FilterControlScreen extends StatefulWidget {
+  const FilterControlScreen({super.key});
 
   @override
-  State<VeilControlScreen> createState() => _VeilControlScreenState();
+  State<FilterControlScreen> createState() => _FilterControlScreenState();
 }
 
-class _VeilControlScreenState extends State<VeilControlScreen>
+class _FilterControlScreenState extends State<FilterControlScreen>
     with WidgetsBindingObserver {
   static const _channel = MethodChannel('com.polybius.red_veil/overlay');
 
@@ -52,7 +52,7 @@ class _VeilControlScreenState extends State<VeilControlScreen>
   bool _active = false;
   bool _busy = false;
   String? _status;
-  HttpServer? _beacon;
+  HttpServer? _statusServer;
 
   @override
   void initState() {
@@ -69,27 +69,32 @@ class _VeilControlScreenState extends State<VeilControlScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Keep the beacon alive while filter is active even if backgrounded.
-    if (_active && _beacon == null && state == AppLifecycleState.resumed) {
-      unawaited(_startBeacon());
+    if (_active &&
+        _statusServer == null &&
+        state == AppLifecycleState.resumed) {
+      unawaited(_startStatusServer());
     }
   }
 
-  Future<void> _startBeacon() async {
+  Future<void> _startStatusServer() async {
     if (kIsWeb) return;
-    if (_beacon != null) return;
+    if (_statusServer != null) return;
     try {
-      final server =
-          await HttpServer.bind(InternetAddress.loopbackIPv4, kVeilBeaconPort);
-      _beacon = server;
+      final server = await HttpServer.bind(
+        InternetAddress.loopbackIPv4,
+        kFilterStatusPort,
+      );
+      _statusServer = server;
       server.listen((req) async {
         try {
-          if (req.uri.path == '/veil' || req.uri.path == '/') {
+          if (req.uri.path == '/veil' ||
+              req.uri.path == '/status' ||
+              req.uri.path == '/') {
             final body = jsonEncode({
               'active': true,
               'tint': 'red',
               'intensity': _intensity,
-              'app': 'red_veil',
+              'app': 'darth_cherry',
             });
             req.response.headers.contentType = ContentType.json;
             req.response.write(body);
@@ -101,13 +106,13 @@ class _VeilControlScreenState extends State<VeilControlScreen>
         }
       });
     } catch (e) {
-      if (mounted) setState(() => _status = 'Beacon failed: $e');
+      if (mounted) setState(() => _status = 'Status port unavailable');
     }
   }
 
-  Future<void> _stopBeacon() async {
-    await _beacon?.close(force: true);
-    _beacon = null;
+  Future<void> _stopStatusServer() async {
+    await _statusServer?.close(force: true);
+    _statusServer = null;
   }
 
   Future<void> _toggle() async {
@@ -129,7 +134,8 @@ class _VeilControlScreenState extends State<VeilControlScreen>
     if (isAndroid) {
       try {
         final permitted =
-            await _channel.invokeMethod<bool>('checkOverlayPermission') ?? false;
+            await _channel.invokeMethod<bool>('checkOverlayPermission') ??
+                false;
         if (!permitted) {
           await _channel.invokeMethod('requestOverlayPermission');
           setState(() => _status =
@@ -143,26 +149,23 @@ class _VeilControlScreenState extends State<VeilControlScreen>
       }
     }
 
-    await _startBeacon();
+    await _startStatusServer();
     if (!mounted) return;
     setState(() {
       _active = true;
       _status = isAndroid
-          ? 'FILTER ON — switch to Polybius. Cipher eye appears under the veil.'
+          ? 'FILTER ON — cherry red veil over your screen.'
           : 'FILTER ON (preview). On Android this overlays other apps.';
     });
 
-    // Non-Android: show an in-app red preview stage.
     if (!isAndroid && mounted) {
       await Navigator.of(context).push(
         PageRouteBuilder(
           opaque: false,
-          pageBuilder: (_, _, _) => RedFilterStage(
+          pageBuilder: (_, _, _) => FilterPreviewStage(
             intensity: _intensity,
             onIntensity: (v) => setState(() => _intensity = v),
-            onClose: () {
-              Navigator.of(context).pop();
-            },
+            onClose: () => Navigator.of(context).pop(),
           ),
         ),
       );
@@ -176,7 +179,7 @@ class _VeilControlScreenState extends State<VeilControlScreen>
         await _channel.invokeMethod('hideOverlay');
       } catch (_) {}
     }
-    await _stopBeacon();
+    await _stopStatusServer();
     if (mounted) {
       setState(() {
         _active = false;
@@ -205,13 +208,27 @@ class _VeilControlScreenState extends State<VeilControlScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
+              Center(
+                child: Image.asset(
+                  'assets/icons/darth_cherry.png',
+                  width: 120,
+                  height: 120,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, _, _) => const Icon(
+                    Icons.brightness_2,
+                    size: 72,
+                    color: Color(0xFFFF2A2A),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
               const Text(
-                'RED VEIL',
+                'DARTH CHERRY',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 36,
-                  letterSpacing: 8,
+                  fontSize: 32,
+                  letterSpacing: 4,
                   color: Color(0xFFFF2A2A),
                   fontWeight: FontWeight.w700,
                 ),
@@ -226,12 +243,11 @@ class _VeilControlScreenState extends State<VeilControlScreen>
                   fontSize: 12,
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 28),
               const Text(
-                'Alone, this dims and warms the screen for night use.\n\n'
-                'Overlaid on Polybius cipher ENCRYPT / DECRYPT, it reveals a '
-                'hidden eyeball: tap to fade-type, hold through a red-pupil '
-                'blink (3s) for matrix green veil with invisible plaintext.',
+                'A cherry-red screen veil for late hours — easier on night vision, '
+                'warmer on the eyes. Enable the filter to dim and tint your display; '
+                'on Android it floats over other apps without blocking touch.',
                 style: TextStyle(color: Color(0xFFCC8888), height: 1.5),
               ),
               const SizedBox(height: 28),
@@ -275,13 +291,7 @@ class _VeilControlScreenState extends State<VeilControlScreen>
                   style: const TextStyle(letterSpacing: 2),
                 ),
               ),
-              const SizedBox(height: 12),
-              const Text(
-                'Beacon: 127.0.0.1:18766/veil',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Color(0xFF663333), fontSize: 10),
-              ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
             ],
           ),
         ),
@@ -290,8 +300,8 @@ class _VeilControlScreenState extends State<VeilControlScreen>
   }
 }
 
-class RedFilterStage extends StatelessWidget {
-  const RedFilterStage({
+class FilterPreviewStage extends StatelessWidget {
+  const FilterPreviewStage({
     super.key,
     required this.intensity,
     required this.onIntensity,
@@ -329,7 +339,7 @@ class RedFilterStage extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const Text(
-                      'RED VEIL PREVIEW',
+                      'DARTH CHERRY',
                       style: TextStyle(
                         color: Color(0xFFFF6666),
                         letterSpacing: 3,

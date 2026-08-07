@@ -16,9 +16,9 @@ import android.view.WindowManager
 import android.widget.FrameLayout
 
 /**
- * Draws a translucent red veil over other apps (TYPE_APPLICATION_OVERLAY)
- * and keeps a foreground notification so the process stays alive for the
- * Dart beacon that Polybius polls.
+ * Draws a translucent cherry-red filter over other apps
+ * (TYPE_APPLICATION_OVERLAY) and keeps a foreground notification so the
+ * process stays alive while the filter is active.
  */
 class OverlayService : Service() {
     private var windowManager: WindowManager? = null
@@ -59,7 +59,7 @@ class OverlayService : Service() {
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
         val view = FrameLayout(this).apply {
             setBackgroundColor(redColor(intensity))
-            // Let touches pass through to the app underneath (Polybius).
+            // Let touches pass through to the app underneath.
             // FLAG_NOT_TOUCHABLE is set on the LayoutParams below.
         }
         val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -90,11 +90,11 @@ class OverlayService : Service() {
     }
 
     private fun buildNotification(): Notification {
-        val channelId = "red_veil_overlay"
+        val channelId = "darth_cherry_overlay"
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 channelId,
-                "Red Veil",
+                "Darth Cherry",
                 NotificationManager.IMPORTANCE_LOW,
             )
             (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
@@ -107,7 +107,7 @@ class OverlayService : Service() {
             PendingIntent.FLAG_IMMUTABLE,
         )
         return Notification.Builder(this, channelId)
-            .setContentTitle("RED VEIL active")
+            .setContentTitle("DARTH CHERRY active")
             .setContentText("Red night filter overlaid — tap to adjust")
             .setSmallIcon(android.R.drawable.ic_menu_view)
             .setContentIntent(launch)
