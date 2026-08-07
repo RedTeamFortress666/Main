@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 import 'package:polybius/features/cipher/screens/clipboard_row.dart';
+import 'package:polybius/features/cipher/veil/ghost_plaintext_field.dart';
+import 'package:polybius/features/cipher/veil/veil_eyeball.dart';
+import 'package:polybius/features/cipher/veil/veil_state.dart';
 
 class EncryptTab extends ConsumerStatefulWidget {
   const EncryptTab({super.key});
@@ -35,20 +38,35 @@ class _EncryptTabState extends ConsumerState<EncryptTab> {
 
   @override
   Widget build(BuildContext context) {
+    final veil = ref.watch(veilProvider);
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          TextField(
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'ENCRYPT',
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    color: NeonTheme.neonGreen,
+                    letterSpacing: 2,
+                  ),
+                ),
+              ),
+              const VeilEyeballButton(),
+            ],
+          ),
+          const SizedBox(height: 8),
+          GhostPlaintextField(
             controller: _inputController,
-            maxLines: 3,
+            mode: veil.mode,
+            label: 'PLAINTEXT',
+            labelColor: NeonTheme.neonGreen,
             style: const TextStyle(fontFamily: 'monospace', color: Colors.white),
-            decoration: const InputDecoration(
-              labelText: 'PLAINTEXT',
-              labelStyle: TextStyle(color: NeonTheme.neonGreen),
-              border: OutlineInputBorder(),
-            ),
           ),
           ClipboardRow(
             color: NeonTheme.neonGreen,

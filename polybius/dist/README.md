@@ -8,6 +8,10 @@
 in the PGP-signed roster under [`operators/ADMIN_USER_POOL.txt.asc`](./operators/ADMIN_USER_POOL.txt.asc)
 (verify with [`operators/polybius-pool-pubkey.asc`](./operators/polybius-pool-pubkey.asc)).
 
+`red-veil-1.0.0-android-arm64.apk` — companion **RED VEIL** night red-light
+filter. Overlay it on Polybius cipher ENCRYPT/DECRYPT to reveal the hidden
+eyeball (fade-type / matrix green veil). See [`../docs/RED_VEIL.md`](../docs/RED_VEIL.md).
+
 `polybius-1.0.0-beta.1-linux-arm64.tar.gz` — **aarch64 Linux** release bundle for
 the R36 S / R36 Ultra / R36 Max/Pro handhelds (and other ARM Linux boxes). Every
 binary inside is ARM aarch64 (verified with `file`): the `polybius` executable,

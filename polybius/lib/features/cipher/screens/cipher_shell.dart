@@ -11,6 +11,7 @@ import 'package:polybius/features/cipher/screens/encrypt_tab.dart';
 import 'package:polybius/features/cipher/screens/pool_tab.dart';
 import 'package:polybius/features/cipher/screens/rotor_gear_sheet.dart';
 import 'package:polybius/features/cipher/screens/sync_tab.dart';
+import 'package:polybius/features/cipher/veil/veil_state.dart';
 
 /// Layer 3 hidden cipher tool — accessible only after unlock rituals.
 class CipherShell extends ConsumerStatefulWidget {
@@ -23,15 +24,22 @@ class CipherShell extends ConsumerStatefulWidget {
 class _CipherShellState extends ConsumerState<CipherShell>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  VeilNotifier? _veil;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 5, vsync: this);
+    // Watch for the RED VEIL companion beacon while the cipher is open.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _veil = ref.read(veilProvider.notifier);
+      _veil?.startWatching();
+    });
   }
 
   @override
   void dispose() {
+    _veil?.stopWatching();
     _tabController.dispose();
     super.dispose();
   }
@@ -95,30 +103,43 @@ class _CipherShellState extends ConsumerState<CipherShell>
   Widget build(BuildContext context) {
     final unlock = ref.watch(unlockProvider);
     final isDev = unlock.state == UnlockState.developer;
+    final veil = ref.watch(veilProvider);
+    final matrix = veil.mode == VeilMode.matrix;
 
     return Scaffold(
+      backgroundColor: matrix ? const Color(0xFF020A04) : null,
       appBar: AppBar(
-        backgroundColor: NeonTheme.surface,
-        title: const Text(
-          '◈ CIPHER CHANNEL ◈',
-          style: TextStyle(fontFamily: 'monospace', fontSize: 16),
+        backgroundColor: matrix ? const Color(0xFF031A08) : NeonTheme.surface,
+        title: Text(
+          matrix ? '◈ MATRIX VEIL ◈' : '◈ CIPHER CHANNEL ◈',
+          style: TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 16,
+            color: matrix ? const Color(0xFF00FF66) : null,
+          ),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: NeonTheme.neonCyan),
+          icon: Icon(Icons.arrow_back,
+              color: matrix ? const Color(0xFF00FF66) : NeonTheme.neonCyan),
           onPressed: () => context.go('/menu'),
         ),
         actions: [
           TextButton.icon(
             onPressed: () => context.go('/menu'),
-            icon: const Icon(Icons.exit_to_app, color: NeonTheme.neonYellow, size: 18),
-            label: const Text('EXIT TO ARCADE',
+            icon: Icon(Icons.exit_to_app,
+                color: matrix ? const Color(0xFF00FF66) : NeonTheme.neonYellow,
+                size: 18),
+            label: Text('EXIT TO ARCADE',
                 style: TextStyle(
-                    color: NeonTheme.neonYellow,
+                    color: matrix
+                        ? const Color(0xFF00FF66)
+                        : NeonTheme.neonYellow,
                     fontFamily: 'monospace',
                     fontSize: 11)),
           ),
           IconButton(
-            icon: const Icon(Icons.settings, color: NeonTheme.neonPink),
+            icon: Icon(Icons.settings,
+                color: matrix ? const Color(0xFF00FF66) : NeonTheme.neonPink),
             tooltip: 'Rotor Gear',
             onPressed: _showRotorGear,
           ),
@@ -131,8 +152,9 @@ class _CipherShellState extends ConsumerState<CipherShell>
         ],
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: NeonTheme.neonCyan,
-          labelColor: NeonTheme.neonCyan,
+          indicatorColor:
+              matrix ? const Color(0xFF00FF66) : NeonTheme.neonCyan,
+          labelColor: matrix ? const Color(0xFF00FF66) : NeonTheme.neonCyan,
           unselectedLabelColor: Colors.white38,
           labelStyle: const TextStyle(fontFamily: 'monospace', fontSize: 11),
           isScrollable: true,
@@ -145,16 +167,45 @@ class _CipherShellState extends ConsumerState<CipherShell>
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: const [
-          EncryptTab(),
-          DecryptTab(),
-          PoolTab(),
-          SyncTab(),
-          ConnectTab(),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          TabBarView(
+            controller: _tabController,
+            children: const [
+              EncryptTab(),
+              DecryptTab(),
+              PoolTab(),
+              SyncTab(),
+              ConnectTab(),
+            ],
+          ),
+          if (matrix)
+            IgnorePointer(
+              child: CustomPaint(painter: _MatrixRainPainter()),
+            ),
         ],
       ),
     );
   }
+}
+
+/// Subtle falling green code rain while matrix veil is engaged.
+class _MatrixRainPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = const Color(0x2200FF66);
+    const cols = 18;
+    final colW = size.width / cols;
+    for (var c = 0; c < cols; c++) {
+      final x = c * colW + colW * 0.4;
+      for (var r = 0; r < 12; r++) {
+        final y = (r * 48.0 + c * 17) % (size.height + 40);
+        canvas.drawRect(Rect.fromLTWH(x, y, 2, 10), paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
