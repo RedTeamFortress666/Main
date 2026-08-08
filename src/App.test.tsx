@@ -12,6 +12,17 @@ describe('POLYBIUS PRESS', () => {
     ).toBeInTheDocument()
   })
 
+  it('lists Cardputer and T-Deck under ESP32', async () => {
+    render(<App />)
+    expect(screen.getByRole('heading', { name: 'ESP32', level: 3 })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /m5stack cardputer/i }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /lilygo t-deck/i }),
+    ).toBeInTheDocument()
+  })
+
   it('selects LineageOS and shows dual-boot modes', async () => {
     const user = userEvent.setup()
     render(<App />)
@@ -21,7 +32,7 @@ describe('POLYBIUS PRESS', () => {
     )
 
     expect(
-      screen.getByRole('radio', { name: /dual card \(os \+ roms\)/i }),
+      screen.getByRole('radio', { name: /dual card/i }),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('radio', { name: /dual os swap/i }),
@@ -29,17 +40,19 @@ describe('POLYBIUS PRESS', () => {
     expect(screen.getByText(/andr36oid release uploads/i)).toBeInTheDocument()
   })
 
-  it('updates the stage plan when boot mode changes', async () => {
+  it('shows dual firmware for Cardputer', async () => {
     const user = userEvent.setup()
     render(<App />)
 
     await user.click(
-      screen.getByRole('button', { name: /r36s · lineageos \(andr36oid\)/i }),
+      screen.getByRole('button', { name: /m5stack cardputer/i }),
     )
     await user.click(
-      screen.getByRole('radio', { name: /dual os swap/i }),
+      screen.getByRole('radio', { name: /dual firmware/i }),
     )
 
-    expect(screen.getByRole('heading', { level: 2, name: /dual os swap/i })).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { level: 2, name: /dual firmware/i }),
+    ).toBeInTheDocument()
   })
 })

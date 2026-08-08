@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""POLYBIUS PRESS — stage SD card layouts and flash OS images safely.
+"""POLYBIUS PRESS — stage image layouts and flash OS / firmware safely.
 
 Examples:
   python tools/sd_organiser/sd_organiser.py list-profiles
   python tools/sd_organiser/sd_organiser.py stage --profile r36s-lineage --mode dual_card --polybius
+  python tools/sd_organiser/sd_organiser.py stage --profile m5-cardputer --mode dual_firmware
   python tools/sd_organiser/sd_organiser.py flash --image ./lineage.img --disk /dev/sdX
 """
 
@@ -17,7 +18,7 @@ import sys
 import textwrap
 from pathlib import Path
 
-PROFILES = {
+PROFILES: dict[str, dict] = {
     "r36s-arkos": {
         "name": "R36S · ArkOS / dArkOS",
         "family": "r36",
@@ -44,8 +45,38 @@ PROFILES = {
     "lilygo-tdeck": {
         "name": "LilyGO T-Deck",
         "family": "esp32",
-        "modes": ["single"],
-        "polybius": None,
+        "modes": ["single", "dual_card", "dual_firmware"],
+        "firmware": "polybius-tdeck.bin",
+        "pio": "tdeck",
+        "chip": "esp32s3",
+        "has_sd": True,
+    },
+    "m5-cardputer": {
+        "name": "M5Stack Cardputer",
+        "family": "esp32",
+        "modes": ["single", "dual_card", "dual_firmware"],
+        "firmware": "polybius-cardputer.bin",
+        "pio": "cardputer",
+        "chip": "esp32s3",
+        "has_sd": True,
+    },
+    "lilygo-tembed": {
+        "name": "LilyGO T-Embed S3",
+        "family": "esp32",
+        "modes": ["single", "dual_firmware"],
+        "firmware": "polybius-tembed.bin",
+        "pio": "tembed",
+        "chip": "esp32s3",
+        "has_sd": False,
+    },
+    "cyd": {
+        "name": "CYD (Cheap Yellow Display)",
+        "family": "esp32",
+        "modes": ["single", "dual_firmware"],
+        "firmware": "polybius-cyd.bin",
+        "pio": "cyd",
+        "chip": "esp32",
+        "has_sd": False,
     },
 }
 
@@ -61,9 +92,78 @@ def cmd_list_profiles(_: argparse.Namespace) -> None:
         print(f"{pid:16}  {meta['name']}  [{modes}]")
 
 
-def write_readme(path: Path, body: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(textwrap.dedent(body).lstrip() + "\n", encoding="utf-8")
+def build_esp32_tree(profile_id: str, mode: str, out: Path, touch_dir, touch_file) -> None:
+    meta = PROFILES[profile_id]
+    fw = meta["firmware"]
+    chip = meta["chip"]
+    pio = meta["pio"]
+
+    touch_file(
+        f"downloads/PLACE_{fw}_HERE.txt",
+        f"""
+        Drop {fw} here (from polybius/dist/esp32/).
+
+        Flash:
+          esptool.py --chip {chip} --port /dev/ttyACM0 write_flash 0x0 downloads/{fw}
+          pio run -e {pio} -t upload
+        """,
+    )
+
+    if mode == "single":
+        touch_file(
+            "FLASH.txt",
+            f"""
+            esptool.py --chip {chip} --port /dev/ttyACM0 write_flash 0x0 downloads/{fw}
+
+            Or: pio run -e {pio} -t upload
+            """,
+        )
+    elif mode == "dual_firmware":
+        touch_file(
+            "downloads/firmware_a_README.txt",
+            f"Copy {fw} here as firmware A (POLYBIUS).",
+        )
+        touch_file(
+            "downloads/firmware_b_README.txt",
+            "Place stock / Meshtastic / alternate .bin here as firmware B.",
+        )
+        touch_file(
+            "FLASH_A.txt",
+            f"esptool.py --chip {chip} --port /dev/ttyACM0 write_flash 0x0 downloads/{fw}",
+        )
+        touch_file(
+            "FLASH_B.txt",
+            f"esptool.py --chip {chip} --port /dev/ttyACM0 write_flash 0x0 downloads/firmware_b_alternate.bin",
+        )
+        touch_file(
+            "SWAP_GUIDE.txt",
+            """
+            ESP32 dual boot = reflash over USB.
+            Keep both binaries; flash A for POLYBIUS, B for the alternate firmware.
+            """,
+        )
+    elif mode == "dual_card":
+        if not meta.get("has_sd"):
+            die(f"{profile_id} has no microSD slot — use single or dual_firmware")
+        touch_dir("card_microsd_assets")
+        touch_file(
+            "card_microsd_assets/README.txt",
+            """
+            Format microSD FAT32/exFAT.
+            Copy notes / exports here — this is NOT an OS image.
+            Firmware still flashes over USB to the MCU.
+            """,
+        )
+        touch_dir("card_microsd_assets/polybius")
+        touch_file(
+            "FLASH.txt",
+            f"""
+            # MCU firmware (USB)
+            esptool.py --chip {chip} --port /dev/ttyACM0 write_flash 0x0 downloads/{fw}
+
+            # microSD: copy card_microsd_assets/* onto the FAT card
+            """,
+        )
 
 
 def build_tree(profile_id: str, mode: str, polybius: bool, out: Path) -> list[str]:
@@ -91,6 +191,7 @@ def build_tree(profile_id: str, mode: str, polybius: bool, out: Path) -> list[st
                 "mode": mode,
                 "polybius": polybius,
                 "name": meta["name"],
+                "family": meta["family"],
             },
             indent=2,
         )
@@ -98,16 +199,7 @@ def build_tree(profile_id: str, mode: str, polybius: bool, out: Path) -> list[st
     )
 
     if meta["family"] == "esp32":
-        touch_file(
-            "FLASH.txt",
-            """
-            Place polybius-tdeck.bin in downloads/, then:
-
-              esptool.py --chip esp32s3 --port /dev/ttyACM0 write_flash 0x0 downloads/polybius-tdeck.bin
-
-            Or: pio run -e tdeck -t upload
-            """,
-        )
+        build_esp32_tree(profile_id, mode, out, touch_dir, touch_file)
         return created
 
     touch_file(
@@ -182,10 +274,6 @@ def build_tree(profile_id: str, mode: str, polybius: bool, out: Path) -> list[st
             """,
         )
 
-    for note in meta.get("notes", []):
-        # Notes already in MANIFEST / docs; keep stage lean.
-        _ = note
-
     touch_file(
         "FLASH.txt",
         f"""
@@ -225,11 +313,9 @@ def cmd_stage(args: argparse.Namespace) -> None:
 
 def is_likely_system_disk(disk: Path) -> bool:
     name = disk.name
-    # Refuse whole-disk names that look like the boot disk on common layouts.
     forbidden_exact = {"sda", "nvme0n1", "mmcblk0", "vda", "xvda"}
     if name in forbidden_exact:
         return True
-    # Refuse partitions as flash targets (want whole disk).
     if name.startswith("sd") and name[-1:].isdigit():
         return True
     if "p" in name and name[-1:].isdigit() and (
@@ -245,7 +331,12 @@ def cmd_flash(args: argparse.Namespace) -> None:
 
     if not image.is_file():
         die(f"image not found: {image}")
-    if image.suffix.lower() in {".xz", ".gz", ".zip"}:
+    if image.suffix.lower() in {".xz", ".gz", ".zip", ".bin"}:
+        if image.suffix.lower() == ".bin":
+            die(
+                "ESP32 .bin files flash with esptool, not dd. "
+                "See FLASH.txt in the staged folder."
+            )
         die("decompress the image to .img first (.xz/.gz/.zip not supported directly)")
 
     if not disk.exists():
@@ -264,7 +355,7 @@ def cmd_flash(args: argparse.Namespace) -> None:
     print("THIS WILL DESTROY ALL DATA ON THE TARGET DISK.")
 
     if not args.yes:
-        confirm = input(f'Type the disk path exactly to continue ({disk}): ').strip()
+        confirm = input(f"Type the disk path exactly to continue ({disk}): ").strip()
         if confirm != str(disk):
             die("confirmation mismatch — aborting")
 
@@ -272,7 +363,6 @@ def cmd_flash(args: argparse.Namespace) -> None:
     if not dd:
         die("dd not found on PATH")
 
-    # Prefer oflag=sync when available (GNU dd).
     cmd = [
         dd,
         f"if={image}",
@@ -286,14 +376,13 @@ def cmd_flash(args: argparse.Namespace) -> None:
         print("dry-run: not executing")
         return
 
-    # Direct exec — requires root for raw disks.
     os.execvp(dd, cmd)
 
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="sd_organiser",
-        description="POLYBIUS PRESS SD image organiser",
+        description="POLYBIUS PRESS image / SD organiser",
     )
     sub = p.add_subparsers(dest="command", required=True)
 
@@ -305,7 +394,7 @@ def build_parser() -> argparse.ArgumentParser:
     stage_p.add_argument(
         "--mode",
         default="single",
-        choices=["single", "dual_card", "dual_os_swap"],
+        choices=["single", "dual_card", "dual_os_swap", "dual_firmware"],
     )
     stage_p.add_argument(
         "--polybius",
@@ -324,10 +413,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     stage_p.set_defaults(func=cmd_stage)
 
-    flash_p = sub.add_parser("flash", help="Write an .img to a block device (destructive)")
+    flash_p = sub.add_parser(
+        "flash", help="Write an .img to a block device (destructive)"
+    )
     flash_p.add_argument("--image", required=True, help="Path to .img")
     flash_p.add_argument("--disk", required=True, help="Whole-disk path e.g. /dev/sdb")
-    flash_p.add_argument("-y", "--yes", action="store_true", help="Skip interactive confirm")
+    flash_p.add_argument(
+        "-y", "--yes", action="store_true", help="Skip interactive confirm"
+    )
     flash_p.add_argument(
         "--dry-run",
         action="store_true",

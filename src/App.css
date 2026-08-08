@@ -237,6 +237,24 @@ body {
   gap: 0.65rem;
 }
 
+.press-group {
+  margin-bottom: 1.15rem;
+}
+
+.press-group:last-of-type {
+  margin-bottom: 0;
+}
+
+.press-group-label {
+  margin: 0 0 0.55rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--press-amber);
+}
+
 .press-device {
   display: flex;
   flex-direction: column;

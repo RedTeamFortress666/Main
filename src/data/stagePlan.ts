@@ -1,4 +1,5 @@
 import type { BootMode, DeviceProfile, TreeNode } from './profiles'
+import { BOOT_MODE_LABELS } from './profiles'
 
 export interface StagePlan {
   profileId: string
@@ -11,8 +12,11 @@ export interface StagePlan {
   flashCommands: string[]
 }
 
-/** Build a staging tree the operator copies onto cards / a work folder. */
-export function buildStagePlan(
+function modeTitle(profile: DeviceProfile, mode: BootMode): string {
+  return `${profile.name} · ${BOOT_MODE_LABELS[mode]}`
+}
+
+function buildEsp32Plan(
   profile: DeviceProfile,
   mode: BootMode,
   includePolybius: boolean,
@@ -21,35 +25,120 @@ export function buildStagePlan(
   const checklist: string[] = []
   const flashCommands: string[] = []
   const root = `stage/${profile.id}`
+  const meta = profile.esp32!
+  const bin = meta.firmwareFile
+  const portHint = '/dev/ttyACM0'
+
+  tree.push({ path: root, kind: 'dir', hint: 'Work folder on your PC' })
+  tree.push({ path: `${root}/downloads`, kind: 'dir', hint: 'Drop firmware binaries here' })
+  tree.push({
+    path: `${root}/downloads/${bin}`,
+    kind: 'image',
+    hint: 'Primary POLYBIUS firmware',
+  })
+
+  checklist.push(`Download ${bin} into downloads/`)
+  checklist.push(`Connect ${profile.name} over USB`)
+
+  if (mode === 'single') {
+    checklist.push('Flash the primary firmware (command below)')
+    flashCommands.push(
+      `esptool.py --chip ${meta.chip} --port ${portHint} write_flash 0x0 downloads/${bin}`,
+    )
+    flashCommands.push(`pio run -e ${meta.pioEnv} -t upload`)
+  }
+
+  if (mode === 'dual_firmware') {
+    tree.push({
+      path: `${root}/downloads/firmware_a_${bin}`,
+      kind: 'image',
+      hint: 'Firmware A — POLYBIUS',
+    })
+    tree.push({
+      path: `${root}/downloads/firmware_b_alternate.bin`,
+      kind: 'image',
+      hint: 'Firmware B — stock / Meshtastic / other',
+    })
+    tree.push({
+      path: `${root}/FLASH_A.txt`,
+      kind: 'file',
+      hint: 'Reflash A to boot POLYBIUS',
+    })
+    tree.push({
+      path: `${root}/FLASH_B.txt`,
+      kind: 'file',
+      hint: 'Reflash B to boot alternate firmware',
+    })
+    checklist.push('Keep both .bin files in downloads/')
+    checklist.push('To switch OS/firmware: reflash A or B over USB (ESP32 has no dual-OS SD boot)')
+    flashCommands.push(
+      `esptool.py --chip ${meta.chip} --port ${portHint} write_flash 0x0 downloads/firmware_a_${bin}  # A`,
+    )
+    flashCommands.push(
+      `esptool.py --chip ${meta.chip} --port ${portHint} write_flash 0x0 downloads/firmware_b_alternate.bin  # B`,
+    )
+  }
+
+  if (mode === 'dual_card') {
+    tree.push({
+      path: `${root}/card_microsd_assets`,
+      kind: 'dir',
+      hint: 'FAT/exFAT microSD — notes, keys, extras (not an OS image)',
+    })
+    tree.push({
+      path: `${root}/card_microsd_assets/README.txt`,
+      kind: 'file',
+      hint: 'Optional assets for T-Deck / Cardputer SD slot',
+    })
+    if (includePolybius) {
+      tree.push({
+        path: `${root}/card_microsd_assets/polybius/`,
+        kind: 'dir',
+        hint: 'Optional cipher notes / export drops',
+      })
+    }
+    checklist.push('Flash firmware to the device over USB (not to the SD card)')
+    checklist.push('Format microSD FAT32/exFAT and copy assets from card_microsd_assets/')
+    flashCommands.push(
+      `esptool.py --chip ${meta.chip} --port ${portHint} write_flash 0x0 downloads/${bin}`,
+    )
+  }
+
+  for (const n of profile.notes) checklist.push(n)
+
+  return {
+    profileId: profile.id,
+    mode,
+    includePolybius,
+    title: modeTitle(profile, mode),
+    summary: profile.blurb,
+    tree,
+    checklist,
+    flashCommands,
+  }
+}
+
+/** Build a staging tree the operator copies onto cards / a work folder. */
+export function buildStagePlan(
+  profile: DeviceProfile,
+  mode: BootMode,
+  includePolybius: boolean,
+): StagePlan {
+  if (profile.family === 'esp32') {
+    const effective = profile.supportedModes.includes(mode)
+      ? mode
+      : profile.supportedModes[0]
+    return buildEsp32Plan(profile, effective, includePolybius)
+  }
+
+  const tree: TreeNode[] = []
+  const checklist: string[] = []
+  const flashCommands: string[] = []
+  const root = `stage/${profile.id}`
 
   tree.push({ path: root, kind: 'dir', hint: 'Work folder on your PC' })
   tree.push({ path: `${root}/downloads`, kind: 'dir', hint: 'Drop official images here' })
 
-  if (profile.family === 'esp32') {
-    tree.push({
-      path: `${root}/downloads/polybius-tdeck.bin`,
-      kind: 'image',
-      hint: 'ESP32 firmware binary',
-    })
-    checklist.push('Download the T-Deck .bin into downloads/')
-    checklist.push('Connect T-Deck over USB-C')
-    checklist.push('Run the flash command below (or PlatformIO upload)')
-    flashCommands.push(
-      'esptool.py --chip esp32s3 --port /dev/ttyACM0 write_flash 0x0 downloads/polybius-tdeck.bin',
-    )
-    return {
-      profileId: profile.id,
-      mode,
-      includePolybius,
-      title: `${profile.name} · firmware stage`,
-      summary: 'Stages the ESP32 binary and flash recipe — no SD OS layout.',
-      tree,
-      checklist,
-      flashCommands,
-    }
-  }
-
-  // R36-class OS images
   tree.push({
     path: `${root}/downloads/os-image.img`,
     kind: 'image',
@@ -170,18 +259,11 @@ export function buildStagePlan(
 
   for (const n of profile.notes) checklist.push(n)
 
-  const modeLabel =
-    mode === 'single'
-      ? 'single card'
-      : mode === 'dual_card'
-        ? 'dual card (OS + ROMs)'
-        : 'dual OS swap'
-
   return {
     profileId: profile.id,
     mode,
     includePolybius,
-    title: `${profile.name} · ${modeLabel}`,
+    title: modeTitle(profile, mode),
     summary: profile.blurb,
     tree,
     checklist,

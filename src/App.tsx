@@ -1,22 +1,28 @@
 import { useMemo, useState } from 'react'
 import './App.css'
 import {
+  BOOT_MODE_HINTS,
   BOOT_MODE_LABELS,
-  profiles,
+  profilesByGroup,
   type BootMode,
   type DeviceProfile,
 } from './data/profiles'
 import { buildStagePlan, treeToText } from './data/stagePlan'
 
 function App() {
-  const [profileId, setProfileId] = useState(profiles[0].id)
+  const groups = useMemo(() => profilesByGroup(), [])
+  const allProfiles = useMemo(
+    () => groups.flatMap((g) => g.items),
+    [groups],
+  )
+  const [profileId, setProfileId] = useState(allProfiles[0].id)
   const [bootMode, setBootMode] = useState<BootMode>('single')
   const [includePolybius, setIncludePolybius] = useState(true)
   const [copied, setCopied] = useState(false)
 
   const profile = useMemo(
-    () => profiles.find((p) => p.id === profileId) ?? profiles[0],
-    [profileId],
+    () => allProfiles.find((p) => p.id === profileId) ?? allProfiles[0],
+    [allProfiles, profileId],
   )
 
   const plan = useMemo(
@@ -63,8 +69,9 @@ function App() {
         <p className="press-brand">POLYBIUS PRESS</p>
         <h1>Stage SD cards before you flash.</h1>
         <p className="press-lede">
-          Organise OS images, dual-boot layouts, and POLYBIUS payloads for R36S
-          and LilyGO — including LineageOS (AndR36oid).
+          Organise OS images and firmware for R36S, LilyGO T-Deck, M5Stack
+          Cardputer, and more — with dual-card, dual-OS, and dual-firmware
+          layouts including LineageOS.
         </p>
         <div className="press-cta-row">
           <a className="press-cta" href="#workshop">
@@ -84,35 +91,43 @@ function App() {
       <main id="workshop" className="press-workshop">
         <section className="press-panel" aria-labelledby="device-heading">
           <h2 id="device-heading">Device</h2>
-          <p className="press-hint">Pick the handheld or deck you are preparing.</p>
-          <div className="press-device-grid">
-            {profiles.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                className={
-                  p.id === profile.id
-                    ? 'press-device press-device-active'
-                    : 'press-device'
-                }
-                onClick={() => selectProfile(p)}
-              >
-                <span className="press-device-name">{p.name}</span>
-                <span className="press-device-meta">
-                  {p.family.toUpperCase()} · {p.supportedModes.length} layout
-                  {p.supportedModes.length === 1 ? '' : 's'}
-                </span>
-              </button>
-            ))}
-          </div>
+          <p className="press-hint">
+            R36S handhelds (SD OS images) or ESP32 decks (USB firmware).
+          </p>
+          {groups.map(({ group, items }) => (
+            <div key={group} className="press-group">
+              <h3 className="press-group-label">{group}</h3>
+              <div className="press-device-grid">
+                {items.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className={
+                      p.id === profile.id
+                        ? 'press-device press-device-active'
+                        : 'press-device'
+                    }
+                    onClick={() => selectProfile(p)}
+                  >
+                    <span className="press-device-name">{p.name}</span>
+                    <span className="press-device-meta">
+                      {p.family.toUpperCase()} · {p.supportedModes.length} layout
+                      {p.supportedModes.length === 1 ? '' : 's'}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
           <p className="press-blurb">{profile.blurb}</p>
         </section>
 
         <section className="press-panel" aria-labelledby="boot-heading">
           <h2 id="boot-heading">Boot layout</h2>
           <p className="press-hint">
-            Dual boot on R36S means two physical cards — OS+ROMs or two OS
-            images you swap in TF1.
+            {profile.family === 'r36'
+              ? 'R36S dual boot uses two physical cards — OS+ROMs or two OS images swapped in TF1.'
+              : 'ESP32 dual boot means reflashing an alternate .bin over USB, or pairing firmware with a FAT microSD for assets.'}
           </p>
           <div className="press-mode-row" role="radiogroup" aria-label="Boot mode">
             {profile.supportedModes.map((id) => (
@@ -127,13 +142,7 @@ function App() {
                 onClick={() => setBootMode(id)}
               >
                 <span className="press-mode-label">{BOOT_MODE_LABELS[id]}</span>
-                <span className="press-mode-desc">
-                  {id === 'single' && 'One microSD with the full OS image.'}
-                  {id === 'dual_card' &&
-                    'TF1 for OS, TF2 for ROMs after first boot.'}
-                  {id === 'dual_os_swap' &&
-                    'Two OS cards (e.g. Lineage + ArkOS); swap TF1 to switch.'}
-                </span>
+                <span className="press-mode-desc">{BOOT_MODE_HINTS[id]}</span>
               </button>
             ))}
           </div>
