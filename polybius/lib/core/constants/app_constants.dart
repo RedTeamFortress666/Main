@@ -50,6 +50,14 @@ class AppConstants {
   static const String opTemptressPassword = 'not1nkansas69';
   static const String opTemptressBackupPassword = 'NoPlaceL1ke';
 
+  /// Admin operator: CrownOfCorns / C0-9N-3E.
+  static const String opCrownOfCornsUsername = 'CROWNOFCORNS';
+  static const String opCrownOfCornsDisplayName = 'CrownOfCorns';
+  static const String opCrownOfCornsInviteCode = 'C0-9N-3E';
+  static const String opCrownOfCornsPin = '539667';
+  static const String opCrownOfCornsPassword = '20YokoMicrowave14';
+  static const String opCrownOfCornsBackupPassword = 'C0rnS1lo14';
+
   static const int poolSize = 560;
   static const int halfPool = 280;
   static const int titleHoldMs = 3000;

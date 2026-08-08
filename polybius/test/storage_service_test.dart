@@ -189,6 +189,37 @@ void main() {
     );
   });
 
+  test('bootstraps CrownOfCorns admin (C0-9N-3E)', () async {
+    final op = await storage.getAccount(AppConstants.opCrownOfCornsUsername);
+    expect(op, isNotNull);
+    expect(op!.tier, UserTier.admin);
+    expect(op.name, AppConstants.opCrownOfCornsDisplayName);
+    expect(op.requiresPin, isTrue);
+    expect(
+      EncryptionService.verifyPassword(
+          AppConstants.opCrownOfCornsPassword, op.passwordHash),
+      isTrue,
+    );
+    expect(
+      EncryptionService.verifyPassword(
+          AppConstants.opCrownOfCornsBackupPassword, op.backupPasswordHash!),
+      isTrue,
+    );
+    expect(
+      EncryptionService.verifyPin(AppConstants.opCrownOfCornsPin, op.pinHash),
+      isTrue,
+    );
+    final invite =
+        await storage.getInvite(AppConstants.opCrownOfCornsInviteCode);
+    expect(invite, isNotNull);
+    expect(invite!.tier, InviteTier.admin);
+    expect(
+      OperatorRoster.inviteCodes
+          .contains(AppConstants.opCrownOfCornsInviteCode.toUpperCase()),
+      isTrue,
+    );
+  });
+
   test('bootstraps the 10 Admin/user pool operators with unique invites',
       () async {
     expect(OperatorRoster.pool, hasLength(10));
@@ -218,6 +249,6 @@ void main() {
       final invite = await storage.getInvite(seed.inviteCode);
       expect(invite, isNotNull, reason: seed.inviteCode);
     }
-    expect(OperatorRoster.inviteCodes, hasLength(11));
+    expect(OperatorRoster.inviteCodes, hasLength(12));
   });
 }

@@ -110,6 +110,23 @@ class StorageService {
         createdAt: DateTime.now(),
       ));
     }
+    await _bootstrapOperator(
+      username: AppConstants.opCrownOfCornsUsername,
+      displayName: AppConstants.opCrownOfCornsDisplayName,
+      password: AppConstants.opCrownOfCornsPassword,
+      backupPassword: AppConstants.opCrownOfCornsBackupPassword,
+      pin: AppConstants.opCrownOfCornsPin,
+      tier: UserTier.admin,
+      note: 'CrownOfCorns admin (C0-9N-3E)',
+    );
+    if (await getInvite(AppConstants.opCrownOfCornsInviteCode) == null) {
+      await saveInvite(InviteCode(
+        code: AppConstants.opCrownOfCornsInviteCode.toUpperCase(),
+        tier: InviteTier.admin,
+        createdBy: 'SYSTEM',
+        createdAt: DateTime.now(),
+      ));
+    }
     // Admin/user pool roster (10 procedurally assigned operators).
     for (final op in OperatorRoster.pool) {
       await _bootstrapOperator(
