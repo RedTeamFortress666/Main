@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:polybius/core/constants/app_constants.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
-import 'package:polybius/features/cipher/engine/daily_pool.dart';
 
 class PoolTab extends ConsumerWidget {
   const PoolTab({super.key});
@@ -13,7 +11,6 @@ class PoolTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final engine = ref.watch(cipherEngineProvider);
     final pool = engine.pool;
-    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
     return Column(
       children: [
@@ -22,7 +19,7 @@ class PoolTab extends ConsumerWidget {
           child: Column(
             children: [
               Text(
-                'DAILY POOL — $today',
+                'ACTIVE POOL — ${engine.poolId}',
                 style: const TextStyle(
                   fontFamily: 'monospace',
                   color: NeonTheme.neonCyan,
@@ -33,15 +30,6 @@ class PoolTab extends ConsumerWidget {
               Text(
                 '${pool.length} / ${AppConstants.poolSize} emojis active',
                 style: const TextStyle(color: Colors.white54, fontSize: 12),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Pool seed: ${DailyPool().dateKey}',
-                style: const TextStyle(
-                  fontFamily: 'monospace',
-                  color: NeonTheme.neonGreen,
-                  fontSize: 10,
-                ),
               ),
             ],
           ),

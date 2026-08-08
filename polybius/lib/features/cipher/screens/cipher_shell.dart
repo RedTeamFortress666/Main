@@ -10,6 +10,7 @@ import 'package:polybius/features/cipher/screens/developer_panel.dart';
 import 'package:polybius/features/cipher/screens/encrypt_tab.dart';
 import 'package:polybius/features/cipher/screens/pool_tab.dart';
 import 'package:polybius/features/cipher/screens/rotor_gear_sheet.dart';
+import 'package:polybius/features/cipher/screens/sync_tab.dart';
 
 /// Layer 3 hidden cipher tool — accessible only after unlock rituals.
 class CipherShell extends ConsumerStatefulWidget {
@@ -26,7 +27,7 @@ class _CipherShellState extends ConsumerState<CipherShell>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
   }
 
   @override
@@ -83,10 +84,12 @@ class _CipherShellState extends ConsumerState<CipherShell>
           labelColor: NeonTheme.neonCyan,
           unselectedLabelColor: Colors.white38,
           labelStyle: const TextStyle(fontFamily: 'monospace', fontSize: 11),
+          isScrollable: true,
           tabs: const [
             Tab(text: '🔒 ENCRYPT'),
             Tab(text: '🔓 DECRYPT'),
             Tab(text: '🎲 POOL'),
+            Tab(text: '🔗 SYNC'),
             Tab(text: '📡 CONNECT'),
           ],
         ),
@@ -97,6 +100,7 @@ class _CipherShellState extends ConsumerState<CipherShell>
           EncryptTab(),
           DecryptTab(),
           PoolTab(),
+          SyncTab(),
           ConnectTab(),
         ],
       ),

@@ -1,19 +1,25 @@
+import 'dart:convert';
 import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:intl/intl.dart';
 import 'package:polybius/core/constants/app_constants.dart';
 import 'package:polybius/core/constants/emoji_pool.dart';
 
-/// Generates the daily 560-emoji cipher pool seeded by calendar date.
+/// Generates the 560-emoji cipher pool from a seed key. The seed is normally
+/// the calendar date, but can be any string so a randomised pool can be shared
+/// between users (they derive an identical pool from the same seed).
 class DailyPool {
-  DailyPool({DateTime? date}) : _date = date ?? DateTime.now();
+  DailyPool({DateTime? date, String? seed})
+      : key = seed ?? DateFormat('yyyy-MM-dd').format(date ?? DateTime.now());
 
-  final DateTime _date;
+  /// The seed key that fully determines the pool ordering.
+  final String key;
 
-  String get dateKey => DateFormat('yyyy-MM-dd').format(_date);
+  /// Kept for back-compat; equals the seed key.
+  String get dateKey => key;
 
   List<String> generate() {
-    final seed = sha256.convert(dateKey.codeUnits).bytes;
+    final seed = sha256.convert(utf8.encode(key)).bytes;
     final rng = _SeededRandom(seed);
     final corpus = emojiCorpus
         .where((e) => e.runes.length == 1)
@@ -23,6 +29,7 @@ class DailyPool {
   }
 
   static List<String> forDate(DateTime date) => DailyPool(date: date).generate();
+  static List<String> forSeed(String seed) => DailyPool(seed: seed).generate();
 }
 
 class _SeededRandom implements Random {

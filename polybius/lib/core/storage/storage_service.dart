@@ -48,6 +48,10 @@ class StorageService {
       await logAudit('BOOTSTRAP', AppConstants.developerUsername,
           'DEVELOPER account created on first install');
     }
+    // Embed the developer's game file number on first install.
+    if (await getGameFileNumber() == null) {
+      await setGameFileNumber(AppConstants.devGameFileNumber);
+    }
   }
 
   String _encodeJson(Map<String, dynamic> json) => jsonEncode(json);
@@ -121,22 +125,37 @@ class StorageService {
   Future<InviteCode?> getInvite(String code) async {
     final box = Hive.box(invitesBox);
     final raw = box.get(code.toUpperCase());
-    if (raw == null) return null;
-    return InviteCode.fromJson(Map<dynamic, dynamic>.from(raw as Map));
+    if (raw == null || raw is! Map) return null;
+    try {
+      return InviteCode.fromJson(Map<dynamic, dynamic>.from(raw));
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<List<InviteCode>> getAllInvites() async {
     final box = Hive.box(invitesBox);
-    return box.values
-        .map((v) => InviteCode.fromJson(Map<dynamic, dynamic>.from(v as Map)))
-        .toList();
+    final invites = <InviteCode>[];
+    for (final v in box.values) {
+      if (v is! Map) continue;
+      try {
+        invites.add(InviteCode.fromJson(Map<dynamic, dynamic>.from(v)));
+      } catch (_) {
+        // Skip a single corrupt record instead of failing the whole load.
+      }
+    }
+    return invites;
   }
 
   Future<GameSettings> getSettings() async {
     final box = Hive.box(settingsBox);
     final raw = box.get('game');
-    if (raw == null) return const GameSettings();
-    return GameSettings.fromJson(Map<dynamic, dynamic>.from(raw as Map));
+    if (raw is! Map) return const GameSettings();
+    try {
+      return GameSettings.fromJson(Map<dynamic, dynamic>.from(raw));
+    } catch (_) {
+      return const GameSettings();
+    }
   }
 
   Future<void> saveSettings(GameSettings settings) async {
@@ -165,6 +184,47 @@ class StorageService {
     await box.delete('unlockState');
   }
 
+  /// The invite code / game file number bound to this copy of the game.
+  Future<String?> getGameFileNumber() async {
+    final raw = Hive.box(settingsBox).get('gameFileNumber');
+    return raw is String ? raw : null;
+  }
+
+  Future<void> setGameFileNumber(String code) async {
+    await Hive.box(settingsBox).put('gameFileNumber', code);
+  }
+
+  /// Optional trusted public key override (per-SD/USB keyset binding). When set,
+  /// signed tokens/updates are verified against this instead of the embedded key.
+  Future<String?> getTrustedPublicKey() async {
+    final raw = Hive.box(settingsBox).get('trustedPublicKey');
+    return raw is String && raw.isNotEmpty ? raw : null;
+  }
+
+  Future<void> setTrustedPublicKey(String keyB64) async {
+    await Hive.box(settingsBox).put('trustedPublicKey', keyB64);
+  }
+
+  /// The signature-verified access token bound to this copy (base64url wire form).
+  Future<String?> getActiveToken() async {
+    final raw = Hive.box(settingsBox).get('activeToken');
+    return raw is String && raw.isNotEmpty ? raw : null;
+  }
+
+  Future<void> setActiveToken(String token) async {
+    await Hive.box(settingsBox).put('activeToken', token);
+  }
+
+  /// The active cipher pool seed (randomised or synced from another user).
+  Future<String?> getPoolSeed() async {
+    final raw = Hive.box(settingsBox).get('poolSeed');
+    return raw is String && raw.isNotEmpty ? raw : null;
+  }
+
+  Future<void> setPoolSeed(String seed) async {
+    await Hive.box(settingsBox).put('poolSeed', seed);
+  }
+
   Future<void> logAudit(String action, String actor, [String? details]) async {
     final box = Hive.box(auditBox);
     final entry = AuditLogEntry(
@@ -178,10 +238,15 @@ class StorageService {
 
   Future<List<AuditLogEntry>> getAuditLogs({int limit = 100}) async {
     final box = Hive.box(auditBox);
-    final entries = box.values
-        .map((v) =>
-            AuditLogEntry.fromJson(Map<dynamic, dynamic>.from(v as Map)))
-        .toList();
+    final entries = <AuditLogEntry>[];
+    for (final v in box.values) {
+      if (v is! Map) continue;
+      try {
+        entries.add(AuditLogEntry.fromJson(Map<dynamic, dynamic>.from(v)));
+      } catch (_) {
+        // Skip a single corrupt record instead of failing the whole load.
+      }
+    }
     entries.sort((a, b) => b.timestamp.compareTo(a.timestamp));
     return entries.take(limit).toList();
   }

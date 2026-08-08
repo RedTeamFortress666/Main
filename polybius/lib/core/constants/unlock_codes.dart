@@ -1,17 +1,17 @@
-/// Unlock ritual codes and sequences for the hidden cipher layer.
+/// Access codes for the hidden cipher engine.
 ///
-/// Unlock flows (documented for operators):
-/// 1. **Title hold**: Hold "PØLYBĪUS" title for 3+ seconds → glitch flash → cipher hint.
-/// 2. **Difficulty ritual**: Set difficulty to 11 + language ENGLISH → partial unlock token.
-/// 3. **LOAD GAME invite**: Valid invite code opens cipher (tier-based access).
-/// 4. **Dev ritual**: LOAD GAME code "B1-66-3R" or "D1-66-3R" with CHINESE language
-///    selected in SETTINGS → developer panel (debug builds only show shortcuts).
-/// 5. **Compound**: Title hold + difficulty 7 + RUSSIAN → full cipher unlock without invite.
+/// The crypto engine is reachable ONLY by logging in at the dev access portal
+/// (reached via the ritual: hold title 6s → SETTINGS difficulty 11 → LANGUAGES
+/// Russian + hold SELECT 3s). Accepted codes:
+/// - `B1-66-3R` / `D1-66-3R` → developer access (full engine + dev panel)
+/// - `Tr1-66-3R` → user-only access (cipher without the dev panel)
+/// - or a valid invite token signed by the project key (SignedToken)
 library;
 
 class UnlockCodes {
   static const String devB1663R = 'B1-66-3R';
   static const String devD1663R = 'D1-66-3R';
+  static const String userTr1663R = 'TR1-66-3R';
   static const String compoundDifficulty = '7';
   static const String compoundLanguage = 'RUSSIAN';
   static const String ritualLanguage = 'CHINESE';

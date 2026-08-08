@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
+import 'package:polybius/features/cipher/screens/clipboard_row.dart';
 
 class DecryptTab extends ConsumerStatefulWidget {
   const DecryptTab({super.key});
@@ -41,7 +41,7 @@ class _DecryptTabState extends ConsumerState<DecryptTab> {
         children: [
           TextField(
             controller: _inputController,
-            maxLines: 4,
+            maxLines: 3,
             style: const TextStyle(fontSize: 20),
             decoration: const InputDecoration(
               labelText: 'EMOJI CIPHERTEXT',
@@ -49,9 +49,14 @@ class _DecryptTabState extends ConsumerState<DecryptTab> {
               border: OutlineInputBorder(),
             ),
           ),
-          const SizedBox(height: 12),
+          ClipboardRow(
+            color: NeonTheme.neonPink,
+            getCopyText: () => _inputController.text,
+            onPaste: (text) => setState(() => _inputController.text = text),
+          ),
+          const SizedBox(height: 4),
           ElevatedButton(onPressed: _decrypt, child: const Text('DECRYPT')),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Expanded(
             child: Container(
               padding: const EdgeInsets.all(12),
@@ -71,17 +76,11 @@ class _DecryptTabState extends ConsumerState<DecryptTab> {
               ),
             ),
           ),
-          if (_output.isNotEmpty)
-            TextButton.icon(
-              onPressed: () {
-                Clipboard.setData(ClipboardData(text: _output));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Copied to clipboard')),
-                );
-              },
-              icon: const Icon(Icons.copy, color: NeonTheme.neonPink),
-              label: const Text('COPY', style: TextStyle(color: NeonTheme.neonPink)),
-            ),
+          ClipboardRow(
+            color: NeonTheme.neonGreen,
+            getCopyText: () => _output,
+            onPaste: (text) => setState(() => _inputController.text = text),
+          ),
         ],
       ),
     );

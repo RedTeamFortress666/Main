@@ -5,8 +5,8 @@ import 'package:polybius/core/providers/app_providers.dart';
 /// Notifies [GoRouter] when auth/unlock changes without recreating the router.
 class RouterRefresh extends ChangeNotifier {
   RouterRefresh(Ref ref) {
-    ref.listen(authProvider, (_, __) => notifyListeners());
-    ref.listen(unlockProvider, (_, __) => notifyListeners());
+    ref.listen(authProvider, (_, _) => notifyListeners());
+    ref.listen(unlockProvider, (_, _) => notifyListeners());
   }
 }
 
