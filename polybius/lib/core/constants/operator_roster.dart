@@ -127,5 +127,6 @@ class OperatorRoster {
         ...pool.map((o) => o.inviteCode.toUpperCase()),
         AppConstants.opTemptressInviteCode.toUpperCase(),
         AppConstants.opCrownOfCornsInviteCode.toUpperCase(),
+        AppConstants.opMizzPicklesInviteCode.toUpperCase(),
       };
 }

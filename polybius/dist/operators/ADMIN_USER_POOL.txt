@@ -10,7 +10,7 @@ Key:      RSA-4096  CE8B181827F1EAEFB06C8151FE567E519EA0E80E
 
 This signed pack lists unique accounts bootstrapped into the Polybius APK
 on first install (including specialised identities SpamKat2 / Gam3.0n /
-KASP3R / CrownOfCorns / T3mptress), plus the DARTH CHERRY night red-light filter used for
+KASP3R / CrownOfCorns / T3mptress / MizzPickl3s), plus the DARTH CHERRY night red-light filter used for
 stealth cipher typing (hidden eyeball → fade-type / matrix green veil).
 
 VERIFY
@@ -22,7 +22,7 @@ DOWNLOADS
 ---------
 Polybius APK (all accounts below):
   https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/polybius-1.0.0-beta.2-android-arm64.apk
-  sha256: bd8ff6efdfe7ad6db3b1a05d86a077a4fc5980751497a1d4034f758799f16438
+  sha256: b7ff8384863f0c6354607a077ad50e8662910f99f6ca9563bc428403f5131055
 
 DARTH CHERRY screen dimmer (install alongside Polybius):
   https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/darth-cherry-1.0.2-android-arm64.apk
@@ -92,6 +92,16 @@ D4. T3mptress  (STANDARD USER / agent)
    Password:         not1nkansas69
    Backup password:  NoPlaceL1ke
    Card: https://github.com/RedTeamFortress666/Main/blob/cursor/polybius-flutter-app-a932/polybius/dist/operators/temptress.md
+
+D5. MizzPickl3s (STANDARD USER / agent)
+   Login:            MizzPickl3s
+   Invite / game file: SP-1N-33
+   PIN:              080826
+   Password:         8-Bit.Bitch3s
+   Backup password:  Glitch.B1tch99
+   iOS QR:           mizzpickles-ios-qr.png
+   iOS / web zip:    https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/polybius-mizzpickles-web-portable.zip
+   Card: https://github.com/RedTeamFortress666/Main/blob/cursor/polybius-flutter-app-a932/polybius/dist/operators/mizzpickles.md
 
 ADMIN / USER POOL (10)
 ----------------------

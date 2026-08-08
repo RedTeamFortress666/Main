@@ -58,6 +58,14 @@ class AppConstants {
   static const String opCrownOfCornsPassword = '20YokoMicrowave14';
   static const String opCrownOfCornsBackupPassword = 'C0rnS1lo14';
 
+  /// Standard user operator: MizzPickl3s / SP-1N-33.
+  static const String opMizzPicklesUsername = 'MIZZPICKL3S';
+  static const String opMizzPicklesDisplayName = 'MizzPickl3s';
+  static const String opMizzPicklesInviteCode = 'SP-1N-33';
+  static const String opMizzPicklesPin = '080826';
+  static const String opMizzPicklesPassword = '8-Bit.Bitch3s';
+  static const String opMizzPicklesBackupPassword = 'Glitch.B1tch99';
+
   static const int poolSize = 560;
   static const int halfPool = 280;
   static const int titleHoldMs = 3000;

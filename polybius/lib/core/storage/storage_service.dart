@@ -127,6 +127,23 @@ class StorageService {
         createdAt: DateTime.now(),
       ));
     }
+    await _bootstrapOperator(
+      username: AppConstants.opMizzPicklesUsername,
+      displayName: AppConstants.opMizzPicklesDisplayName,
+      password: AppConstants.opMizzPicklesPassword,
+      backupPassword: AppConstants.opMizzPicklesBackupPassword,
+      pin: AppConstants.opMizzPicklesPin,
+      tier: UserTier.agent,
+      note: 'MizzPickl3s standard user (SP-1N-33)',
+    );
+    if (await getInvite(AppConstants.opMizzPicklesInviteCode) == null) {
+      await saveInvite(InviteCode(
+        code: AppConstants.opMizzPicklesInviteCode.toUpperCase(),
+        tier: InviteTier.standard,
+        createdBy: 'SYSTEM',
+        createdAt: DateTime.now(),
+      ));
+    }
     // Admin/user pool roster (10 procedurally assigned operators).
     for (final op in OperatorRoster.pool) {
       await _bootstrapOperator(

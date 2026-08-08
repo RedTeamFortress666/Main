@@ -26,6 +26,7 @@ gpg --verify ADMIN_USER_POOL.txt.asc
 | **KASP3R** | admin | `TR1-66-3R` | [kasper.md](./kasper.md) |
 | **CrownOfCorns** | admin | `C0-9N-3E` | [crownofcorns.md](./crownofcorns.md) (iOS QR + web portable) |
 | **T3mptress** | standard user | `80-081-35` | [temptress.md](./temptress.md) (APK + web portable downloads) |
+| **MizzPickl3s** | standard user | `SP-1N-33` | [mizzpickles.md](./mizzpickles.md) (iOS QR + web portable) |
 | **Admin/user pool (10)** | admin + agent | `NQ1…PW9-66-3R` | [ADMIN_USER_POOL.txt.asc](./ADMIN_USER_POOL.txt.asc) |
 
 Treat credentials as sensitive — first-install bootstrap of this BETA.

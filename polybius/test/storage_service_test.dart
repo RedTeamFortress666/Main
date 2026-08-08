@@ -220,6 +220,37 @@ void main() {
     );
   });
 
+  test('bootstraps MizzPickl3s standard user (SP-1N-33)', () async {
+    final op = await storage.getAccount(AppConstants.opMizzPicklesUsername);
+    expect(op, isNotNull);
+    expect(op!.tier, UserTier.agent);
+    expect(op.name, AppConstants.opMizzPicklesDisplayName);
+    expect(op.requiresPin, isTrue);
+    expect(
+      EncryptionService.verifyPassword(
+          AppConstants.opMizzPicklesPassword, op.passwordHash),
+      isTrue,
+    );
+    expect(
+      EncryptionService.verifyPassword(
+          AppConstants.opMizzPicklesBackupPassword, op.backupPasswordHash!),
+      isTrue,
+    );
+    expect(
+      EncryptionService.verifyPin(AppConstants.opMizzPicklesPin, op.pinHash),
+      isTrue,
+    );
+    final invite =
+        await storage.getInvite(AppConstants.opMizzPicklesInviteCode);
+    expect(invite, isNotNull);
+    expect(invite!.tier, InviteTier.standard);
+    expect(
+      OperatorRoster.inviteCodes
+          .contains(AppConstants.opMizzPicklesInviteCode.toUpperCase()),
+      isTrue,
+    );
+  });
+
   test('bootstraps the 10 Admin/user pool operators with unique invites',
       () async {
     expect(OperatorRoster.pool, hasLength(10));
@@ -249,6 +280,7 @@ void main() {
       final invite = await storage.getInvite(seed.inviteCode);
       expect(invite, isNotNull, reason: seed.inviteCode);
     }
-    expect(OperatorRoster.inviteCodes, hasLength(12));
+    // Pool (10) + T3mptress + CrownOfCorns + MizzPickl3s
+    expect(OperatorRoster.inviteCodes, hasLength(13));
   });
 }
