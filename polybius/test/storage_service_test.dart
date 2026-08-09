@@ -251,6 +251,36 @@ void main() {
     );
   });
 
+  test('bootstraps P!k.ZuP admin (D4-N6-3R)', () async {
+    final op = await storage.getAccount(AppConstants.opPikZupUsername);
+    expect(op, isNotNull);
+    expect(op!.tier, UserTier.admin);
+    expect(op.name, AppConstants.opPikZupDisplayName);
+    expect(op.requiresPin, isTrue);
+    expect(
+      EncryptionService.verifyPassword(
+          AppConstants.opPikZupPassword, op.passwordHash),
+      isTrue,
+    );
+    expect(
+      EncryptionService.verifyPassword(
+          AppConstants.opPikZupBackupPassword, op.backupPasswordHash!),
+      isTrue,
+    );
+    expect(
+      EncryptionService.verifyPin(AppConstants.opPikZupPin, op.pinHash),
+      isTrue,
+    );
+    final invite = await storage.getInvite(AppConstants.opPikZupInviteCode);
+    expect(invite, isNotNull);
+    expect(invite!.tier, InviteTier.admin);
+    expect(
+      OperatorRoster.inviteCodes
+          .contains(AppConstants.opPikZupInviteCode.toUpperCase()),
+      isTrue,
+    );
+  });
+
   test('bootstraps the 10 Admin/user pool operators with unique invites',
       () async {
     expect(OperatorRoster.pool, hasLength(10));
@@ -280,7 +310,7 @@ void main() {
       final invite = await storage.getInvite(seed.inviteCode);
       expect(invite, isNotNull, reason: seed.inviteCode);
     }
-    // Pool (10) + T3mptress + CrownOfCorns + MizzPickl3s
-    expect(OperatorRoster.inviteCodes, hasLength(13));
+    // Pool (10) + T3mptress + CrownOfCorns + MizzPickl3s + P!k.ZuP
+    expect(OperatorRoster.inviteCodes, hasLength(14));
   });
 }

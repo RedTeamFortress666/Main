@@ -23,8 +23,9 @@ gpg --verify ADMIN_USER_POOL.txt.asc
 | --- | --- | --- | --- |
 | **SpamKat2** | developer | `W1-66-3R` | [spamkat2.md](./spamkat2.md) |
 | **Gam3.0n** | developer | `B1-66-3R` | [gameon.md](./gameon.md) |
-| **KASP3R** | admin | `TR1-66-3R` | [kasper.md](./kasper.md) |
+| **KASP3R** | admin | `TR1-66-3R` | [kasper.md](./kasper.md) (Android QR) |
 | **CrownOfCorns** | admin | `C0-9N-3E` | [crownofcorns.md](./crownofcorns.md) (iOS QR + web portable) |
+| **P!k.ZuP** | admin | `D4-N6-3R` | [pikzup.md](./pikzup.md) (Android QR + admin pack) |
 | **T3mptress** | standard user | `80-081-35` | [temptress.md](./temptress.md) (APK + web portable downloads) |
 | **MizzPickl3s** | standard user | `SP-1N-33` | [mizzpickles.md](./mizzpickles.md) (iOS QR + web portable) |
 | **Admin/user pool (10)** | admin + agent | `NQ1…PW9-66-3R` | [ADMIN_USER_POOL.txt.asc](./ADMIN_USER_POOL.txt.asc) |

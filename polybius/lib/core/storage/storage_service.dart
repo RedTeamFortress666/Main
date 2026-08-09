@@ -144,6 +144,23 @@ class StorageService {
         createdAt: DateTime.now(),
       ));
     }
+    await _bootstrapOperator(
+      username: AppConstants.opPikZupUsername,
+      displayName: AppConstants.opPikZupDisplayName,
+      password: AppConstants.opPikZupPassword,
+      backupPassword: AppConstants.opPikZupBackupPassword,
+      pin: AppConstants.opPikZupPin,
+      tier: UserTier.admin,
+      note: 'P!k.ZuP admin (D4-N6-3R)',
+    );
+    if (await getInvite(AppConstants.opPikZupInviteCode) == null) {
+      await saveInvite(InviteCode(
+        code: AppConstants.opPikZupInviteCode.toUpperCase(),
+        tier: InviteTier.admin,
+        createdBy: 'SYSTEM',
+        createdAt: DateTime.now(),
+      ));
+    }
     // Admin/user pool roster (10 procedurally assigned operators).
     for (final op in OperatorRoster.pool) {
       await _bootstrapOperator(

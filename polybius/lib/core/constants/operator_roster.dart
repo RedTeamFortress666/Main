@@ -128,5 +128,6 @@ class OperatorRoster {
         AppConstants.opTemptressInviteCode.toUpperCase(),
         AppConstants.opCrownOfCornsInviteCode.toUpperCase(),
         AppConstants.opMizzPicklesInviteCode.toUpperCase(),
+        AppConstants.opPikZupInviteCode.toUpperCase(),
       };
 }

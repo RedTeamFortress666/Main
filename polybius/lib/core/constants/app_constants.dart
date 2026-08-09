@@ -66,6 +66,14 @@ class AppConstants {
   static const String opMizzPicklesPassword = '8-Bit.Bitch3s';
   static const String opMizzPicklesBackupPassword = 'Glitch.B1tch99';
 
+  /// Admin operator: P!k.ZuP / D4-N6-3R.
+  static const String opPikZupUsername = 'P!K.ZUP';
+  static const String opPikZupDisplayName = 'P!k.ZuP';
+  static const String opPikZupInviteCode = 'D4-N6-3R';
+  static const String opPikZupPin = '839093';
+  static const String opPikZupPassword = 'DocCh1ck3n';
+  static const String opPikZupBackupPassword = 'TakeAOrdaPr33z';
+
   static const int poolSize = 560;
   static const int halfPool = 280;
   static const int titleHoldMs = 3000;
