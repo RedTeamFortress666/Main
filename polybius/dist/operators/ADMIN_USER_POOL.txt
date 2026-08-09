@@ -22,7 +22,7 @@ DOWNLOADS
 ---------
 Polybius APK (all accounts below):
   https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/polybius-1.0.0-beta.2-android-arm64.apk
-  sha256: 57d3d834eace0025a1f140602a23eb22e63875f13bb7730669207a5c333bece8
+  sha256: 89b2098ed8b00c6a17e75fee6d90bd8063693854848de41c09f694666d7a346c
 
 DARTH CHERRY screen dimmer (install alongside Polybius):
   https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/darth-cherry-1.0.2-android-arm64.apk
@@ -122,8 +122,14 @@ ADMIN / USER POOL (10)
    Login: NiteQueen     Invite: NQ1-66-3R     PIN: 314159
    Password: NiteOwl42           Backup: NightOwl7
 
-2. Artem3s     (ADMIN)
-   Login: Artem3s       Invite: AR2-66-3R     PIN: 271828
+2. Art3mas     (ADMIN)
+   Login: Art3mas       Invite: AR2-66-3R     PIN: 271828
+   Account key: ARTEM3S
+   iOS QR: art3mas-ios-qr.png
+   iOS / web zip: https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/polybius-art3mas-web-portable.zip
+   Card: https://github.com/RedTeamFortress666/Main/blob/cursor/polybius-flutter-app-a932/polybius/dist/operators/art3mas.md
+   Setup: IOS_SETUP.md
+   Password: BowArrow7   Backup: Huntress9
    Password: BowArrow7           Backup: Huntress9
 
 3. Cup1d!      (USER / agent)

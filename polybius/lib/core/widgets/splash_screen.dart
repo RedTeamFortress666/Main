@@ -1,45 +1,478 @@
+import 'dart:async';
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:polybius/core/constants/app_constants.dart';
+import 'package:polybius/core/providers/intro_provider.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 
-/// Shown during app bootstrap and session restore.
-class SplashScreen extends StatelessWidget {
+/// Cinematic boot: logo → matrix + third eye → GAME OVER typewriter →
+/// CRT power-off → loading → start screen.
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
+
+  @override
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
+}
+
+enum _Phase {
+  logo,
+  matrixEye,
+  blackBeat,
+  gameOverType,
+  tvOff,
+  loading,
+  done,
+}
+
+class _SplashScreenState extends ConsumerState<SplashScreen>
+    with TickerProviderStateMixin {
+  _Phase _phase = _Phase.logo;
+  String _typed = '';
+  static const _line = 'brought to you by GÅMÊ ØVĒR...';
+  double _tvScale = 1;
+  double _tvOpacity = 1;
+  int _eyeBlink = 0;
+  bool _showQuestion = false;
+  late final AnimationController _matrixCtrl;
+  late final AnimationController _eyePulse;
+  final _rng = Random(42);
+
+  @override
+  void initState() {
+    super.initState();
+    _matrixCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2400),
+    )..repeat();
+    _eyePulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 380),
+    );
+    _runSequence();
+  }
+
+  @override
+  void dispose() {
+    _matrixCtrl.dispose();
+    _eyePulse.dispose();
+    super.dispose();
+  }
+
+  Future<void> _runSequence() async {
+    // 1) Logo
+    await Future<void>.delayed(const Duration(milliseconds: 2600));
+    if (!mounted) return;
+    setState(() => _phase = _Phase.matrixEye);
+
+    // 2) Matrix + eye blinks (show ? in pupil on blinks)
+    for (var i = 0; i < 3; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 700));
+      if (!mounted) return;
+      setState(() {
+        _eyeBlink = i + 1;
+        _showQuestion = true;
+      });
+      unawaited(_eyePulse.forward(from: 0));
+      await Future<void>.delayed(const Duration(milliseconds: 220));
+      if (!mounted) return;
+      setState(() => _showQuestion = false);
+      await Future<void>.delayed(const Duration(milliseconds: 420));
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    if (!mounted) return;
+
+    // 3) Black beat
+    setState(() => _phase = _Phase.blackBeat);
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    if (!mounted) return;
+
+    // 4) Typewriter
+    setState(() {
+      _phase = _Phase.gameOverType;
+      _typed = '';
+    });
+    for (var i = 0; i < _line.length; i++) {
+      await Future<void>.delayed(Duration(milliseconds: 38 + _rng.nextInt(28)));
+      if (!mounted) return;
+      setState(() => _typed = _line.substring(0, i + 1));
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 900));
+    if (!mounted) return;
+
+    // 5) Glitch + TV off to white dot
+    setState(() => _phase = _Phase.tvOff);
+    const steps = 18;
+    for (var i = 0; i <= steps; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 28));
+      if (!mounted) return;
+      final t = i / steps;
+      setState(() {
+        _tvScale = 1.0 - (0.92 * Curves.easeIn.transform(t));
+        _tvOpacity = 1.0 - (0.15 * t);
+      });
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    if (!mounted) return;
+    setState(() {
+      _tvScale = 0.02;
+      _tvOpacity = 1;
+    });
+    await Future<void>.delayed(const Duration(milliseconds: 180));
+    if (!mounted) return;
+    setState(() => _tvOpacity = 0);
+
+    // 6) Loading
+    setState(() => _phase = _Phase.loading);
+    await Future<void>.delayed(const Duration(seconds: 2));
+    if (!mounted) return;
+
+    setState(() => _phase = _Phase.done);
+    ref.read(introCompleteProvider.notifier).state = true;
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: NeonTheme.background,
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              AppConstants.appName,
-              style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                    color: NeonTheme.neonCyan,
-                    fontFamily: 'monospace',
-                  ),
+      backgroundColor: Colors.black,
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 280),
+        child: switch (_phase) {
+          _Phase.logo => _LogoPhase(key: const ValueKey('logo')),
+          _Phase.matrixEye => _MatrixEyePhase(
+              key: const ValueKey('matrix'),
+              controller: _matrixCtrl,
+              pulse: _eyePulse,
+              showQuestion: _showQuestion,
+              blinkIndex: _eyeBlink,
             ),
-            const SizedBox(height: 32),
-            const SizedBox(
-              width: 32,
-              height: 32,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation(NeonTheme.neonPink),
-              ),
+          _Phase.blackBeat => const SizedBox.expand(key: ValueKey('black')),
+          _Phase.gameOverType => _TypePhase(
+              key: const ValueKey('type'),
+              text: _typed,
             ),
-            const SizedBox(height: 16),
-            const Text(
-              'INITIALIZING TERMINAL...',
-              style: TextStyle(
-                color: Colors.white38,
-                fontFamily: 'monospace',
-                fontSize: 12,
-              ),
+          _Phase.tvOff => _TvOffPhase(
+              key: const ValueKey('tv'),
+              scale: _tvScale,
+              opacity: _tvOpacity,
+              text: _typed,
             ),
+          _Phase.loading || _Phase.done => const _LoadingPhase(
+              key: ValueKey('loading'),
+            ),
+        },
+      ),
+    );
+  }
+}
+
+class _LogoPhase extends StatelessWidget {
+  const _LogoPhase({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: key,
+      color: Colors.black,
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            AppConstants.appName,
+            style: TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 42,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 6,
+              color: NeonTheme.neonCyan,
+              shadows: [
+                Shadow(color: NeonTheme.neonPink.withValues(alpha: 0.7), blurRadius: 18),
+                Shadow(color: NeonTheme.neonCyan.withValues(alpha: 0.5), blurRadius: 28),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'TERMINAL BOOT',
+            style: TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 11,
+              letterSpacing: 4,
+              color: NeonTheme.neonYellow.withValues(alpha: 0.75),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MatrixEyePhase extends StatelessWidget {
+  const _MatrixEyePhase({
+    super.key,
+    required this.controller,
+    required this.pulse,
+    required this.showQuestion,
+    required this.blinkIndex,
+  });
+
+  final AnimationController controller;
+  final AnimationController pulse;
+  final bool showQuestion;
+  final int blinkIndex;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([controller, pulse]),
+      builder: (context, _) {
+        return CustomPaint(
+          painter: _MatrixEyePainter(
+            t: controller.value,
+            pulse: pulse.value,
+            showQuestion: showQuestion,
+            blinkIndex: blinkIndex,
+          ),
+          child: const SizedBox.expand(),
+        );
+      },
+    );
+  }
+}
+
+class _MatrixEyePainter extends CustomPainter {
+  _MatrixEyePainter({
+    required this.t,
+    required this.pulse,
+    required this.showQuestion,
+    required this.blinkIndex,
+  });
+
+  final double t;
+  final double pulse;
+  final bool showQuestion;
+  final int blinkIndex;
+
+  static const _palette = [
+    Color(0xFF39FF14), // neon green
+    Color(0xFFFF2D95), // pink/red
+    Color(0xFFFF1744), // red
+    Color(0xFFFFF200), // yellow
+  ];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rng = Random(7);
+    final cols = (size.width / 14).floor().clamp(8, 40);
+    final rows = (size.height / 16).floor().clamp(12, 60);
+    final glyphs = '01アイウエオカキクケコサシスセソタチツテト01PØLYBĪUS';
+
+    for (var c = 0; c < cols; c++) {
+      final speed = 0.35 + (c % 5) * 0.12;
+      final head = ((t * speed * rows) + c * 3) % (rows + 8);
+      for (var r = 0; r < rows; r++) {
+        final dist = (head - r);
+        if (dist < 0 || dist > 12) continue;
+        final ch = glyphs[(c * 13 + r + (t * 40).floor()) % glyphs.length];
+        final color = _palette[(c + r) % _palette.length]
+            .withValues(alpha: (1.0 - dist / 12).clamp(0.15, 0.95));
+        final tp = TextPainter(
+          text: TextSpan(
+            text: ch,
+            style: TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 12,
+              color: color,
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        tp.paint(canvas, Offset(c * 14.0, r * 16.0));
+      }
+    }
+
+    // Illuminati third eye (triangle + eye)
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+    final flash = 0.55 + 0.45 * sin(t * pi * 6);
+    final blinkClose = showQuestion ? (0.15 + 0.85 * (1 - pulse)) : 1.0;
+
+    final tri = Path()
+      ..moveTo(cx, cy - 90)
+      ..lineTo(cx - 78, cy + 55)
+      ..lineTo(cx + 78, cy + 55)
+      ..close();
+    canvas.drawPath(
+      tri,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5
+        ..color = const Color(0xFF39FF14).withValues(alpha: flash),
+    );
+    canvas.drawPath(
+      tri,
+      Paint()
+        ..style = PaintingStyle.fill
+        ..color = Colors.black.withValues(alpha: 0.55),
+    );
+
+    // Eye white / iris
+    final eyeR = 28.0 * blinkClose;
+    if (eyeR > 2) {
+      canvas.drawOval(
+        Rect.fromCenter(center: Offset(cx, cy - 8), width: 70, height: eyeR * 1.4),
+        Paint()..color = const Color(0xFF39FF14).withValues(alpha: 0.25 + 0.2 * flash),
+      );
+      canvas.drawCircle(
+        Offset(cx, cy - 8),
+        16 * blinkClose,
+        Paint()..color = const Color(0xFFFF2D95).withValues(alpha: 0.85),
+      );
+      canvas.drawCircle(
+        Offset(cx, cy - 8),
+        8 * blinkClose,
+        Paint()..color = const Color(0xFFFFF200),
+      );
+      // Pupil
+      canvas.drawCircle(
+        Offset(cx, cy - 8),
+        5 * blinkClose,
+        Paint()..color = Colors.black,
+      );
+      if (showQuestion && blinkClose > 0.4) {
+        final q = TextPainter(
+          text: const TextSpan(
+            text: '?',
+            style: TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF39FF14),
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        q.paint(canvas, Offset(cx - q.width / 2, cy - 8 - q.height / 2));
+      }
+    }
+
+    // Accent rays
+    for (var i = 0; i < 6; i++) {
+      final a = -pi / 2 + i * pi / 3 + t * pi;
+      final p = Paint()
+        ..color = _palette[i % _palette.length].withValues(alpha: 0.35 * flash)
+        ..strokeWidth = 1.2;
+      canvas.drawLine(
+        Offset(cx + cos(a) * 40, cy - 8 + sin(a) * 40),
+        Offset(cx + cos(a) * 110, cy - 8 + sin(a) * 110),
+        p,
+      );
+    }
+
+    // consume unused to keep analyzer quiet if tree shaken oddly
+    rng.nextBool();
+  }
+
+  @override
+  bool shouldRepaint(covariant _MatrixEyePainter old) =>
+      old.t != t ||
+      old.pulse != pulse ||
+      old.showQuestion != showQuestion ||
+      old.blinkIndex != blinkIndex;
+}
+
+class _TypePhase extends StatelessWidget {
+  const _TypePhase({super.key, required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.black,
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 28),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          fontFamily: 'monospace',
+          fontSize: 18,
+          height: 1.4,
+          letterSpacing: 1.2,
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+          shadows: [
+            Shadow(color: Color(0xFF39FF14), blurRadius: 8),
+            Shadow(color: Color(0xFFFF2D95), blurRadius: 14),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TvOffPhase extends StatelessWidget {
+  const _TvOffPhase({
+    super.key,
+    required this.scale,
+    required this.opacity,
+    required this.text,
+  });
+
+  final double scale;
+  final double opacity;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.black,
+      alignment: Alignment.center,
+      child: Opacity(
+        opacity: opacity.clamp(0, 1),
+        child: Transform.scale(
+          scaleX: 1,
+          scaleY: scale.clamp(0.01, 1),
+          child: Container(
+            width: MediaQuery.sizeOf(context).width,
+            color: scale < 0.08 ? Colors.white : Colors.black,
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+            child: scale < 0.08
+                ? null
+                : Text(
+                    text,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 18,
+                      color: Colors.white.withValues(alpha: 0.9),
+                    ),
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LoadingPhase extends StatelessWidget {
+  const _LoadingPhase({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const ColoredBox(
+      color: Colors.black,
+      child: Center(
+        child: Text(
+          'loading...',
+          style: TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 14,
+            letterSpacing: 3,
+            color: Colors.white54,
+          ),
         ),
       ),
     );

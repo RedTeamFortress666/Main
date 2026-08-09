@@ -40,7 +40,7 @@ class OperatorRoster {
     ),
     OperatorSeed(
       username: 'ARTEM3S',
-      displayName: 'Artem3s',
+      displayName: 'Art3mas',
       inviteCode: 'AR2-66-3R',
       pin: '271828',
       password: 'BowArrow7',

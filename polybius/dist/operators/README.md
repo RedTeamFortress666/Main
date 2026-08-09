@@ -23,6 +23,7 @@ gpg --verify ADMIN_USER_POOL.txt.asc
 | --- | --- | --- | --- |
 | **SpamKat2** | developer | `W1-66-3R` | [spamkat2.md](./spamkat2.md) |
 | **Gam3.0n** | developer | `B1-66-3R` | [gameon.md](./gameon.md) |
+| **Art3mas** | admin | `AR2-66-3R` | [art3mas.md](./art3mas.md) (iOS QR + manual) |
 | **KASP3R** | admin | `TR1-66-3R` | [kasper.md](./kasper.md) (Android QR) |
 | **CrownOfCorns** | admin | `C0-9N-3E` | [crownofcorns.md](./crownofcorns.md) (iOS QR + web portable) |
 | **P!k.ZuP** | admin | `D4-N6-3R` | [pikzup.md](./pikzup.md) (Android QR + admin pack) |

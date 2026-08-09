@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:polybius/core/constants/unlock_codes.dart';
 import 'package:polybius/core/audio/music_service.dart';
+import 'package:polybius/core/providers/intro_provider.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/routing/router_refresh.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
@@ -30,17 +31,18 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final authState = ref.read(authProvider);
       final unlockState = ref.read(unlockProvider);
+      final introDone = ref.read(introCompleteProvider);
       final loc = state.matchedLocation;
 
-      // Keep the splash visible until session restore completes.
-      if (authState.isRestoring) {
+      // Keep the splash visible until session restore + cinematic intro finish.
+      if (authState.isRestoring || !introDone) {
         return loc == '/' ? null : '/';
       }
 
       final loggedIn = authState.isAuthenticated;
       final needsPin = authState.needsPin && authState.user != null;
 
-      // Route away from the splash once restore has finished.
+      // Route away from the splash once restore + intro have finished.
       if (loc == '/') {
         if (needsPin) return '/pin';
         return loggedIn ? '/menu' : '/login';
