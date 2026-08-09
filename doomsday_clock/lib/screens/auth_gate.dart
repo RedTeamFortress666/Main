@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../services/auth_service.dart';
 import '../theme/noir_theme.dart';
+import '../widgets/doomsday_logo.dart';
 import '../widgets/matrix_chrome.dart';
 
 class AuthGate extends StatefulWidget {
@@ -79,19 +80,8 @@ class _AuthGateState extends State<AuthGate> {
           child: ListView(
             padding: const EdgeInsets.all(24),
             children: [
-              Text(
-                'DOOMSDAY CLOCK 2.0',
-                style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                      fontSize: 28,
-                      shadows: [
-                        Shadow(
-                          color: NoirTheme.matrix.withValues(alpha: 0.5),
-                          blurRadius: 20,
-                        ),
-                      ],
-                    ),
-              ),
-              const SizedBox(height: 8),
+              const Center(child: DoomsdayLogo(size: 140)),
+              const SizedBox(height: 18),
               Text(
                 'VAULT LOGIN · POLYBIUS DEVELOPER / ADMIN',
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(

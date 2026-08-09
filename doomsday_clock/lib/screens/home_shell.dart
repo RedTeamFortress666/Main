@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
 import '../theme/noir_theme.dart';
+import '../widgets/doomsday_logo.dart';
 import '../widgets/matrix_chrome.dart';
 import 'alarm_tab.dart';
 import 'auth_gate.dart';
@@ -59,6 +60,8 @@ class _HomeShellState extends State<HomeShell> {
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
                 child: Row(
                   children: [
+                    const DoomsdayLogo(size: 52, showWordmark: false),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -69,7 +72,7 @@ class _HomeShellState extends State<HomeShell> {
                                 .textTheme
                                 .displayLarge
                                 ?.copyWith(
-                                  fontSize: 22,
+                                  fontSize: 20,
                                   shadows: [
                                     Shadow(
                                       color: NoirTheme.matrix

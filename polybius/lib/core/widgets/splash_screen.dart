@@ -61,6 +61,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 
   Future<void> _runSequence() async {
+    // Failsafe: never leave the operator stranded on splash/loading.
+    unawaited(Future<void>.delayed(const Duration(seconds: 14), () {
+      if (!mounted) return;
+      if (!ref.read(introCompleteProvider)) {
+        ref.read(introCompleteProvider.notifier).state = true;
+      }
+    }));
+
     // 1) Logo
     await Future<void>.delayed(const Duration(milliseconds: 2600));
     if (!mounted) return;
@@ -123,12 +131,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     if (!mounted) return;
     setState(() => _tvOpacity = 0);
 
-    // 6) Loading
+    // 6) Loading — hard-capped so we never stick on this frame.
     setState(() => _phase = _Phase.loading);
     await Future<void>.delayed(const Duration(seconds: 2));
     if (!mounted) return;
 
     setState(() => _phase = _Phase.done);
+    // Flip intro gate; RouterRefresh listens and re-runs redirect.
     ref.read(introCompleteProvider.notifier).state = true;
   }
 
