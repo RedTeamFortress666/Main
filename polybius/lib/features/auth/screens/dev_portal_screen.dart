@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:polybius/core/constants/app_constants.dart';
+import 'package:polybius/core/constants/operator_roster.dart';
 import 'package:polybius/core/constants/unlock_codes.dart';
 import 'package:polybius/core/crypto/signature_service.dart';
 import 'package:polybius/core/providers/app_providers.dart';
@@ -13,7 +14,8 @@ enum _Grant { none, user, developer }
 /// POLYBIUS dev access portal — reached via the ritual sequence
 /// (title hold -> difficulty 11 -> Russian hold-to-select). This is the ONLY
 /// entry to the crypto engine: a valid account login plus an access code
-/// (B1-66-3R / D1-66-3R for dev, Tr1-66-3R for user, or a signed invite token).
+/// (B1-66-3R / D1-66-3R / W1-66-3R for dev, Tr1-66-3R for user/admin, or a
+/// signed invite token).
 class DevPortalScreen extends ConsumerStatefulWidget {
   const DevPortalScreen({super.key});
 
@@ -62,14 +64,15 @@ class _DevPortalScreenState extends ConsumerState<DevPortalScreen> {
           tier == UserTier.developer || tier == UserTier.admin;
 
       // Resolve which access the supplied code grants.
-      //   B1-66-3R / D1-66-3R -> developer (requires privileged account)
-      //   Tr1-66-3R           -> user-only cipher (no dev panel)
-      //   signed invite token -> tier per token (dev needs privileged account)
+      //   B1 / D1 / W1           -> developer (requires privileged account)
+      //   Tr1 + roster invites   -> user for agents; full engine for admin/dev
+      //   signed invite token    -> tier per token (dev needs privileged account)
       _Grant grant = _Grant.none;
-      if (code == UnlockCodes.devB1663R || code == UnlockCodes.devD1663R) {
+      if (UnlockCodes.developerCodes.contains(code)) {
         if (privileged) grant = _Grant.developer;
-      } else if (code == UnlockCodes.userTr1663R) {
-        grant = _Grant.user;
+      } else if (code == UnlockCodes.userTr1663R ||
+          OperatorRoster.inviteCodes.contains(code)) {
+        grant = privileged ? _Grant.developer : _Grant.user;
       } else {
         final token = SignedToken.tryParse(rawCode);
         if (token != null) {

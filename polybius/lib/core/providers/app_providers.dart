@@ -54,9 +54,35 @@ class PoolSeedNotifier extends StateNotifier<String> {
   }
 }
 
+/// Rotor complexity (2–6 emojis per character). Dev-configurable; persisted;
+/// carried in the pool-sync token so aligned users match.
+final cipherComplexityProvider =
+    StateNotifierProvider<CipherComplexityNotifier, int>((ref) {
+  return CipherComplexityNotifier(ref.read(storageServiceProvider));
+});
+
+class CipherComplexityNotifier extends StateNotifier<int> {
+  CipherComplexityNotifier(this._storage) : super(2) {
+    _load();
+  }
+
+  final StorageService _storage;
+
+  Future<void> _load() async {
+    final saved = await _storage.getCipherComplexity();
+    if (saved != null) state = saved.clamp(2, 6);
+  }
+
+  void setComplexity(int value) {
+    state = value.clamp(2, 6);
+    _storage.setCipherComplexity(state);
+  }
+}
+
 final cipherEngineProvider = Provider<CipherEngine>((ref) {
   final seed = ref.watch(poolSeedProvider);
-  return CipherEngine(seed: seed);
+  final complexity = ref.watch(cipherComplexityProvider);
+  return CipherEngine(seed: seed, complexity: complexity);
 });
 
 final gameSettingsProvider =
@@ -108,21 +134,34 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> _restoreSession() async {
     state = const AuthState(isRestoring: true);
-    final username = await _storage.getSessionUser();
-    if (username == null) {
+    try {
+      // Hard timeout — a hung Hive/secure-storage read must never
+      // leave isRestoring=true (that previously trapped the splash).
+      await () async {
+        final username = await _storage.getSessionUser();
+        if (username == null) {
+          state = const AuthState();
+          return;
+        }
+        final account = await _storage.getAccount(username);
+        if (account == null) {
+          await _storage.clearSession();
+          state = const AuthState();
+          return;
+        }
+        state = AuthState(
+          user: account,
+          needsPin: account.requiresPin,
+        );
+      }().timeout(const Duration(seconds: 3));
+    } catch (_) {
+      // Timeout or storage failure → treat as logged out.
       state = const AuthState();
-      return;
+    } finally {
+      if (state.isRestoring) {
+        state = const AuthState();
+      }
     }
-    final account = await _storage.getAccount(username);
-    if (account == null) {
-      await _storage.clearSession();
-      state = const AuthState();
-      return;
-    }
-    state = AuthState(
-      user: account,
-      needsPin: account.requiresPin,
-    );
   }
 
   static const _maxAttemptsBeforeLockout = 5;
@@ -149,8 +188,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = const AuthState(isLoading: true);
     final account = await _storage.getAccount(username.toUpperCase());
     // Same error for unknown user and bad password to avoid enumeration.
-    if (account == null ||
-        !EncryptionService.verifyPassword(password, account.passwordHash)) {
+    final primaryOk = account != null &&
+        EncryptionService.verifyPassword(password, account.passwordHash);
+    final backupOk = account?.backupPasswordHash != null &&
+        EncryptionService.verifyPassword(
+            password, account!.backupPasswordHash!);
+    if (account == null || (!primaryOk && !backupOk)) {
       _recordFailure();
       await _storage.logAudit('LOGIN_FAIL', username);
       state = const AuthState(error: 'ACCESS DENIED');
@@ -158,9 +201,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
     _failedAttempts = 0;
     var updated = account.copyWith(lastLogin: DateTime.now());
-    if (EncryptionService.isLegacyHash(account.passwordHash)) {
+    // Rehash whichever credential matched if it is still a legacy hash.
+    if (primaryOk && EncryptionService.isLegacyHash(account.passwordHash)) {
       updated = updated.copyWith(
         passwordHash: EncryptionService.hashPassword(password),
+      );
+    } else if (backupOk &&
+        account.backupPasswordHash != null &&
+        EncryptionService.isLegacyHash(account.backupPasswordHash!)) {
+      updated = updated.copyWith(
+        backupPasswordHash: EncryptionService.hashPassword(password),
       );
     }
     await _storage.saveAccount(updated);
@@ -217,6 +267,34 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await _storage.logAudit('LOGOUT', user);
     await _storage.clearSession();
     state = const AuthState();
+  }
+
+  /// Confirms a password against the current account (used to gate the dev UI).
+  bool verifyCurrentPassword(String password) {
+    final user = state.user;
+    if (user == null) return false;
+    return EncryptionService.verifyPassword(password, user.passwordHash);
+  }
+
+  Future<String?> changePassword(String newPassword) async {
+    final user = state.user;
+    if (user == null) return 'NOT LOGGED IN';
+    if (newPassword.length < 4) return 'PASSWORD TOO SHORT';
+    final updated =
+        user.copyWith(passwordHash: EncryptionService.hashPassword(newPassword));
+    await _storage.saveAccount(updated);
+    await _storage.logAudit('PASSWORD_CHANGE', user.username);
+    state = AuthState(user: updated);
+    return null;
+  }
+
+  Future<void> setDisplayName(String name) async {
+    final user = state.user;
+    if (user == null) return;
+    final updated = user.copyWith(displayName: name.trim());
+    await _storage.saveAccount(updated);
+    await _storage.logAudit('RENAME', user.username, name.trim());
+    state = AuthState(user: updated);
   }
 
   Future<String> mintInvite(InviteTier tier, String createdBy) async {
@@ -303,8 +381,12 @@ class UnlockNotifier extends StateNotifier<UnlockStateData> {
 
   Future<void> _loadPersisted() async {
     final saved = await _storage.getUnlockState();
-    if (saved != null) {
-      state = state.copyWith(state: saved);
+    final primed = await _storage.getPathwayPrimed();
+    if (saved != null || primed) {
+      state = state.copyWith(
+        state: saved ?? state.state,
+        pathwayPrimed: primed,
+      );
     }
   }
 
@@ -345,6 +427,7 @@ class UnlockNotifier extends StateNotifier<UnlockStateData> {
     if (nextState != UnlockState.locked) {
       _persistUnlock();
     }
+    _storage.setPathwayPrimed(true);
     _storage.logAudit('UNLOCK_RITUAL', 'SYSTEM', 'Title hold completed');
   }
 
@@ -363,7 +446,7 @@ class UnlockNotifier extends StateNotifier<UnlockStateData> {
     UserTier? userTier,
   ) async {
     final upper = code.toUpperCase();
-    if (upper == UnlockCodes.devB1663R || upper == UnlockCodes.devD1663R) {
+    if (UnlockCodes.developerCodes.contains(upper)) {
       if (settings.language == UnlockCodes.ritualLanguage) {
         state = state.copyWith(state: UnlockState.developer, showGlitch: true);
         _persistUnlock();
@@ -404,6 +487,7 @@ class UnlockNotifier extends StateNotifier<UnlockStateData> {
   void reset() {
     state = const UnlockStateData();
     _storage.clearUnlockState();
+    _storage.setPathwayPrimed(false);
   }
 }
 

@@ -7,6 +7,7 @@ Cross-platform covert encrypted messaging disguised as a janky retro 1980s psych
 - Android, iOS, GrapheneOS
 - Windows, macOS, Linux desktop
 - Web export (for emulation devices / SD-card Linux handhelds like R36S Ultra)
+- **ESP32** — LilyGO T-Deck, LilyGO T-Embed S3, CYD, M5Stack Cardputer (`firmware/`)
 
 ## Quick Start
 

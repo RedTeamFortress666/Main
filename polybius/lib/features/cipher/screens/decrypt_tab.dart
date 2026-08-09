@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 import 'package:polybius/features/cipher/screens/clipboard_row.dart';
+import 'package:polybius/features/cipher/veil/veil_eyeball.dart';
+import 'package:polybius/features/cipher/veil/veil_state.dart';
 
 class DecryptTab extends ConsumerStatefulWidget {
   const DecryptTab({super.key});
@@ -34,11 +36,31 @@ class _DecryptTabState extends ConsumerState<DecryptTab> {
 
   @override
   Widget build(BuildContext context) {
+    final veil = ref.watch(veilProvider);
+    // Under matrix veil the recovered plaintext does not appear at all.
+    final hidePlain = veil.mode == VeilMode.matrix;
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'DECRYPT',
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    color: NeonTheme.neonPink,
+                    letterSpacing: 2,
+                  ),
+                ),
+              ),
+              const VeilEyeballButton(),
+            ],
+          ),
+          const SizedBox(height: 8),
           TextField(
             controller: _inputController,
             maxLines: 3,
@@ -61,18 +83,35 @@ class _DecryptTabState extends ConsumerState<DecryptTab> {
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                border: Border.all(color: NeonTheme.neonPink),
-                color: NeonTheme.surface,
+                border: Border.all(
+                  color: hidePlain
+                      ? const Color(0xFF00FF66)
+                      : NeonTheme.neonPink,
+                ),
+                color: hidePlain
+                    ? const Color(0xFF031A08)
+                    : NeonTheme.surface,
               ),
               child: SingleChildScrollView(
-                child: SelectableText(
-                  _output.isEmpty ? '...' : _output,
-                  style: const TextStyle(
-                    fontFamily: 'monospace',
-                    color: NeonTheme.neonGreen,
-                    fontSize: 16,
-                  ),
-                ),
+                child: hidePlain
+                    ? Text(
+                        _output.isEmpty
+                            ? 'MATRIX VEIL — plaintext withheld'
+                            : 'MATRIX VEIL — ${_output.length} chars held (clipboard still works)',
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          color: Color(0xFF00FF66),
+                          fontSize: 13,
+                        ),
+                      )
+                    : SelectableText(
+                        _output.isEmpty ? '...' : _output,
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          color: NeonTheme.neonGreen,
+                          fontSize: 16,
+                        ),
+                      ),
               ),
             ),
           ),

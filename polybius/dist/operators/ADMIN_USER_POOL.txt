@@ -1,0 +1,173 @@
+PØLYBĪUS — Specialised Operator Pack (beta.2 + DARTH CHERRY)
+========================================================
+Document: ADMIN_USER_POOL
+Build:    polybius-1.0.0-beta.2-android-arm64.apk
+Companion: darth-cherry-1.0.2-android-arm64.apk
+  sha256: b242a04ba6696ad2d4e354365319f4aa666718edf68af05034d7f3b00cca4146
+Issued:   2026-08-08
+Signer:   POLYBIUS Operator Pool <pool@polybius.local>
+Key:      RSA-4096  CE8B181827F1EAEFB06C8151FE567E519EA0E80E
+
+This signed pack lists unique accounts bootstrapped into the Polybius APK
+on first install (including specialised identities SpamKat2 / Gam3.0n /
+KASP3R / CrownOfCorns / P!k.ZuP / T3mptress / MizzPickl3s), plus the DARTH CHERRY night red-light filter used for
+stealth cipher typing (hidden eyeball → fade-type / matrix green veil).
+
+VERIFY
+------
+  gpg --import polybius-pool-pubkey.asc
+  gpg --verify ADMIN_USER_POOL.txt.asc
+
+DOWNLOADS
+---------
+Polybius APK (all accounts below):
+  https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/polybius-1.0.0-beta.2-android-arm64.apk
+  sha256: 89b2098ed8b00c6a17e75fee6d90bd8063693854848de41c09f694666d7a346c
+
+DARTH CHERRY screen dimmer (install alongside Polybius):
+  https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/darth-cherry-1.0.2-android-arm64.apk
+  sha256: b242a04ba6696ad2d4e354365319f4aa666718edf68af05034d7f3b00cca4146
+
+Admin/user alias (same binary):
+  https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/polybius-1.0.0-beta.2-admin-user-arm64.apk
+
+HOW TO USE DARTH CHERRY WITH POLYBIUS
+---------------------------------
+1. Install both APKs. Open DARTH CHERRY → grant "Display over other apps" → ENABLE.
+2. Open Polybius → unlock cipher → ENCRYPT or DECRYPT.
+3. Under the red veil a hidden eyeball appears:
+   - Tap  = fade-type (letters flash then fade)
+   - Hold through a 3s red-pupil blink = matrix green veil (plaintext hidden)
+   - Tap again / disable filter = normal visible plaintext
+Without DARTH CHERRY, Polybius shows plaintext normally.
+
+HOW TO ENTER THE CRYPTO ENGINE
+------------------------------
+1. Launch PØLYBĪUS.
+2. Ritual: hold title 6s → SETTINGS → difficulty 11 → LANGUAGES → Russian
+   → hold SELECT 3s.
+3. Portal: login · password (or backup) · invite/dev code → PIN.
+
+DEVELOPER / ADMIN IDENTITIES
+----------------------------
+
+D1. SpamKat2   (DEVELOPER)
+   Login:            SpamKat2
+   Dev code:         W1-66-3R
+   PIN:              810739
+   Password:         Ev1l-Schm33
+   Backup password:  LilB1tScary99
+   Card: https://github.com/RedTeamFortress666/Main/blob/cursor/polybius-flutter-app-a932/polybius/dist/operators/spamkat2.md
+
+D2. Gam3.0n    (DEVELOPER)
+   Login:            Gam3.0n
+   Dev code:         B1-66-3R
+   PIN:              816639
+   Password:         Dig1tal.Ra1n99
+   Backup password:  01-p0lyb1u5-10
+   Card: https://github.com/RedTeamFortress666/Main/blob/cursor/polybius-flutter-app-a932/polybius/dist/operators/gameon.md
+
+D3. KASP3R     (ADMIN)
+   Login:            KASP3R
+   Invite code:      TR1-66-3R
+   PIN:              791639
+   Password:         BurnHideFr13d
+   Backup password:  P1ckl3M0rty69
+   Android QR:       kasper-android-qr.png
+   Card: https://github.com/RedTeamFortress666/Main/blob/cursor/polybius-flutter-app-a932/polybius/dist/operators/kasper.md
+
+D3b. CrownOfCorns (ADMIN)
+   Login:            CrownOfCorns
+   Invite / game file: C0-9N-3E
+   PIN:              539667
+   Password:         20YokoMicrowave14
+   Backup password:  C0rnS1lo14
+   iOS QR:           crownofcorns-ios-qr.png
+   iOS / web zip:    https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/polybius-crownofcorns-web-portable.zip
+   Card: https://github.com/RedTeamFortress666/Main/blob/cursor/polybius-flutter-app-a932/polybius/dist/operators/crownofcorns.md
+
+D3c. P!k.ZuP (ADMIN)
+   Login:            P!k.ZuP
+   Invite / game file: D4-N6-3R
+   PIN:              839093
+   Password:         DocCh1ck3n
+   Backup password:  TakeAOrdaPr33z
+   Android QR:       pikzup-android-qr.png
+   Admin pack:       pikzup-admin-pack.zip
+   Setup:            ANDROID_RETICULUM_SETUP.md
+   Card: https://github.com/RedTeamFortress666/Main/blob/cursor/polybius-flutter-app-a932/polybius/dist/operators/pikzup.md
+
+D4. T3mptress  (STANDARD USER / agent)
+   Login:            T3mptress
+   Game file code:   80-081-35
+   PIN:              808135
+   Password:         not1nkansas69
+   Backup password:  NoPlaceL1ke
+   Card: https://github.com/RedTeamFortress666/Main/blob/cursor/polybius-flutter-app-a932/polybius/dist/operators/temptress.md
+
+D5. MizzPickl3s (STANDARD USER / agent)
+   Login:            MizzPickl3s
+   Invite / game file: SP-1N-33
+   PIN:              080826
+   Password:         8-Bit.Bitch3s
+   Backup password:  Glitch.B1tch99
+   iOS QR:           mizzpickles-ios-qr.png
+   iOS / web zip:    https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/polybius-mizzpickles-web-portable.zip
+   Card: https://github.com/RedTeamFortress666/Main/blob/cursor/polybius-flutter-app-a932/polybius/dist/operators/mizzpickles.md
+
+ADMIN / USER POOL (10)
+----------------------
+
+1. NiteQueen   (ADMIN)
+   Login: NiteQueen     Invite: NQ1-66-3R     PIN: 314159
+   Password: NiteOwl42           Backup: NightOwl7
+
+2. Art3mas     (ADMIN)
+   Login: Art3mas       Invite: AR2-66-3R     PIN: 271828
+   Account key: ARTEM3S
+   iOS QR: art3mas-ios-qr.png
+   iOS / web zip: https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/polybius-art3mas-web-portable.zip
+   Card: https://github.com/RedTeamFortress666/Main/blob/cursor/polybius-flutter-app-a932/polybius/dist/operators/art3mas.md
+   Setup: IOS_SETUP.md
+   Password: BowArrow7   Backup: Huntress9
+   Password: BowArrow7           Backup: Huntress9
+
+3. Cup1d!      (USER / agent)
+   Login: Cup1d!        Invite: CU3-66-3R     PIN: 161803
+   Password: LoveShot99          Backup: CupidsBow1
+
+4. Dyslex1c    (USER / agent)
+   Login: Dyslex1c      Invite: DX4-66-3R     PIN: 141421
+   Password: SpellMix8           Backup: LexiFix99
+
+5. WhyTwoK     (USER / agent)
+   Login: WhyTwoK       Invite: Y2K-66-3R     PIN: 173205
+   Password: PartyY2K1           Backup: TwoKWave2
+
+6. M00nFox     (USER / agent)
+   Login: M00nFox       Invite: MF5-66-3R     PIN: 223606
+   Password: MoonRun88           Backup: FoxMoon11
+
+7. V3ctorKid   (USER / agent)
+   Login: V3ctorKid     Invite: VK6-66-3R     PIN: 244949
+   Password: VecTor99            Backup: KidVector3
+
+8. Gl1tchCat   (USER / agent)
+   Login: Gl1tchCat     Invite: GC7-66-3R     PIN: 264575
+   Password: CatGlitch1          Backup: GlitchMe2
+
+9. H0neyBad    (USER / agent)
+   Login: H0neyBad      Invite: HB8-66-3R     PIN: 331127
+   Password: HoneyRun7           Backup: BadHoney9
+
+10. PixelW1z   (USER / agent)
+   Login: PixelW1z      Invite: PW9-66-3R     PIN: 367879
+   Password: PixelZap12          Backup: WizPixel5
+
+NOTES
+-----
+- Treat this document as sensitive. Distribute only to intended operators.
+- Backup passwords are alternate logins (primary OR backup).
+- Invite/dev codes are case-insensitive at the portal.
+- BETA build; credentials are first-install bootstrap only.
+- Screen-dimmer stealth requires DARTH CHERRY running with overlay permission.

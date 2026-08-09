@@ -67,5 +67,26 @@ void main() {
       engine.encrypt('NOISE THAT ADVANCES THE ROTORS');
       expect(engine.decrypt(cipherA), 'FIRST MESSAGE');
     });
+
+    test('round-trips at every rotor complexity 2..6 and emits N per char', () {
+      const plaintext = 'MEET AT 0300';
+      final expectedChars = plaintext
+          .split('')
+          .where((c) => CipherEngine.charset.contains(c))
+          .length;
+      for (var c = 2; c <= 6; c++) {
+        final e = CipherEngine(seed: 'complexity-seed', complexity: c);
+        final cipher = e.encrypt(plaintext);
+        // Each accepted character produces exactly `c` emoji runes.
+        expect(cipher.runes.length, expectedChars * c);
+        final d = CipherEngine(seed: 'complexity-seed', complexity: c);
+        expect(d.decrypt(cipher), plaintext);
+      }
+    });
+
+    test('complexity is clamped to 2..6', () {
+      expect(CipherEngine(seed: 's', complexity: 0).complexity, 2);
+      expect(CipherEngine(seed: 's', complexity: 9).complexity, 6);
+    });
   });
 }

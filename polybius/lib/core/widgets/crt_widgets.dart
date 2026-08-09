@@ -83,6 +83,7 @@ class _GlitchOverlayState extends State<GlitchOverlay>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   final _random = Random();
+  bool _flashing = false;
 
   @override
   void initState() {
@@ -93,16 +94,30 @@ class _GlitchOverlayState extends State<GlitchOverlay>
     );
     _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
+        // Reset so a finished flash never leaves a hit-test barrier.
+        setState(() => _flashing = false);
+        _controller.value = 0;
         widget.onComplete?.call();
       }
     });
+    if (widget.active) {
+      _startFlash();
+    }
+  }
+
+  void _startFlash() {
+    setState(() => _flashing = true);
+    _controller.forward(from: 0);
   }
 
   @override
   void didUpdateWidget(GlitchOverlay oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.active && !oldWidget.active) {
-      _controller.forward(from: 0);
+      _startFlash();
+    } else if (!widget.active && oldWidget.active) {
+      setState(() => _flashing = false);
+      _controller.value = 0;
     }
   }
 
@@ -118,23 +133,31 @@ class _GlitchOverlayState extends State<GlitchOverlay>
       fit: StackFit.expand,
       children: [
         if (widget.child != null) widget.child!,
-        AnimatedBuilder(
-          animation: _controller,
-          builder: (context, _) {
-            if (_controller.value == 0) return const SizedBox.shrink();
-            final offset = (_random.nextDouble() - 0.5) * 20 * _controller.value;
-            return Transform.translate(
-              offset: Offset(offset, 0),
-              child: Container(
-                color: [
-                  NeonTheme.neonPink,
-                  NeonTheme.neonCyan,
-                  Colors.white,
-                ][_random.nextInt(3)]
-                    .withValues(alpha: 0.15 * (1 - _controller.value)),
-              ),
-            );
-          },
+        // Visual-only: never absorb taps (this previously froze the menu
+        // after the PØLYBĪUS title-hold glitch because the finished flash
+        // layer stayed mounted at opacity 0 and blocked all input).
+        IgnorePointer(
+          child: AnimatedBuilder(
+            animation: _controller,
+            builder: (context, _) {
+              if (!_flashing || _controller.value == 0) {
+                return const SizedBox.shrink();
+              }
+              final offset =
+                  (_random.nextDouble() - 0.5) * 20 * _controller.value;
+              return Transform.translate(
+                offset: Offset(offset, 0),
+                child: Container(
+                  color: [
+                    NeonTheme.neonPink,
+                    NeonTheme.neonCyan,
+                    Colors.white,
+                  ][_random.nextInt(3)]
+                      .withValues(alpha: 0.15 * (1 - _controller.value)),
+                ),
+              );
+            },
+          ),
         ),
       ],
     );

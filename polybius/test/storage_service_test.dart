@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:polybius/core/constants/app_constants.dart';
+import 'package:polybius/core/constants/operator_roster.dart';
 import 'package:polybius/core/crypto/encryption_service.dart';
 import 'package:polybius/core/models/models.dart';
 import 'package:polybius/core/storage/polybius_secret_store.dart';
@@ -83,5 +84,233 @@ void main() {
         Hive.box(StorageService.accountsBox).get('LEGACY') as String;
     final decrypted = encryption.decrypt(reloadedRaw);
     expect(jsonDecode(decrypted), isA<Map>());
+  });
+
+  test('bootstraps the RedTeam01 admin account (816639)', () async {
+    final admin = await storage.getAccount('REDTEAM01');
+    expect(admin, isNotNull);
+    expect(admin!.tier, UserTier.admin);
+    expect(admin.name, 'RedTeam01');
+    expect(EncryptionService.verifyPassword('816639', admin.passwordHash), isTrue);
+    expect(EncryptionService.verifyPin('816639', admin.pinHash), isTrue);
+  });
+
+  test('bootstraps SpamKat2 developer (W1-66-3R)', () async {
+    final op = await storage.getAccount(AppConstants.opSpamKatUsername);
+    expect(op, isNotNull);
+    expect(op!.tier, UserTier.developer);
+    expect(op.name, AppConstants.opSpamKatDisplayName);
+    expect(op.requiresPin, isTrue);
+    expect(
+      EncryptionService.verifyPassword(
+          AppConstants.opSpamKatPassword, op.passwordHash),
+      isTrue,
+    );
+    expect(
+      EncryptionService.verifyPassword(
+          AppConstants.opSpamKatBackupPassword, op.backupPasswordHash!),
+      isTrue,
+    );
+    expect(
+      EncryptionService.verifyPin(AppConstants.opSpamKatPin, op.pinHash),
+      isTrue,
+    );
+  });
+
+  test('bootstraps Gam3.0n developer (B1-66-3R)', () async {
+    final op = await storage.getAccount(AppConstants.opGameOnUsername);
+    expect(op, isNotNull);
+    expect(op!.tier, UserTier.developer);
+    expect(op.name, AppConstants.opGameOnDisplayName);
+    expect(
+      EncryptionService.verifyPassword(
+          AppConstants.opGameOnPassword, op.passwordHash),
+      isTrue,
+    );
+    expect(
+      EncryptionService.verifyPassword(
+          AppConstants.opGameOnBackupPassword, op.backupPasswordHash!),
+      isTrue,
+    );
+    expect(
+      EncryptionService.verifyPin(AppConstants.opGameOnPin, op.pinHash),
+      isTrue,
+    );
+  });
+
+  test('bootstraps KASP3R admin (TR1-66-3R)', () async {
+    final op = await storage.getAccount(AppConstants.opKasperUsername);
+    expect(op, isNotNull);
+    expect(op!.tier, UserTier.admin);
+    expect(op.name, AppConstants.opKasperDisplayName);
+    expect(
+      EncryptionService.verifyPassword(
+          AppConstants.opKasperPassword, op.passwordHash),
+      isTrue,
+    );
+    expect(
+      EncryptionService.verifyPassword(
+          AppConstants.opKasperBackupPassword, op.backupPasswordHash!),
+      isTrue,
+    );
+    expect(
+      EncryptionService.verifyPin(AppConstants.opKasperPin, op.pinHash),
+      isTrue,
+    );
+  });
+
+  test('bootstraps T3mptress standard user (80-081-35)', () async {
+    final op = await storage.getAccount(AppConstants.opTemptressUsername);
+    expect(op, isNotNull);
+    expect(op!.tier, UserTier.agent);
+    expect(op.name, AppConstants.opTemptressDisplayName);
+    expect(op.requiresPin, isTrue);
+    expect(
+      EncryptionService.verifyPassword(
+          AppConstants.opTemptressPassword, op.passwordHash),
+      isTrue,
+    );
+    expect(
+      EncryptionService.verifyPassword(
+          AppConstants.opTemptressBackupPassword, op.backupPasswordHash!),
+      isTrue,
+    );
+    expect(
+      EncryptionService.verifyPin(AppConstants.opTemptressPin, op.pinHash),
+      isTrue,
+    );
+    final invite = await storage.getInvite(AppConstants.opTemptressInviteCode);
+    expect(invite, isNotNull);
+    expect(invite!.tier, InviteTier.standard);
+    expect(
+      OperatorRoster.inviteCodes
+          .contains(AppConstants.opTemptressInviteCode.toUpperCase()),
+      isTrue,
+    );
+  });
+
+  test('bootstraps CrownOfCorns admin (C0-9N-3E)', () async {
+    final op = await storage.getAccount(AppConstants.opCrownOfCornsUsername);
+    expect(op, isNotNull);
+    expect(op!.tier, UserTier.admin);
+    expect(op.name, AppConstants.opCrownOfCornsDisplayName);
+    expect(op.requiresPin, isTrue);
+    expect(
+      EncryptionService.verifyPassword(
+          AppConstants.opCrownOfCornsPassword, op.passwordHash),
+      isTrue,
+    );
+    expect(
+      EncryptionService.verifyPassword(
+          AppConstants.opCrownOfCornsBackupPassword, op.backupPasswordHash!),
+      isTrue,
+    );
+    expect(
+      EncryptionService.verifyPin(AppConstants.opCrownOfCornsPin, op.pinHash),
+      isTrue,
+    );
+    final invite =
+        await storage.getInvite(AppConstants.opCrownOfCornsInviteCode);
+    expect(invite, isNotNull);
+    expect(invite!.tier, InviteTier.admin);
+    expect(
+      OperatorRoster.inviteCodes
+          .contains(AppConstants.opCrownOfCornsInviteCode.toUpperCase()),
+      isTrue,
+    );
+  });
+
+  test('bootstraps MizzPickl3s standard user (SP-1N-33)', () async {
+    final op = await storage.getAccount(AppConstants.opMizzPicklesUsername);
+    expect(op, isNotNull);
+    expect(op!.tier, UserTier.agent);
+    expect(op.name, AppConstants.opMizzPicklesDisplayName);
+    expect(op.requiresPin, isTrue);
+    expect(
+      EncryptionService.verifyPassword(
+          AppConstants.opMizzPicklesPassword, op.passwordHash),
+      isTrue,
+    );
+    expect(
+      EncryptionService.verifyPassword(
+          AppConstants.opMizzPicklesBackupPassword, op.backupPasswordHash!),
+      isTrue,
+    );
+    expect(
+      EncryptionService.verifyPin(AppConstants.opMizzPicklesPin, op.pinHash),
+      isTrue,
+    );
+    final invite =
+        await storage.getInvite(AppConstants.opMizzPicklesInviteCode);
+    expect(invite, isNotNull);
+    expect(invite!.tier, InviteTier.standard);
+    expect(
+      OperatorRoster.inviteCodes
+          .contains(AppConstants.opMizzPicklesInviteCode.toUpperCase()),
+      isTrue,
+    );
+  });
+
+  test('bootstraps P!k.ZuP admin (D4-N6-3R)', () async {
+    final op = await storage.getAccount(AppConstants.opPikZupUsername);
+    expect(op, isNotNull);
+    expect(op!.tier, UserTier.admin);
+    expect(op.name, AppConstants.opPikZupDisplayName);
+    expect(op.requiresPin, isTrue);
+    expect(
+      EncryptionService.verifyPassword(
+          AppConstants.opPikZupPassword, op.passwordHash),
+      isTrue,
+    );
+    expect(
+      EncryptionService.verifyPassword(
+          AppConstants.opPikZupBackupPassword, op.backupPasswordHash!),
+      isTrue,
+    );
+    expect(
+      EncryptionService.verifyPin(AppConstants.opPikZupPin, op.pinHash),
+      isTrue,
+    );
+    final invite = await storage.getInvite(AppConstants.opPikZupInviteCode);
+    expect(invite, isNotNull);
+    expect(invite!.tier, InviteTier.admin);
+    expect(
+      OperatorRoster.inviteCodes
+          .contains(AppConstants.opPikZupInviteCode.toUpperCase()),
+      isTrue,
+    );
+  });
+
+  test('bootstraps the 10 Admin/user pool operators with unique invites',
+      () async {
+    expect(OperatorRoster.pool, hasLength(10));
+    final codes = <String>{};
+    for (final seed in OperatorRoster.pool) {
+      expect(seed.password.length, lessThanOrEqualTo(12));
+      expect(seed.backupPassword.length, lessThanOrEqualTo(12));
+      expect(seed.pin.length, 6);
+      expect(codes.add(seed.inviteCode.toUpperCase()), isTrue);
+
+      final op = await storage.getAccount(seed.username);
+      expect(op, isNotNull, reason: seed.displayName);
+      expect(op!.tier, seed.tier);
+      expect(op.name, seed.displayName);
+      expect(op.requiresPin, isTrue);
+      expect(
+        EncryptionService.verifyPassword(seed.password, op.passwordHash),
+        isTrue,
+      );
+      expect(
+        EncryptionService.verifyPassword(
+            seed.backupPassword, op.backupPasswordHash!),
+        isTrue,
+      );
+      expect(EncryptionService.verifyPin(seed.pin, op.pinHash), isTrue);
+
+      final invite = await storage.getInvite(seed.inviteCode);
+      expect(invite, isNotNull, reason: seed.inviteCode);
+    }
+    // Pool (10) + T3mptress + CrownOfCorns + MizzPickl3s + P!k.ZuP
+    expect(OperatorRoster.inviteCodes, hasLength(14));
   });
 }
