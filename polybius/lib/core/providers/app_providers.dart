@@ -381,8 +381,12 @@ class UnlockNotifier extends StateNotifier<UnlockStateData> {
 
   Future<void> _loadPersisted() async {
     final saved = await _storage.getUnlockState();
-    if (saved != null) {
-      state = state.copyWith(state: saved);
+    final primed = await _storage.getPathwayPrimed();
+    if (saved != null || primed) {
+      state = state.copyWith(
+        state: saved ?? state.state,
+        pathwayPrimed: primed,
+      );
     }
   }
 
@@ -423,6 +427,7 @@ class UnlockNotifier extends StateNotifier<UnlockStateData> {
     if (nextState != UnlockState.locked) {
       _persistUnlock();
     }
+    _storage.setPathwayPrimed(true);
     _storage.logAudit('UNLOCK_RITUAL', 'SYSTEM', 'Title hold completed');
   }
 
@@ -482,6 +487,7 @@ class UnlockNotifier extends StateNotifier<UnlockStateData> {
   void reset() {
     state = const UnlockStateData();
     _storage.clearUnlockState();
+    _storage.setPathwayPrimed(false);
   }
 }
 

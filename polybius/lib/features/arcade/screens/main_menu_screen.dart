@@ -45,19 +45,22 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen>
   }
 
   void _startTitleHold() {
+    _holdTimer?.cancel();
     setState(() => _holding = true);
     ref.read(unlockProvider.notifier).onTitleHoldStart();
     _holdTimer = Timer(
       const Duration(milliseconds: AppConstants.devTitleHoldMs),
       () {
-        if (_holding) {
-          ref.read(unlockProvider.notifier).onTitleHoldComplete();
-        }
+        if (!mounted || !_holding) return;
+        setState(() => _holding = false);
+        ref.read(unlockProvider.notifier).onTitleHoldComplete();
       },
     );
   }
 
   void _endTitleHold() {
+    // Only cancel if the ritual has not already completed.
+    if (!_holding) return;
     setState(() => _holding = false);
     _holdTimer?.cancel();
   }

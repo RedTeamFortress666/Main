@@ -71,6 +71,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           _errorEligible = _game?.errorPathEligible ?? false;
           _showGameOver = true;
         });
+        // Stop the arena under the overlay so GAME OVER doesn't look frozen
+        // while enemies keep ticking.
+        _game?.pauseEngine();
       },
     );
 

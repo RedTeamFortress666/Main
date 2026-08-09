@@ -184,9 +184,13 @@ class StorageService {
         ));
       }
     }
-    // Embed the developer's game file number on first install.
-    if (await getGameFileNumber() == null) {
-      await setGameFileNumber(AppConstants.devGameFileNumber);
+    // Do NOT seed unlock codes (B1/D1/W1) as the default game file number —
+    // that leaked B1-66-3R into the ERROR "diagnostic code" box for every
+    // fresh install. Operators bind a file number via LOAD GAME instead.
+    final existing = await getGameFileNumber();
+    if (existing != null &&
+        UnlockCodes.developerCodes.contains(existing.toUpperCase())) {
+      await clearGameFileNumber();
     }
   }
 
@@ -356,6 +360,19 @@ class StorageService {
 
   Future<void> setGameFileNumber(String code) async {
     await Hive.box(settingsBox).put('gameFileNumber', code);
+  }
+
+  Future<void> clearGameFileNumber() async {
+    await Hive.box(settingsBox).delete('gameFileNumber');
+  }
+
+  Future<bool> getPathwayPrimed() async {
+    final raw = Hive.box(settingsBox).get('pathwayPrimed');
+    return raw == true;
+  }
+
+  Future<void> setPathwayPrimed(bool primed) async {
+    await Hive.box(settingsBox).put('pathwayPrimed', primed);
   }
 
   /// Optional trusted public key override (per-SD/USB keyset binding). When set,
