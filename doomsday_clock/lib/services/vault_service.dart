@@ -81,6 +81,18 @@ class VaultService {
     );
   }
 
+  Future<bool> isVaultOpenForDay(String username, DateTime day) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = 'vault_unlocked_${username.toUpperCase()}_${dayKey(day)}';
+    return prefs.getBool(key) ?? false;
+  }
+
+  Future<void> unlockVaultForDay(String username, DateTime day) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = 'vault_unlocked_${username.toUpperCase()}_${dayKey(day)}';
+    await prefs.setBool(key, true);
+  }
+
   Future<bool> isVaultOpenToday() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_unlockedDayKey) == dayKey();
@@ -89,32 +101,6 @@ class VaultService {
   Future<void> unlockVaultForToday() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_unlockedDayKey, dayKey());
-    // Seed default vault contents once.
-    final existing = await loadVault();
-    if (existing.isEmpty) {
-      await saveVault([
-        VaultEntry(
-          id: 'polybius',
-          title: 'PØLYBĪUS Admin APK',
-          detail: 'Emoji cipher / operator portal',
-          apkHint:
-              'https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/polybius-1.0.0-beta.2-android-arm64.apk',
-        ),
-        VaultEntry(
-          id: 'darth',
-          title: 'DARTH CHERRY',
-          detail: 'Night red-light screen dimmer',
-          apkHint:
-              'https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/darth-cherry-1.0.2-android-arm64.apk',
-        ),
-        VaultEntry(
-          id: 'press',
-          title: 'POLYBIUS PRESS notes',
-          detail: 'SD / firmware organiser stage plans',
-          apkHint: null,
-        ),
-      ]);
-    }
   }
 
   Future<List<VaultEntry>> loadVault() async {

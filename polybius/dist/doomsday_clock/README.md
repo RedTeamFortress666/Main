@@ -1,27 +1,14 @@
 # DOOMSDAY CLOCK 2.0
 
-Neo-noir / cyberpunk / psychological-thriller Android clock.
+Neon / matrix crisis chronometer for Polybius **developers & admins**.
 
 ## Features
 
-1. **Bulletin** — daily digest of the [Bulletin of the Atomic Scientists](https://thebulletin.org/doomsday-clock/) minutes/seconds to midnight + short analysis (network fetch with offline baseline cache).
-2. **Clock** — selectable world timezones color-coded:
-   - green = peace/reference
-   - amber = tension
-   - orange = crisis
-   - red = currently engaged in conflict  
-   Sources cited per zone (CrisisWatch / ACLED-style open reporting).
-3. **Planner + secret vault** — write a daily note; **hold SAVE NOTE for 3 seconds**. If the note contains that calendar day’s ritual words, the control flips to **OPEN** and unlocks a vault folder for stashing APK links / app notes.
-
-### Vault ritual (operator)
-
-Words rotate across a 7-entry bank by day-of-year. Example for a given day:
-
-```dart
-VaultService().ritualPhraseFor(DateTime.now());
-```
-
-Type those three words (optionally inside a longer note), then hold until **OPEN**.
+- **Vault login** — Polybius developer/admin credentials; first login seeds a personal vault
+- **Bulletin** — daily BAS minutes/seconds to midnight
+- **Clock** — **Brisbane QLD AEST (UTC+10, no DST)** primary + threat-colored world zones
+- **Planner / calendar** — browse past & future dates; ritual words + hold SAVE NOTE 3s → OPEN vault
+- **Alarm** — hidden **DARTH CHERRY** veil (package `com.polybius.red_veil`) unlocks **GRØK-REBEL 6.0** local uncensored AI loader (Gemma heretic / quantized GGUF slots)
 
 ## Build
 
@@ -32,4 +19,4 @@ flutter test
 flutter build apk --release
 ```
 
-APK output: `build/app/outputs/flutter-apk/app-release.apk`
+APK: `polybius/dist/doomsday_clock/doomsday-clock-2.0.0-android-arm64.apk`

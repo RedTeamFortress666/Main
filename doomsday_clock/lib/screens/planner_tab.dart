@@ -1,12 +1,20 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/models.dart';
+import '../services/auth_service.dart';
 import '../services/vault_service.dart';
 import '../theme/noir_theme.dart';
+import '../widgets/matrix_chrome.dart';
 
 class PlannerTab extends StatefulWidget {
-  const PlannerTab({super.key});
+  const PlannerTab({super.key, required this.session});
+
+  final AuthSession session;
 
   @override
   State<PlannerTab> createState() => _PlannerTabState();
@@ -15,9 +23,7 @@ class PlannerTab extends StatefulWidget {
 class _PlannerTabState extends State<PlannerTab> {
   final _vault = VaultService();
   final _noteCtrl = TextEditingController();
-  final _titleCtrl = TextEditingController();
-  final _detailCtrl = TextEditingController();
-
+  DateTime _selected = DateTime.now();
   List<PlannerNote> _notes = [];
   List<VaultEntry> _vaultEntries = [];
   bool _vaultOpen = false;
@@ -34,15 +40,16 @@ class _PlannerTabState extends State<PlannerTab> {
   @override
   void dispose() {
     _noteCtrl.dispose();
-    _titleCtrl.dispose();
-    _detailCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _reload() async {
     final notes = await _vault.loadNotes();
-    final open = await _vault.isVaultOpenToday();
-    final entries = open ? await _vault.loadVault() : <VaultEntry>[];
+    final open = await _vault.isVaultOpenForDay(
+      widget.session.username,
+      _selected,
+    );
+    final entries = await _loadUserVault();
     if (!mounted) return;
     setState(() {
       _notes = notes;
@@ -50,6 +57,41 @@ class _PlannerTabState extends State<PlannerTab> {
       _vaultEntries = entries;
       _holdLabel = open ? 'OPEN' : 'SAVE NOTE';
     });
+  }
+
+  Future<List<VaultEntry>> _loadUserVault() async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = 'vault_entries_${widget.session.username.toUpperCase()}';
+    final raw = prefs.getString(key);
+    if (raw == null) return [];
+    final list = jsonDecode(raw) as List<dynamic>;
+    return list
+        .map((e) => VaultEntry.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
+  }
+
+  Future<void> _pickDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selected,
+      firstDate: DateTime(now.year - 5),
+      lastDate: DateTime(now.year + 5),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: const ColorScheme.dark(
+            primary: NoirTheme.matrix,
+            surface: NoirTheme.panel,
+            onSurface: NoirTheme.mist,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null) {
+      setState(() => _selected = picked);
+      await _reload();
+    }
   }
 
   Future<void> _onHoldStart() async {
@@ -60,23 +102,19 @@ class _PlannerTabState extends State<PlannerTab> {
     });
     await Future<void>.delayed(const Duration(seconds: 3));
     if (!_holding || _holdStarted == null) return;
-    final elapsed = DateTime.now().difference(_holdStarted!);
-    if (elapsed < const Duration(milliseconds: 2800)) return;
-
-    final now = DateTime.now();
     final body = _noteCtrl.text.trim();
     final note = PlannerNote(
       id: _vault.newId(),
-      dayKey: _vault.dayKey(now),
+      dayKey: _vault.dayKey(_selected),
       body: body.isEmpty ? '(empty note)' : body,
-      updatedAt: now,
+      updatedAt: DateTime.now(),
     );
     final notes = [..._notes, note];
     await _vault.saveNotes(notes);
 
     var unlocked = _vaultOpen;
-    if (_vault.matchesRitual(body, now)) {
-      await _vault.unlockVaultForToday();
+    if (_vault.matchesRitual(body, _selected)) {
+      await _vault.unlockVaultForDay(widget.session.username, _selected);
       unlocked = true;
       HapticFeedback.heavyImpact();
     }
@@ -87,10 +125,9 @@ class _PlannerTabState extends State<PlannerTab> {
       _vaultOpen = unlocked;
       _holdLabel = unlocked ? 'OPEN' : 'SAVE NOTE';
       _holding = false;
-      _holdStarted = null;
     });
     if (unlocked) {
-      final entries = await _vault.loadVault();
+      final entries = await _loadUserVault();
       if (mounted) setState(() => _vaultEntries = entries);
     }
   }
@@ -99,42 +136,67 @@ class _PlannerTabState extends State<PlannerTab> {
     if (_holdLabel == 'OPEN' && _vaultOpen) return;
     setState(() {
       _holding = false;
-      _holdStarted = null;
       _holdLabel = _vaultOpen ? 'OPEN' : 'SAVE NOTE';
     });
   }
 
-  Future<void> _addVaultItem() async {
-    final title = _titleCtrl.text.trim();
-    if (title.isEmpty) return;
-    final entry = VaultEntry(
-      id: _vault.newId(),
-      title: title,
-      detail: _detailCtrl.text.trim(),
-      apkHint: null,
-    );
-    await _vault.addVaultEntry(entry);
-    _titleCtrl.clear();
-    _detailCtrl.clear();
-    await _reload();
-  }
-
   @override
   Widget build(BuildContext context) {
-    final today = DateTime.now();
-    // Ritual phrase is intentionally not shown in the UI — operator must know
-    // today's words. (Tests / operator docs can reveal the rotation.)
+    final dayKey = _vault.dayKey(_selected);
+    final dayNotes = _notes.where((n) => n.dayKey == dayKey);
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       children: [
-        Text('DAILY PLANNER', style: Theme.of(context).textTheme.labelLarge),
+        Text('CALENDAR · PAST / FUTURE',
+            style: Theme.of(context).textTheme.labelLarge),
         const SizedBox(height: 8),
-        Text(
-          'Write the day. Hold SAVE NOTE for 3 seconds to commit.\n'
-          'Certain words, on the right day, open the vault.',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: NoirTheme.mist.withValues(alpha: 0.65),
+        NeonPanel(
+          child: Row(
+            children: [
+              IconButton(
+                onPressed: () async {
+                  setState(() {
+                    _selected = _selected.subtract(const Duration(days: 1));
+                  });
+                  await _reload();
+                },
+                icon: const Icon(Icons.chevron_left, color: NoirTheme.matrix),
               ),
+              Expanded(
+                child: InkWell(
+                  onTap: _pickDate,
+                  child: Column(
+                    children: [
+                      Text(
+                        DateFormat('EEEE').format(_selected).toUpperCase(),
+                        style: const TextStyle(color: NoirTheme.pink),
+                      ),
+                      Text(
+                        DateFormat('d MMM yyyy').format(_selected),
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
+                      const Text('TAP TO JUMP',
+                          style: TextStyle(
+                            fontSize: 10,
+                            letterSpacing: 2,
+                            color: NoirTheme.yellow,
+                          )),
+                    ],
+                  ),
+                ),
+              ),
+              IconButton(
+                onPressed: () async {
+                  setState(() {
+                    _selected = _selected.add(const Duration(days: 1));
+                  });
+                  await _reload();
+                },
+                icon: const Icon(Icons.chevron_right, color: NoirTheme.matrix),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 14),
         TextField(
@@ -142,136 +204,76 @@ class _PlannerTabState extends State<PlannerTab> {
           maxLines: 4,
           style: const TextStyle(color: NoirTheme.mist),
           decoration: InputDecoration(
-            hintText: 'Note for ${_vault.dayKey(today)}…',
+            hintText: 'Note for $dayKey — ritual words unlock vault…',
             hintStyle: TextStyle(color: NoirTheme.mist.withValues(alpha: 0.35)),
             filled: true,
             fillColor: NoirTheme.panel,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.zero,
-              borderSide: BorderSide(color: NoirTheme.line),
-            ),
+            border: const OutlineInputBorder(borderRadius: BorderRadius.zero),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         Listener(
           onPointerDown: (_) => _onHoldStart(),
           onPointerUp: (_) => _onHoldEnd(),
           onPointerCancel: (_) => _onHoldEnd(),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: _holdLabel == 'OPEN'
-                  ? NoirTheme.peace.withValues(alpha: 0.2)
-                  : NoirTheme.cyan.withValues(alpha: _holding ? 0.25 : 0.1),
-              border: Border.all(
-                color: _holdLabel == 'OPEN' ? NoirTheme.peace : NoirTheme.cyan,
-              ),
-            ),
-            child: Text(
-              _holdLabel,
-              style: TextStyle(
-                letterSpacing: 3,
-                fontWeight: FontWeight.w700,
-                color: _holdLabel == 'OPEN' ? NoirTheme.peace : NoirTheme.cyan,
+          child: NeonPanel(
+            color: _holdLabel == 'OPEN' ? NoirTheme.peace : NoirTheme.matrix,
+            child: Center(
+              child: Text(
+                _holdLabel,
+                style: TextStyle(
+                  letterSpacing: 3,
+                  fontWeight: FontWeight.w800,
+                  color: _holdLabel == 'OPEN'
+                      ? NoirTheme.peace
+                      : NoirTheme.matrix,
+                ),
               ),
             ),
           ),
         ),
-        const SizedBox(height: 22),
-        Text('TODAY\'S NOTES', style: Theme.of(context).textTheme.labelLarge),
-        const SizedBox(height: 8),
-        ..._notes.where((n) => n.dayKey == _vault.dayKey(today)).map(
-              (n) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text('• ${n.body}',
-                    style: Theme.of(context).textTheme.bodyLarge),
-              ),
-            ),
+        const SizedBox(height: 18),
+        Text('NOTES · $dayKey', style: Theme.of(context).textTheme.labelLarge),
+        ...dayNotes.map((n) => Text('• ${n.body}')),
         if (_vaultOpen) ...[
-          const SizedBox(height: 22),
-          Text('VAULT · OPEN',
+          const SizedBox(height: 18),
+          Text('VAULT · ${widget.session.displayName}',
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
                     color: NoirTheme.peace,
                   )),
           const SizedBox(height: 8),
           ..._vaultEntries.map(
-            (e) => Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                border: Border.all(color: NoirTheme.peace.withValues(alpha: 0.4)),
-                color: NoirTheme.panel,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(e.title,
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            fontSize: 18,
-                            color: NoirTheme.peace,
-                          )),
-                  if (e.detail.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(e.detail),
-                  ],
-                  if (e.apkHint != null) ...[
-                    const SizedBox(height: 6),
-                    SelectableText(
-                      e.apkHint!,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            (e) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: NeonPanel(
+                color: NoirTheme.peace,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(e.title,
+                        style: const TextStyle(
+                          color: NoirTheme.peace,
+                          fontWeight: FontWeight.w700,
+                        )),
+                    if (e.detail.isNotEmpty) Text(e.detail),
+                    if (e.apkHint != null)
+                      SelectableText(e.apkHint!,
+                          style: const TextStyle(
                             color: NoirTheme.cyan,
                             fontSize: 11,
-                          ),
-                    ),
+                          )),
                   ],
-                ],
+                ),
               ),
             ),
           ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _titleCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Stash title / APK name',
-              labelStyle: TextStyle(color: NoirTheme.mist),
-            ),
-            style: const TextStyle(color: NoirTheme.mist),
-          ),
-          TextField(
-            controller: _detailCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Detail',
-              labelStyle: TextStyle(color: NoirTheme.mist),
-            ),
-            style: const TextStyle(color: NoirTheme.mist),
-          ),
-          const SizedBox(height: 8),
-          OutlinedButton(
-            onPressed: _addVaultItem,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: NoirTheme.peace,
-              side: const BorderSide(color: NoirTheme.peace),
-            ),
-            child: const Text('ADD TO VAULT'),
-          ),
-        ] else ...[
-          const SizedBox(height: 22),
+        ] else
           Text(
-            'VAULT · SEALED',
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: NoirTheme.mist.withValues(alpha: 0.45),
-                ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Enter the day\'s particular words, then hold until OPEN.',
+            'VAULT SEALED — enter that day\'s ritual words, hold until OPEN.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: NoirTheme.mist.withValues(alpha: 0.45),
                 ),
           ),
-        ],
       ],
     );
   }

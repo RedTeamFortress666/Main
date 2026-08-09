@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:doomsday_clock/services/vault_service.dart';
+import 'package:doomsday_clock/services/polybius_operators.dart';
 import 'package:doomsday_clock/services/bulletin_service.dart';
 
 void main() {
@@ -13,11 +14,24 @@ void main() {
     expect(v.matchesRitual('wrong words here', day), isFalse);
   });
 
-  test('bulletin baseline parses seconds language', () {
-    final s = BulletinService();
-    // ignore: invalid_use_of_visible_for_testing_member
-    final parsed = s.runtimeType; // smoke
-    expect(parsed.toString(), contains('BulletinService'));
+  test('polybius admin auth accepts Art3mas and rejects bad pin', () {
+    final ok = authenticatePolybiusAdmin(
+      username: 'Art3mas',
+      password: 'BowArrow7',
+      pin: '271828',
+    );
+    expect(ok, isNotNull);
+    expect(ok!.tier, 'admin');
+
+    final bad = authenticatePolybiusAdmin(
+      username: 'Art3mas',
+      password: 'BowArrow7',
+      pin: '000000',
+    );
+    expect(bad, isNull);
+  });
+
+  test('bulletin source is BAS', () {
     expect(BulletinService.sourceUrl, contains('thebulletin.org'));
   });
 }

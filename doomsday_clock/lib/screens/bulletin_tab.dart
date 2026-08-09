@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../models/models.dart';
 import '../services/bulletin_service.dart';
 import '../theme/noir_theme.dart';
+import '../widgets/matrix_chrome.dart';
 
 class BulletinTab extends StatefulWidget {
   const BulletinTab({super.key});
