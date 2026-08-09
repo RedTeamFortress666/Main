@@ -34,16 +34,19 @@ final routerProvider = Provider<GoRouter>((ref) {
       final introDone = ref.read(introCompleteProvider);
       final loc = state.matchedLocation;
 
-      // Keep the splash visible until session restore + cinematic intro finish.
-      if (authState.isRestoring || !introDone) {
+      // Stay on splash only while the cinematic intro runs.
+      // Do NOT block on auth restore — that previously trapped Android on
+      // "loading..." forever when restore lagged or failed.
+      if (!introDone) {
         return loc == '/' ? null : '/';
       }
 
       final loggedIn = authState.isAuthenticated;
       final needsPin = authState.needsPin && authState.user != null;
 
-      // Route away from the splash once restore + intro have finished.
+      // Route away from the splash once intro has finished.
       if (loc == '/') {
+        if (authState.isRestoring) return '/login';
         if (needsPin) return '/pin';
         return loggedIn ? '/menu' : '/login';
       }

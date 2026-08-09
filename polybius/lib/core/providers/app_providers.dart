@@ -134,21 +134,34 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> _restoreSession() async {
     state = const AuthState(isRestoring: true);
-    final username = await _storage.getSessionUser();
-    if (username == null) {
+    try {
+      // Hard timeout — a hung Hive/secure-storage read must never
+      // leave isRestoring=true (that previously trapped the splash).
+      await () async {
+        final username = await _storage.getSessionUser();
+        if (username == null) {
+          state = const AuthState();
+          return;
+        }
+        final account = await _storage.getAccount(username);
+        if (account == null) {
+          await _storage.clearSession();
+          state = const AuthState();
+          return;
+        }
+        state = AuthState(
+          user: account,
+          needsPin: account.requiresPin,
+        );
+      }().timeout(const Duration(seconds: 3));
+    } catch (_) {
+      // Timeout or storage failure → treat as logged out.
       state = const AuthState();
-      return;
+    } finally {
+      if (state.isRestoring) {
+        state = const AuthState();
+      }
     }
-    final account = await _storage.getAccount(username);
-    if (account == null) {
-      await _storage.clearSession();
-      state = const AuthState();
-      return;
-    }
-    state = AuthState(
-      user: account,
-      needsPin: account.requiresPin,
-    );
   }
 
   static const _maxAttemptsBeforeLockout = 5;

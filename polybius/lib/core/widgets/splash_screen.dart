@@ -3,8 +3,11 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:polybius/core/constants/app_constants.dart';
+import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/providers/intro_provider.dart';
+import 'package:polybius/core/routing/router_refresh.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 
 /// Cinematic boot: logo → matrix + third eye → GAME OVER typewriter →
@@ -35,6 +38,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   double _tvOpacity = 1;
   int _eyeBlink = 0;
   bool _showQuestion = false;
+  bool _navigated = false;
+  Timer? _loadingTimer;
+  Timer? _failsafeTimer;
   late final AnimationController _matrixCtrl;
   late final AnimationController _eyePulse;
   final _rng = Random(42);
@@ -50,51 +56,93 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       vsync: this,
       duration: const Duration(milliseconds: 380),
     );
+    // Absolute failsafe — never strand on splash past ~10s.
+    _failsafeTimer = Timer(const Duration(seconds: 10), () {
+      _finishIntroAndGo();
+    });
     _runSequence();
   }
 
   @override
   void dispose() {
+    _loadingTimer?.cancel();
+    _failsafeTimer?.cancel();
     _matrixCtrl.dispose();
     _eyePulse.dispose();
     super.dispose();
   }
 
-  Future<void> _runSequence() async {
-    // Failsafe: never leave the operator stranded on splash/loading.
-    unawaited(Future<void>.delayed(const Duration(seconds: 14), () {
-      if (!mounted) return;
-      if (!ref.read(introCompleteProvider)) {
-        ref.read(introCompleteProvider.notifier).state = true;
-      }
-    }));
+  String _destinationFor(AuthState auth) {
+    if (!auth.isRestoring &&
+        auth.isAuthenticated &&
+        auth.needsPin &&
+        auth.user != null) {
+      return '/pin';
+    }
+    if (!auth.isRestoring && auth.isAuthenticated) {
+      return '/menu';
+    }
+    return '/login';
+  }
 
+  /// Leave splash immediately — never wait on auth restore.
+  void _finishIntroAndGo() {
+    if (_navigated) return;
+    _navigated = true;
+    _loadingTimer?.cancel();
+    _failsafeTimer?.cancel();
+
+    // Flip the intro gate so GoRouter redirect will allow leaving `/`.
+    try {
+      ref.read(introCompleteProvider.notifier).state = true;
+      // Belt-and-suspenders: poke refresh even if listen missed a frame.
+      ref.read(routerRefreshProvider).ping();
+    } catch (_) {}
+
+    void goNow() {
+      if (!mounted) return;
+      try {
+        final target = _destinationFor(ref.read(authProvider));
+        GoRouter.of(context).go(target);
+      } catch (_) {
+        try {
+          context.go('/login');
+        } catch (_) {}
+      }
+    }
+
+    // Navigate immediately and again next frame (covers mid-build cases).
+    goNow();
+    WidgetsBinding.instance.addPostFrameCallback((_) => goNow());
+  }
+
+  Future<void> _runSequence() async {
     // 1) Logo
-    await Future<void>.delayed(const Duration(milliseconds: 2600));
-    if (!mounted) return;
+    await Future<void>.delayed(const Duration(milliseconds: 1800));
+    if (!mounted || _navigated) return;
     setState(() => _phase = _Phase.matrixEye);
 
-    // 2) Matrix + eye blinks (show ? in pupil on blinks)
+    // 2) Matrix + eye blinks
     for (var i = 0; i < 3; i++) {
-      await Future<void>.delayed(const Duration(milliseconds: 700));
-      if (!mounted) return;
+      await Future<void>.delayed(const Duration(milliseconds: 550));
+      if (!mounted || _navigated) return;
       setState(() {
         _eyeBlink = i + 1;
         _showQuestion = true;
       });
       unawaited(_eyePulse.forward(from: 0));
-      await Future<void>.delayed(const Duration(milliseconds: 220));
-      if (!mounted) return;
+      await Future<void>.delayed(const Duration(milliseconds: 180));
+      if (!mounted || _navigated) return;
       setState(() => _showQuestion = false);
-      await Future<void>.delayed(const Duration(milliseconds: 420));
+      await Future<void>.delayed(const Duration(milliseconds: 320));
     }
-    await Future<void>.delayed(const Duration(milliseconds: 600));
-    if (!mounted) return;
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    if (!mounted || _navigated) return;
 
     // 3) Black beat
     setState(() => _phase = _Phase.blackBeat);
-    await Future<void>.delayed(const Duration(milliseconds: 500));
-    if (!mounted) return;
+    await Future<void>.delayed(const Duration(milliseconds: 320));
+    if (!mounted || _navigated) return;
 
     // 4) Typewriter
     setState(() {
@@ -102,43 +150,44 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       _typed = '';
     });
     for (var i = 0; i < _line.length; i++) {
-      await Future<void>.delayed(Duration(milliseconds: 38 + _rng.nextInt(28)));
-      if (!mounted) return;
+      await Future<void>.delayed(Duration(milliseconds: 28 + _rng.nextInt(18)));
+      if (!mounted || _navigated) return;
       setState(() => _typed = _line.substring(0, i + 1));
     }
-    await Future<void>.delayed(const Duration(milliseconds: 900));
-    if (!mounted) return;
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    if (!mounted || _navigated) return;
 
-    // 5) Glitch + TV off to white dot
+    // 5) Glitch + TV off
     setState(() => _phase = _Phase.tvOff);
-    const steps = 18;
+    const steps = 14;
     for (var i = 0; i <= steps; i++) {
-      await Future<void>.delayed(const Duration(milliseconds: 28));
-      if (!mounted) return;
+      await Future<void>.delayed(const Duration(milliseconds: 22));
+      if (!mounted || _navigated) return;
       final t = i / steps;
       setState(() {
         _tvScale = 1.0 - (0.92 * Curves.easeIn.transform(t));
         _tvOpacity = 1.0 - (0.15 * t);
       });
     }
-    await Future<void>.delayed(const Duration(milliseconds: 200));
-    if (!mounted) return;
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+    if (!mounted || _navigated) return;
     setState(() {
       _tvScale = 0.02;
       _tvOpacity = 1;
     });
-    await Future<void>.delayed(const Duration(milliseconds: 180));
-    if (!mounted) return;
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+    if (!mounted || _navigated) return;
     setState(() => _tvOpacity = 0);
 
-    // 6) Loading — hard-capped so we never stick on this frame.
+    // 6) Loading — own Timer so we leave even if an await above races.
+    if (!mounted || _navigated) return;
     setState(() => _phase = _Phase.loading);
-    await Future<void>.delayed(const Duration(seconds: 2));
-    if (!mounted) return;
-
-    setState(() => _phase = _Phase.done);
-    // Flip intro gate; RouterRefresh listens and re-runs redirect.
-    ref.read(introCompleteProvider.notifier).state = true;
+    _loadingTimer?.cancel();
+    _loadingTimer = Timer(const Duration(seconds: 2), () {
+      if (!mounted || _navigated) return;
+      setState(() => _phase = _Phase.done);
+      _finishIntroAndGo();
+    });
   }
 
   @override
@@ -167,9 +216,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
               opacity: _tvOpacity,
               text: _typed,
             ),
-          _Phase.loading || _Phase.done => const _LoadingPhase(
-              key: ValueKey('loading'),
-            ),
+          _Phase.loading => const _LoadingPhase(key: ValueKey('loading')),
+          // Black frame while go_router swaps — never re-show loading.
+          _Phase.done => const SizedBox.expand(key: ValueKey('done')),
         },
       ),
     );
@@ -195,21 +244,21 @@ class _LogoPhase extends StatelessWidget {
               fontSize: 42,
               fontWeight: FontWeight.w800,
               letterSpacing: 6,
-              color: NeonTheme.neonCyan,
+              color: NeonTheme.neonPink,
               shadows: [
-                Shadow(color: NeonTheme.neonPink.withValues(alpha: 0.7), blurRadius: 18),
+                Shadow(color: NeonTheme.neonPink.withValues(alpha: 0.8), blurRadius: 18),
                 Shadow(color: NeonTheme.neonCyan.withValues(alpha: 0.5), blurRadius: 28),
               ],
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           Text(
-            'TERMINAL BOOT',
+            'ARCADE TERMINAL',
             style: TextStyle(
               fontFamily: 'monospace',
               fontSize: 11,
               letterSpacing: 4,
-              color: NeonTheme.neonYellow.withValues(alpha: 0.75),
+              color: Colors.white.withValues(alpha: 0.45),
             ),
           ),
         ],
@@ -243,6 +292,7 @@ class _MatrixEyePhase extends StatelessWidget {
             pulse: pulse.value,
             showQuestion: showQuestion,
             blinkIndex: blinkIndex,
+            rng: Random(blinkIndex + 7),
           ),
           child: const SizedBox.expand(),
         );
@@ -257,23 +307,26 @@ class _MatrixEyePainter extends CustomPainter {
     required this.pulse,
     required this.showQuestion,
     required this.blinkIndex,
+    required this.rng,
   });
 
   final double t;
   final double pulse;
   final bool showQuestion;
   final int blinkIndex;
+  final Random rng;
 
   static const _palette = [
-    Color(0xFF39FF14), // neon green
-    Color(0xFFFF2D95), // pink/red
-    Color(0xFFFF1744), // red
-    Color(0xFFFFF200), // yellow
+    Color(0xFF39FF14),
+    Color(0xFF00F0FF),
+    Color(0xFFFF2D95),
+    Color(0xFFFFF200),
   ];
 
   @override
   void paint(Canvas canvas, Size size) {
-    final rng = Random(7);
+    canvas.drawRect(Offset.zero & size, Paint()..color = Colors.black);
+
     final cols = (size.width / 14).floor().clamp(8, 40);
     final rows = (size.height / 16).floor().clamp(12, 60);
     final glyphs = '01アイウエオカキクケコサシスセソタチツテト01PØLYBĪUS';
@@ -394,28 +447,33 @@ class _MatrixEyePainter extends CustomPainter {
 
 class _TypePhase extends StatelessWidget {
   const _TypePhase({super.key, required this.text});
+
   final String text;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return ColoredBox(
       color: Colors.black,
-      alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(horizontal: 28),
-      child: Text(
-        text,
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-          fontFamily: 'monospace',
-          fontSize: 18,
-          height: 1.4,
-          letterSpacing: 1.2,
-          fontWeight: FontWeight.w600,
-          color: Colors.white,
-          shadows: [
-            Shadow(color: Color(0xFF39FF14), blurRadius: 8),
-            Shadow(color: Color(0xFFFF2D95), blurRadius: 14),
-          ],
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Text(
+            text,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 16,
+              letterSpacing: 1.2,
+              height: 1.5,
+              color: NeonTheme.neonPink.withValues(alpha: 0.95),
+              shadows: [
+                Shadow(
+                  color: NeonTheme.neonCyan.withValues(alpha: 0.55),
+                  blurRadius: 10,
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -436,20 +494,23 @@ class _TvOffPhase extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return ColoredBox(
       color: Colors.black,
-      alignment: Alignment.center,
       child: Opacity(
-        opacity: opacity.clamp(0, 1),
+        opacity: opacity.clamp(0.0, 1.0),
         child: Transform.scale(
-          scaleX: 1,
-          scaleY: scale.clamp(0.01, 1),
-          child: Container(
-            width: MediaQuery.sizeOf(context).width,
-            color: scale < 0.08 ? Colors.white : Colors.black,
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+          scaleY: scale.clamp(0.02, 1.0),
+          scaleX: (0.15 + 0.85 * scale).clamp(0.02, 1.0),
+          child: Center(
             child: scale < 0.08
-                ? null
+                ? Container(
+                    width: 6,
+                    height: 6,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                  )
                 : Text(
                     text,
                     textAlign: TextAlign.center,

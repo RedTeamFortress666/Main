@@ -10,6 +10,9 @@ class RouterRefresh extends ChangeNotifier {
     ref.listen(unlockProvider, (_, _) => notifyListeners());
     ref.listen(introCompleteProvider, (_, _) => notifyListeners());
   }
+
+  /// Public poke for splash / manual navigation after flipping intro gate.
+  void ping() => notifyListeners();
 }
 
 final routerRefreshProvider = Provider<RouterRefresh>((ref) {
