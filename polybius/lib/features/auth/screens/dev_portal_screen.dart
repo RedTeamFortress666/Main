@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:polybius/core/constants/app_constants.dart';
 import 'package:polybius/core/constants/app_flavor.dart';
+import 'package:polybius/core/constants/operator_identities.dart';
 import 'package:polybius/core/constants/operator_roster.dart';
 import 'package:polybius/core/constants/unlock_codes.dart';
 import 'package:polybius/core/crypto/signature_service.dart';
@@ -66,13 +67,17 @@ class _DevPortalScreenState extends ConsumerState<DevPortalScreen> {
 
       // Resolve which access the supplied code grants.
       //   B1 / D1 / W1           -> developer (requires privileged account)
-      //   Tr1 + roster invites   -> user for agents; full engine for admin/dev
+      //   Tr1 + any operator invite / game code -> user for agents;
+      //                           full engine for admin/dev
       //   signed invite token    -> tier per token (dev needs privileged account)
       _Grant grant = _Grant.none;
+      final knownInvite = OperatorRoster.inviteCodes.contains(code) ||
+          OperatorIdentities.unique.any(
+            (o) => o.inviteOrFileCode.toUpperCase() == code,
+          );
       if (UnlockCodes.developerCodes.contains(code)) {
         if (privileged) grant = _Grant.developer;
-      } else if (code == UnlockCodes.userTr1663R ||
-          OperatorRoster.inviteCodes.contains(code)) {
+      } else if (code == UnlockCodes.userTr1663R || knownInvite) {
         grant = privileged ? _Grant.developer : _Grant.user;
       } else {
         final token = SignedToken.tryParse(rawCode);
@@ -91,9 +96,11 @@ class _DevPortalScreenState extends ConsumerState<DevPortalScreen> {
       switch (grant) {
         case _Grant.developer:
           ref.read(unlockProvider.notifier).grantDeveloperAccess();
+          ref.read(authProvider.notifier).clearPinGate();
           if (mounted) context.go('/cipher');
         case _Grant.user:
           ref.read(unlockProvider.notifier).grantUserAccess();
+          ref.read(authProvider.notifier).clearPinGate();
           if (mounted) context.go('/cipher');
         case _Grant.none:
           setState(() => _error = 'ACCESS DENIED');

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:polybius/core/constants/unlock_codes.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 import 'package:polybius/core/widgets/crt_widgets.dart';
@@ -35,7 +36,10 @@ class _PinScreenState extends ConsumerState<PinScreen> {
           await ref.read(authProvider.notifier).verifyPin(_pinController.text);
       if (!mounted) return;
       if (ok) {
-        context.go('/menu');
+        final unlock = ref.read(unlockProvider).state;
+        final cipherOpen = unlock == UnlockState.unlocked ||
+            unlock == UnlockState.developer;
+        context.go(cipherOpen ? '/cipher' : '/menu');
       } else {
         setState(() => _error = 'INVALID PIN');
       }

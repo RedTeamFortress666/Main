@@ -77,7 +77,10 @@ Multi-rotor Enigma variant. Each character → 2 emojis from a daily 560-emoji p
 - **📡 CONNECT** — Bluetooth messaging, rotor/pool share with mutual confirm codes, relay, logout
 - **⚙ Rotor Gear** — live rotor positions + decrypt-via-current-rotor
 
-User APK: splash → game (no Layer-1 login). Ritual portal reads **USER ACCESS PORTAL**.
+User APK: splash → arcade menu (no Layer-1 login). Ritual portal reads **USER ACCESS PORTAL**.
+
+**Test matrix (credentials + rituals):** `docs/RITUAL_TEST_MATRIX.md`  
+**Dev/admin ops manual:** `docs/DEV_OPERATOR_MANUAL.md`
 
 ## Build
 

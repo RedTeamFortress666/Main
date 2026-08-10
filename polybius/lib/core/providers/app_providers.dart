@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:polybius/core/constants/app_constants.dart';
 import 'package:polybius/core/constants/app_flavor.dart';
+import 'package:polybius/core/constants/operator_identities.dart';
 import 'package:polybius/core/storage/create_polybius_secret_store.dart';
 import 'package:polybius/core/constants/unlock_codes.dart';
 import 'package:polybius/core/crypto/encryption_service.dart';
@@ -291,7 +292,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return false;
     }
     state = const AuthState(isLoading: true);
-    final account = await _storage.getAccount(normalized);
+    // Resolve display-name aliases (e.g. Art3mas → ARTEM3S) before lookup.
+    var lookupKey = normalized;
+    final byName = OperatorIdentities.byUsername(normalized) ??
+        OperatorIdentities.byDisplayName(normalized);
+    if (byName != null) {
+      lookupKey = byName.username.toUpperCase();
+    }
+    final account = await _storage.getAccount(lookupKey);
     // Same error for unknown user and bad password to avoid enumeration.
     final primaryOk = account != null &&
         EncryptionService.verifyPassword(password, account.passwordHash);
@@ -323,6 +331,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await _storage.logAudit('LOGIN_OK', username);
     state = AuthState(user: updated, needsPin: updated.requiresPin);
     return true;
+  }
+
+  /// Clears the PIN gate after a successful access-portal login so User APK
+  /// operators (requiresPin=true) are not bounced away from `/cipher`.
+  void clearPinGate() {
+    final user = state.user;
+    if (user == null) return;
+    state = AuthState(user: user, needsPin: false);
   }
 
   /// Creates a new user-tier account. Returns null on success, or an error

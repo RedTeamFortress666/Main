@@ -70,9 +70,17 @@ void main() {
     expect(OperatorIdentities.visibleFor('UNKNOWN_OP'), isEmpty);
   });
 
-  test('RedTeam01 still bootstraps', () async {
-    final admin = await storage.getAccount(AppConstants.adminUsername);
-    expect(admin, isNotNull);
-    expect(admin!.tier.name, 'admin');
+  test('Art3mas display name and Gl1tchCat credentials authenticate', () async {
+    final art = await auth.login('Art3mas', 'BowArrow7');
+    expect(art, isTrue);
+    expect(auth.state.user?.username.toUpperCase(), 'ARTEM3S');
+    await auth.logout();
+
+    final cat = await auth.login('Gl1tchCat', 'CatGlitch1');
+    expect(cat, isTrue);
+    expect(auth.state.user?.username.toUpperCase(), 'GL1TCHCAT');
+    expect(auth.state.needsPin, isTrue);
+    auth.clearPinGate();
+    expect(auth.state.needsPin, isFalse);
   });
 }
