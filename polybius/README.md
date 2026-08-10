@@ -18,7 +18,20 @@ flutter run          # mobile/desktop
 flutter run -d chrome # web
 ```
 
-**First login:** `DEVELOPER` / `developer` (bootstrapped on first install)
+**First login (V1 Stable):** use an operator account (e.g. `REDTEAM01` / `816639`).  
+~~`DEVELOPER` / `developer`~~ is stricken.
+
+## Flavors
+
+```bash
+# EMOJINIGMA HQ (Dev Admin)
+flutter run --flavor hq --dart-define=POLYBIUS_FLAVOR=hq
+
+# Everyday user APK
+flutter run --flavor user --dart-define=POLYBIUS_FLAVOR=user
+```
+
+See `docs/V1_STABLE.md` for download links and operator cards.
 
 ## Architecture
 
@@ -37,8 +50,8 @@ lib/
 ## Three Layers
 
 ### Layer 1 — Login Gate
-Replit-style OIDC login. First install creates built-in `DEVELOPER` account.
-
+Operator login. V1 Stable bootstraps named operators + pool roster.
+~~`DEVELOPER`~~ is retired.
 ### Layer 2 — Decoy Arcade
 Psychedelic neon CRT main menu with playable space shooter. MKUltra-themed level names, subliminal glitch text, ship upgrades MK-I → MK-V.
 

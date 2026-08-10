@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:polybius/core/constants/app_flavor.dart';
 import 'package:polybius/core/constants/unlock_codes.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
@@ -102,7 +103,8 @@ class _CipherShellState extends ConsumerState<CipherShell>
   @override
   Widget build(BuildContext context) {
     final unlock = ref.watch(unlockProvider);
-    final isDev = unlock.state == UnlockState.developer;
+    final isDev =
+        AppFlavor.allowDeveloperTools && unlock.state == UnlockState.developer;
     final veil = ref.watch(veilProvider);
     final matrix = veil.mode == VeilMode.matrix;
 
@@ -111,7 +113,9 @@ class _CipherShellState extends ConsumerState<CipherShell>
       appBar: AppBar(
         backgroundColor: matrix ? const Color(0xFF031A08) : NeonTheme.surface,
         title: Text(
-          matrix ? '◈ MATRIX VEIL ◈' : '◈ CIPHER CHANNEL ◈',
+          matrix
+              ? '◈ MATRIX VEIL ◈'
+              : (AppFlavor.isHq ? '◈ EMOJINIGMA HQ ◈' : '◈ CIPHER CHANNEL ◈'),
           style: TextStyle(
             fontFamily: 'monospace',
             fontSize: 16,
