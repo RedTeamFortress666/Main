@@ -90,13 +90,18 @@ class ConnectTab extends ConsumerWidget {
               await ref.read(bluetoothLinkProvider.notifier).setEnabled(false);
               await ref.read(authProvider.notifier).logout();
               ref.read(unlockProvider.notifier).reset();
-              if (context.mounted) context.go('/login');
+              if (!context.mounted) return;
+              context.go(
+                AppFlavor.requiresStartupLogin ? '/login' : '/menu',
+              );
             },
             style: OutlinedButton.styleFrom(
               foregroundColor: NeonTheme.dangerRed,
               side: const BorderSide(color: NeonTheme.dangerRed),
             ),
-            child: const Text('EXIT / LOGOUT'),
+            child: Text(
+              AppFlavor.requiresStartupLogin ? 'EXIT / LOGOUT' : 'EXIT CIPHER',
+            ),
           ),
         ),
       ],

@@ -26,11 +26,15 @@ class _CipherShellState extends ConsumerState<CipherShell>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   VeilNotifier? _veil;
+  late final bool _showPool;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _showPool = AppFlavor.showPoolTab;
+    // User APK: ENCRYPT / DECRYPT / SYNC / CONNECT (no POOL).
+    // HQ: also includes POOL vault.
+    _tabController = TabController(length: _showPool ? 5 : 4, vsync: this);
     // Watch for the RED VEIL companion beacon while the cipher is open.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _veil = ref.read(veilProvider.notifier);
@@ -162,12 +166,12 @@ class _CipherShellState extends ConsumerState<CipherShell>
           unselectedLabelColor: Colors.white38,
           labelStyle: const TextStyle(fontFamily: 'monospace', fontSize: 11),
           isScrollable: true,
-          tabs: const [
-            Tab(text: '🔒 ENCRYPT'),
-            Tab(text: '🔓 DECRYPT'),
-            Tab(text: '🎲 POOL'),
-            Tab(text: '🔗 SYNC'),
-            Tab(text: '📡 CONNECT'),
+          tabs: [
+            const Tab(text: '🔒 ENCRYPT'),
+            const Tab(text: '🔓 DECRYPT'),
+            if (_showPool) const Tab(text: '🎲 POOL'),
+            const Tab(text: '🔗 SYNC'),
+            const Tab(text: '📡 CONNECT'),
           ],
         ),
       ),
@@ -176,12 +180,12 @@ class _CipherShellState extends ConsumerState<CipherShell>
         children: [
           TabBarView(
             controller: _tabController,
-            children: const [
-              EncryptTab(),
-              DecryptTab(),
-              PoolTab(),
-              SyncTab(),
-              ConnectTab(),
+            children: [
+              const EncryptTab(),
+              const DecryptTab(),
+              if (_showPool) const PoolTab(),
+              const SyncTab(),
+              const ConnectTab(),
             ],
           ),
           if (matrix)

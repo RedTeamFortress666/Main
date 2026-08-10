@@ -38,10 +38,16 @@ flutter build apk --release --flavor user --dart-define=POLYBIUS_FLAVOR=user
 
 | Flavor | App label | Dart define | Capabilities |
 | --- | --- | --- | --- |
-| `hq` | **EMOJINIGMA HQ** | `POLYBIUS_FLAVOR=hq` | Agent + admin + developer unlock, HQ panel, cross encrypt/decrypt |
-| `user` | **PØLYBĪUS** | `POLYBIUS_FLAVOR=user` | Portal → ENCRYPT / DECRYPT / POOL / SYNC / CONNECT (no HQ developer panel) |
+| `hq` | **EMOJINIGMA HQ** | `POLYBIUS_FLAVOR=hq` | Login gate, agent + admin + developer unlock, HQ panel, POOL vault, cross encrypt/decrypt |
+| `user` | **PØLYBĪUS** | `POLYBIUS_FLAVOR=user` | Splash → game (no pre-login). Ritual opens **USER ACCESS PORTAL**. Tabs: ENCRYPT / DECRYPT / SYNC / CONNECT (no POOL) |
 
-Both flavors accept all certified tiers for encrypt / decrypt / QR sync / Bluetooth.
+Both flavors accept certified accounts for encrypt / decrypt / QR sync / Bluetooth.
+
+## High scores
+
+Players enter their **real name** on GAME OVER and on the HIGH SCORE board.
+Pool-sync QR tokens (v2) carry each device's top scores; importing a peer's QR
+merges boards so operators can compete across HQ and user builds.
 
 ## Operator identity cards
 

@@ -432,6 +432,32 @@ class StorageService {
     await Hive.box(settingsBox).put('poolWindowHours', hours);
   }
 
+  /// Arcade high-score board (merged across QR pool sync).
+  Future<List<Map<String, dynamic>>> getHighScores() async {
+    final raw = Hive.box(settingsBox).get('highScores');
+    if (raw is! List) return const [];
+    return [
+      for (final e in raw)
+        if (e is Map)
+          Map<String, dynamic>.from(
+            e.map((k, v) => MapEntry(k.toString(), v)),
+          ),
+    ];
+  }
+
+  Future<void> setHighScores(List<Map<String, dynamic>> scores) async {
+    await Hive.box(settingsBox).put('highScores', scores);
+  }
+
+  Future<String?> getPlayerDisplayName() async {
+    final raw = Hive.box(settingsBox).get('playerDisplayName');
+    return raw is String && raw.trim().isNotEmpty ? raw.trim() : null;
+  }
+
+  Future<void> setPlayerDisplayName(String name) async {
+    await Hive.box(settingsBox).put('playerDisplayName', name.trim());
+  }
+
   Future<void> deleteAccount(String username) async {
     await Hive.box(accountsBox).delete(username.toUpperCase());
   }

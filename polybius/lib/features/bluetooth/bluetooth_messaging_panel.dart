@@ -70,7 +70,12 @@ class _BluetoothMessagingPanelState
   Future<void> _shareRotor(String peerId) async {
     final seed = ref.read(poolSeedProvider);
     final complexity = ref.read(cipherComplexityProvider);
-    final token = PoolSync.fromSeed(seed, complexity: complexity);
+    final scores = ref.read(highScoresProvider);
+    final token = PoolSync.fromSeed(
+      seed,
+      complexity: complexity,
+      scores: scores,
+    );
     final code = await ref
         .read(bluetoothLinkProvider.notifier)
         .offerRotorShare(peerId: peerId, token: token);
@@ -95,6 +100,9 @@ class _BluetoothMessagingPanelState
     if (token != null) {
       ref.read(poolSeedProvider.notifier).setSeed(token.seed);
       ref.read(cipherComplexityProvider.notifier).setComplexity(token.complexity);
+      if (token.scores.isNotEmpty) {
+        await ref.read(highScoresProvider.notifier).mergeRemote(token.scores);
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:polybius/core/constants/app_constants.dart';
+import 'package:polybius/core/constants/app_flavor.dart';
 import 'package:polybius/core/constants/operator_roster.dart';
 import 'package:polybius/core/constants/unlock_codes.dart';
 import 'package:polybius/core/crypto/signature_service.dart';
@@ -107,7 +108,7 @@ class _DevPortalScreenState extends ConsumerState<DevPortalScreen> {
   @override
   Widget build(BuildContext context) {
     return ArcadeScaffold(
-      accent: NeonTheme.dangerRed,
+      accent: AppFlavor.isUser ? NeonTheme.neonCyan : NeonTheme.dangerRed,
       showFooter: false,
       child: LayoutBuilder(
         builder: (context, constraints) => SingleChildScrollView(
@@ -128,11 +129,11 @@ class _DevPortalScreenState extends ConsumerState<DevPortalScreen> {
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
-            'DEV ACCESS PORTAL',
+          Text(
+            AppFlavor.accessPortalTitle,
             style: TextStyle(
               fontFamily: 'monospace',
-              color: NeonTheme.dangerRed,
+              color: AppFlavor.isUser ? NeonTheme.neonCyan : NeonTheme.dangerRed,
               letterSpacing: 4,
               fontSize: 14,
             ),
@@ -142,7 +143,7 @@ class _DevPortalScreenState extends ConsumerState<DevPortalScreen> {
           const SizedBox(height: 14),
           _labelled('PASSWORD', _password, obscure: true),
           const SizedBox(height: 14),
-          _labelled('DEV CODE', _devCode),
+          _labelled(AppFlavor.isUser ? 'ACCESS CODE' : 'DEV CODE', _devCode),
           if (_error != null) ...[
             const SizedBox(height: 14),
             Text(_error!,

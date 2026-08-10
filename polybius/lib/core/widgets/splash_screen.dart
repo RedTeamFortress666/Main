@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:polybius/core/constants/app_constants.dart';
+import 'package:polybius/core/constants/app_flavor.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/providers/intro_provider.dart';
 import 'package:polybius/core/routing/router_refresh.dart';
@@ -73,6 +74,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 
   String _destinationFor(AuthState auth) {
+    if (!AppFlavor.requiresStartupLogin) {
+      return AppFlavor.postSplashRoute;
+    }
     if (!auth.isRestoring &&
         auth.isAuthenticated &&
         auth.needsPin &&
@@ -106,7 +110,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         GoRouter.of(context).go(target);
       } catch (_) {
         try {
-          context.go('/login');
+          context.go(AppFlavor.requiresStartupLogin ? '/login' : '/game');
         } catch (_) {}
       }
     }

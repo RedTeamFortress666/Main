@@ -6,6 +6,7 @@ import 'package:polybius/core/constants/unlock_codes.dart';
 import 'package:polybius/core/crypto/encryption_service.dart';
 import 'package:polybius/core/models/models.dart';
 import 'package:polybius/core/storage/storage_service.dart';
+import 'package:polybius/features/arcade/high_score_models.dart';
 import 'package:polybius/features/cipher/engine/cipher_engine.dart';
 import 'package:polybius/features/cipher/engine/daily_pool.dart';
 import 'dart:convert';
@@ -105,6 +106,99 @@ class GameSettingsNotifier extends StateNotifier<GameSettings> {
   Future<void> update(GameSettings settings) async {
     state = settings;
     await _storage.saveSettings(settings);
+  }
+}
+
+/// Local arcade high-score board — merged when peers share a pool-sync QR.
+final highScoresProvider =
+    StateNotifierProvider<HighScoresNotifier, List<HighScoreEntry>>((ref) {
+  return HighScoresNotifier(ref.read(storageServiceProvider));
+});
+
+class HighScoresNotifier extends StateNotifier<List<HighScoreEntry>> {
+  HighScoresNotifier(this._storage) : super(const []) {
+    _load();
+  }
+
+  final StorageService _storage;
+  static const _maxEntries = 20;
+
+  Future<void> _load() async {
+    final raw = await _storage.getHighScores();
+    state = _sorted([
+      for (final m in raw) HighScoreEntry.fromJson(m),
+    ]);
+  }
+
+  Future<void> _persist() async {
+    await _storage.setHighScores([for (final e in state) e.toJson()]);
+  }
+
+  List<HighScoreEntry> _sorted(List<HighScoreEntry> input) {
+    final copy = [...input]..sort((a, b) {
+        final byScore = b.score.compareTo(a.score);
+        if (byScore != 0) return byScore;
+        return b.at.compareTo(a.at);
+      });
+    if (copy.length <= _maxEntries) return copy;
+    return copy.sublist(0, _maxEntries);
+  }
+
+  Future<void> submit({required String name, required int score}) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty || score <= 0) return;
+    state = _sorted([
+      ...state,
+      HighScoreEntry(name: trimmed, score: score, at: DateTime.now()),
+    ]);
+    await _persist();
+    await _storage.setPlayerDisplayName(trimmed);
+  }
+
+  /// Merge remote scores from a pool-sync QR (keeps the best unique name+score).
+  Future<int> mergeRemote(List<HighScoreEntry> remote) async {
+    if (remote.isEmpty) return 0;
+    final beforeKeys = {
+      for (final e in state) '${e.name.toUpperCase()}::${e.score}',
+    };
+    var added = 0;
+    final keyed = <String, HighScoreEntry>{
+      for (final e in state) '${e.name.toUpperCase()}::${e.score}': e,
+    };
+    for (final e in remote) {
+      if (e.name.trim().isEmpty || e.score <= 0) continue;
+      final key = '${e.name.toUpperCase()}::${e.score}';
+      if (!beforeKeys.contains(key) && !keyed.containsKey(key)) added++;
+      final existing = keyed[key];
+      if (existing == null || e.at.isAfter(existing.at)) {
+        keyed[key] = e;
+      }
+    }
+    state = _sorted(keyed.values.toList());
+    await _persist();
+    return added;
+  }
+}
+
+final playerDisplayNameProvider =
+    StateNotifierProvider<PlayerDisplayNameNotifier, String>((ref) {
+  return PlayerDisplayNameNotifier(ref.read(storageServiceProvider));
+});
+
+class PlayerDisplayNameNotifier extends StateNotifier<String> {
+  PlayerDisplayNameNotifier(this._storage) : super('') {
+    _load();
+  }
+
+  final StorageService _storage;
+
+  Future<void> _load() async {
+    state = await _storage.getPlayerDisplayName() ?? '';
+  }
+
+  Future<void> setName(String name) async {
+    state = name.trim();
+    await _storage.setPlayerDisplayName(state);
   }
 }
 
