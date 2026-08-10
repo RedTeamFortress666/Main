@@ -169,8 +169,12 @@ export const profiles: DeviceProfile[] = [
         url: `${RAW}/polybius/dist/polybius-v1-stable-user-android-arm64.apk`,
       },
       {
+        label: 'PØLYBÎŪS V.1 — iOS (Safari web portable)',
+        url: `${RAW}/polybius/dist/polybius-v1-stable-user-ios-web-portable.zip`,
+      },
+      {
         label: 'DARTH CHERRY filter APK',
-        url: `https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/darth-cherry-1.0.2-android-arm64.apk`,
+        url: `${RAW}/polybius/dist/darth-cherry-1.0.2-android-arm64.apk`,
       },
     ],
     notes: [
