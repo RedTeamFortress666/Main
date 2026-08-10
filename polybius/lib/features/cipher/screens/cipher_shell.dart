@@ -119,7 +119,7 @@ class _CipherShellState extends ConsumerState<CipherShell>
         title: Text(
           matrix
               ? '◈ MATRIX VEIL ◈'
-              : (AppFlavor.isHq ? '◈ EMOJINIGMA HQ ◈' : '◈ CIPHER CHANNEL ◈'),
+              : (AppFlavor.isHq ? '◈ PØLYBÎŪS PORTAL ◈' : '◈ CIPHER CHANNEL ◈'),
           style: TextStyle(
             fontFamily: 'monospace',
             fontSize: 16,

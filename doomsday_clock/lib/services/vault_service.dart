@@ -7,23 +7,19 @@ import '../models/models.dart';
 
 /// Daily planner notes + hidden vault.
 ///
-/// Vault unlock: type today's ritual words into the note field, then
-/// **hold SAVE NOTE for 3 seconds** until the control reads OPEN.
+/// Vault unlock: select **5 November** on the calendar, enter the Gunpowder
+/// Plot riddle into the note field, then **hold SAVE NOTE for 3 seconds**
+/// until the control reads OPEN.
 class VaultService {
   static const _notesKey = 'planner_notes_v1';
   static const _vaultKey = 'vault_entries_v1';
   static const _unlockedDayKey = 'vault_unlocked_day';
 
-  /// Word lists rotate by calendar day — operator must enter the phrase for *today*.
-  static const _wordBank = [
-    ['ash', 'meridian', 'quiet'],
-    ['violet', 'static', 'harbour'],
-    ['iron', 'lullaby', 'zero'],
-    ['ember', 'corridor', 'nine'],
-    ['glass', 'oracle', 'drift'],
-    ['copper', 'siren', 'fold'],
-    ['nylon', 'eclipse', 'ward'],
-  ];
+  /// Guy Fawkes / Gunpowder Plot riddle — vault opens only on 5 November
+  /// when this phrase is held in SAVE NOTE.
+  static const gunpowderRiddle =
+      'Remember Remember the 5th of November, the gunpowder treason and plot- '
+      'I know of no reason why gunpowder treason should ever be forgot';
 
   String dayKey([DateTime? now]) {
     final d = now ?? DateTime.now();
@@ -32,35 +28,29 @@ class VaultService {
         '${d.day.toString().padLeft(2, '0')}';
   }
 
-  /// Today's required words (space-separated, order matters).
-  List<String> ritualWordsFor(DateTime day) {
-    final idx = day.difference(DateTime(day.year)).inDays % _wordBank.length;
-    return List<String>.from(_wordBank[idx]);
+  /// Unlock calendar day: 5 November (any year).
+  bool isUnlockDay(DateTime day) => day.month == 11 && day.day == 5;
+
+  /// Canonical ritual phrase (for tests / operator docs).
+  String ritualPhraseFor(DateTime day) =>
+      isUnlockDay(day) ? gunpowderRiddle : '';
+
+  /// Normalize text for riddle comparison: letters/digits only, lowercased.
+  static String normalizeRitual(String input) {
+    return input
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
   }
 
-  String ritualPhraseFor(DateTime day) => ritualWordsFor(day).join(' ');
-
   bool matchesRitual(String input, DateTime day) {
-    final want = ritualWordsFor(day).map((w) => w.toLowerCase()).toList();
-    final got = input
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z\s]'), ' ')
-        .split(RegExp(r'\s+'))
-        .where((s) => s.isNotEmpty)
-        .toList();
-    if (got.length < want.length) return false;
-    // Allow the ritual words to appear as a contiguous sequence in the note.
-    for (var i = 0; i <= got.length - want.length; i++) {
-      var ok = true;
-      for (var j = 0; j < want.length; j++) {
-        if (got[i + j] != want[j]) {
-          ok = false;
-          break;
-        }
-      }
-      if (ok) return true;
-    }
-    return false;
+    if (!isUnlockDay(day)) return false;
+    final want = normalizeRitual(gunpowderRiddle);
+    final got = normalizeRitual(input);
+    if (got.isEmpty) return false;
+    // Exact match or note contains the full riddle as a contiguous phrase.
+    return got == want || got.contains(want);
   }
 
   Future<List<PlannerNote>> loadNotes() async {

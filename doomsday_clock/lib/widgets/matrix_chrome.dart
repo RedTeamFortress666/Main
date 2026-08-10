@@ -53,7 +53,7 @@ class _RainPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final cols = (size.width / 16).floor().clamp(6, 28);
     final rows = (size.height / 18).floor().clamp(10, 50);
-    const glyphs = '01アカサタナハマヤラワPOLYBIUSGRØK';
+    const glyphs = '01アカサタナハマヤラワGRØKDOOMSDAY';
     for (var c = 0; c < cols; c++) {
       final head = ((t * (10 + c % 7) * rows) + c * 5) % (rows + 10);
       for (var r = 0; r < rows; r++) {

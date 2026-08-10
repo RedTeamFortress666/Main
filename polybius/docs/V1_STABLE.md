@@ -10,8 +10,8 @@ Raw GitHub links (branch `cursor/pool-pin-bt-ui-d8fa`):
 
 | Artifact | URL |
 | --- | --- |
-| **PØLYBĪUS-V1-STABLE — EMOJINIGMA HQ** (Dev Admin, triple tier) | https://github.com/RedTeamFortress666/Main/raw/cursor/pool-pin-bt-ui-d8fa/polybius/dist/polybius-v1-stable-hq-android-arm64.apk |
-| **PØLYBĪUS-V1-STABLE — User** (ENCRYPT / DECRYPT / SYNC / CONNECT) | https://github.com/RedTeamFortress666/Main/raw/cursor/pool-pin-bt-ui-d8fa/polybius/dist/polybius-v1-stable-user-android-arm64.apk |
+| **PØLYBÎŪS PORTAL** (Dev Admin, triple tier) | https://github.com/RedTeamFortress666/Main/raw/cursor/pool-pin-bt-ui-d8fa/polybius/dist/polybius-v1-stable-hq-android-arm64.apk |
+| **PØLYBÎŪS V.1** (ENCRYPT / DECRYPT / SYNC / CONNECT) | https://github.com/RedTeamFortress666/Main/raw/cursor/pool-pin-bt-ui-d8fa/polybius/dist/polybius-v1-stable-user-android-arm64.apk |
 | DARTH CHERRY | https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/darth-cherry-1.0.2-android-arm64.apk |
 
 Aliases (same binaries):
@@ -25,11 +25,11 @@ Build locally:
 cd polybius
 flutter pub get
 
-# EMOJINIGMA HQ fork
+# PØLYBÎŪS PORTAL fork
 flutter build apk --release --flavor hq --dart-define=POLYBIUS_FLAVOR=hq
 # → build/app/outputs/flutter-apk/app-hq-release.apk
 
-# Everyday user fork
+# PØLYBÎŪS V.1 (everyday user) fork
 flutter build apk --release --flavor user --dart-define=POLYBIUS_FLAVOR=user
 # → build/app/outputs/flutter-apk/app-user-release.apk
 ```
@@ -38,8 +38,8 @@ flutter build apk --release --flavor user --dart-define=POLYBIUS_FLAVOR=user
 
 | Flavor | App label | Dart define | Capabilities |
 | --- | --- | --- | --- |
-| `hq` | **EMOJINIGMA HQ** | `POLYBIUS_FLAVOR=hq` | Login gate, agent + admin + developer unlock, HQ panel, POOL vault, cross encrypt/decrypt |
-| `user` | **PØLYBĪUS** | `POLYBIUS_FLAVOR=user` | Splash → game (no pre-login). Ritual opens **USER ACCESS PORTAL**. Tabs: ENCRYPT / DECRYPT / SYNC / CONNECT (no POOL) |
+| `hq` | **PØLYBÎŪS PORTAL** | `POLYBIUS_FLAVOR=hq` | Login gate, agent + admin + developer unlock, HQ panel, POOL vault, cross encrypt/decrypt. Ritual: LOAD → diff 11 → **Russian** → lose → GAME OVER |
+| `user` | **PØLYBÎŪS V.1** | `POLYBIUS_FLAVOR=user` | Splash → game (no pre-login). Ritual: LOAD → diff 11 → **Japanese** → lose → GAME OVER → **USER ACCESS PORTAL**. Tabs: ENCRYPT / DECRYPT / SYNC / CONNECT (no POOL) |
 
 Both flavors accept certified accounts for encrypt / decrypt / QR sync / Bluetooth.
 

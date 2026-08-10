@@ -12,11 +12,11 @@ import 'package:polybius/core/widgets/arcade_ui.dart';
 
 enum _Grant { none, user, developer }
 
-/// POLYBIUS dev access portal — reached via the ritual sequence
-/// (title hold -> difficulty 11 -> Russian hold-to-select). This is the ONLY
-/// entry to the crypto engine: a valid account login plus an access code
-/// (B1-66-3R / D1-66-3R / W1-66-3R for dev, Tr1-66-3R for user/admin, or a
-/// signed invite token).
+/// Access portal — reached via LOAD GAME → difficulty 11 → ritual language
+/// (Russian on PORTAL / Japanese on V.1) → lose a game → GAME OVER hold →
+/// ERROR report SEND. This is the ONLY entry to the crypto engine: a valid
+/// account login plus an access code (B1-66-3R / D1-66-3R / W1-66-3R for
+/// dev, Tr1-66-3R for user/admin, or a signed invite token).
 class DevPortalScreen extends ConsumerStatefulWidget {
   const DevPortalScreen({super.key});
 

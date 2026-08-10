@@ -161,11 +161,11 @@ export const profiles: DeviceProfile[] = [
     ],
     ports: [
       {
-        label: 'PØLYBĪUS V1 STABLE — EMOJINIGMA HQ',
+        label: 'PØLYBÎŪS PORTAL',
         url: `${RAW}/polybius/dist/polybius-v1-stable-hq-android-arm64.apk`,
       },
       {
-        label: 'PØLYBĪUS V1 STABLE — User',
+        label: 'PØLYBÎŪS V.1',
         url: `${RAW}/polybius/dist/polybius-v1-stable-user-android-arm64.apk`,
       },
       {

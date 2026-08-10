@@ -19,8 +19,8 @@ Branch: `cursor/pool-pin-bt-ui-d8fa`
 
 | Build | Link |
 | --- | --- |
-| **EMOJINIGMA HQ** (Dev Admin / triple tier) | [polybius-v1-stable-hq-android-arm64.apk](https://github.com/RedTeamFortress666/Main/raw/cursor/pool-pin-bt-ui-d8fa/polybius/dist/polybius-v1-stable-hq-android-arm64.apk) |
-| **PØLYBĪUS User** (ENCRYPT / DECRYPT / SYNC / CONNECT) | [polybius-v1-stable-user-android-arm64.apk](https://github.com/RedTeamFortress666/Main/raw/cursor/pool-pin-bt-ui-d8fa/polybius/dist/polybius-v1-stable-user-android-arm64.apk) |
+| **PØLYBÎŪS PORTAL** (Dev Admin / triple tier) | [polybius-v1-stable-hq-android-arm64.apk](https://github.com/RedTeamFortress666/Main/raw/cursor/pool-pin-bt-ui-d8fa/polybius/dist/polybius-v1-stable-hq-android-arm64.apk) |
+| **PØLYBÎŪS V.1** (ENCRYPT / DECRYPT / SYNC / CONNECT) | [polybius-v1-stable-user-android-arm64.apk](https://github.com/RedTeamFortress666/Main/raw/cursor/pool-pin-bt-ui-d8fa/polybius/dist/polybius-v1-stable-user-android-arm64.apk) |
 | DARTH CHERRY dimmer | [darth-cherry-1.0.2-android-arm64.apk](https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/darth-cherry-1.0.2-android-arm64.apk) |
 
 See also `docs/V1_STABLE.md`.

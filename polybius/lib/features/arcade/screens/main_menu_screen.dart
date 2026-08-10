@@ -12,9 +12,9 @@ import 'package:polybius/core/widgets/crt_widgets.dart';
 
 /// Layer 2 public face — retro arcade main menu with hidden unlock rituals.
 ///
-/// Ritual entry point: hold the PØLYBĪUS title for 6 seconds until it
-/// glitches, which primes the hidden pathway (see [SettingsScreen] for the
-/// difficulty-11 + Russian-hold continuation).
+/// Primary portal path: LOAD GAME (file number) → SETTINGS difficulty 11 →
+/// ritual language (Russian / Japanese by flavor) → lose a game → hold
+/// GAME OVER. Legacy: hold title 6s still primes the pathway.
 class MainMenuScreen extends ConsumerStatefulWidget {
   const MainMenuScreen({super.key});
 

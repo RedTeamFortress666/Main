@@ -3,7 +3,7 @@
 library;
 
 enum PolybiusFlavor {
-  /// EMOJINIGMA HQ — Dev Admin fork with triple-tier (agent / admin / developer)
+  /// PØLYBÎŪS PORTAL — Dev Admin fork with triple-tier (agent / admin / developer)
   /// access and cross encrypt/decrypt tooling.
   hq,
 
@@ -33,11 +33,11 @@ class AppFlavor {
   static bool get isUser => current == PolybiusFlavor.user;
 
   static String get displayName =>
-      isHq ? 'EMOJINIGMA HQ' : 'PØLYBĪUS';
+      isHq ? 'PØLYBÎŪS PORTAL' : 'PØLYBÎŪS V.1';
 
   static String get subtitle => isHq
       ? 'DEV ADMIN · TRIPLE TIER · V1 STABLE'
-      : 'PØLYBĪUS-V1-STABLE (USER)';
+      : 'USER BUILD · V1 STABLE';
 
   /// Developer unlock state + red-team panel only on the HQ fork.
   static bool get allowDeveloperTools => isHq;
@@ -54,4 +54,8 @@ class AppFlavor {
 
   /// After cinematic splash: HQ → login/menu; user → game.
   static String get postSplashRoute => isUser ? '/game' : '/menu';
+
+  /// Language that completes the GAME OVER → portal ritual for this flavor.
+  /// HQ / Portal: Russian. User V.1: Japanese.
+  static String get ritualLanguage => isHq ? 'RUSSIAN' : 'JAPANESE';
 }

@@ -146,7 +146,7 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
       appBar: AppBar(
         backgroundColor: NeonTheme.dangerRed.withValues(alpha: 0.2),
         title: const Text(
-          '◈ EMOJINIGMA HQ ◈',
+          '◈ PØLYBÎŪS PORTAL ◈',
           style: TextStyle(fontFamily: 'monospace', color: NeonTheme.dangerRed),
         ),
         actions: [

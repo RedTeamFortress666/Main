@@ -1,6 +1,6 @@
 import 'package:flutter/services.dart';
 
-/// Detects DARTH CHERRY (`com.polybius.red_veil`) for the hidden alarm veil.
+/// Detects DARTH CHERRY companion package for the hidden alarm veil.
 class DarthCherryProbe {
   static const _channel = MethodChannel('doomsday_clock/packages');
   static const packageId = 'com.polybius.red_veil';

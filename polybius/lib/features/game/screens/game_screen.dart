@@ -65,7 +65,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   }
 
   void _startGameOverHold() {
-    if (!_errorEligible) return;
+    final settings = ref.read(gameSettingsProvider);
+    final ritualReady =
+        ref.read(unlockProvider.notifier).isPortalRitualReady(settings);
+    if (!ritualReady) return;
     setState(() => _holdingGameOver = true);
     _holdTimer = Timer(
       const Duration(milliseconds: AppConstants.gameOverHoldMs),
@@ -97,9 +100,15 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     _game ??= game.PolybiusGame(
       difficulty: settings.difficulty,
       onGameOver: (score) {
+        final settings = ref.read(gameSettingsProvider);
+        final ritualReady =
+            ref.read(unlockProvider.notifier).isPortalRitualReady(settings);
         setState(() {
           _finalScore = score;
-          _errorEligible = _game?.errorPathEligible ?? false;
+          // Ritual path: LOAD + diff 11 + flavor language → hold GAME OVER.
+          // Early-loss eligibility kept as a soft secondary cue for UI tint.
+          _errorEligible =
+              ritualReady || (_game?.errorPathEligible ?? false);
           _showGameOver = true;
           _scoreSaved = false;
           if (_nameController.text.trim().isEmpty) {
@@ -149,8 +158,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Hold "GAME OVER" for 6 seconds (when eligible) to reach the
-              // hidden ERROR report screen (ritual pathway).
+              // Hold "GAME OVER" when portal ritual is armed (LOAD GAME +
+              // difficulty 11 + flavor language) to reach the ERROR report.
               GestureDetector(
                 onLongPressStart: (_) => _startGameOverHold(),
                 onLongPressEnd: (_) => _endGameOverHold(),

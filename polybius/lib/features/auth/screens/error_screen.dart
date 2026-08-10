@@ -96,7 +96,14 @@ class _ErrorScreenState extends ConsumerState<ErrorScreen> {
       setState(() => _error = 'HOLD SAVE AS DRAFT FIRST');
       return;
     }
-    // Proceed to the dev/admin login gate (only accepts privileged codes).
+    final settings = ref.read(gameSettingsProvider);
+    final ritualReady =
+        ref.read(unlockProvider.notifier).isPortalRitualReady(settings);
+    if (!ritualReady) {
+      setState(() => _error = 'DIAGNOSTIC PATH LOCKED');
+      return;
+    }
+    // Proceed to the access portal login gate.
     context.go('/devportal');
   }
 

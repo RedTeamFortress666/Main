@@ -51,7 +51,7 @@ class _AuthGateState extends State<AuthGate> {
     if (session == null) {
       setState(() {
         _busy = false;
-        _error = 'ACCESS DENIED — Polybius developer/admin only';
+        _error = 'ACCESS DENIED — developer / admin only';
       });
       return;
     }
@@ -83,7 +83,7 @@ class _AuthGateState extends State<AuthGate> {
               const Center(child: DoomsdayLogo(size: 140)),
               const SizedBox(height: 18),
               Text(
-                'VAULT LOGIN · POLYBIUS DEVELOPER / ADMIN',
+                'VAULT LOGIN · DEVELOPER / ADMIN',
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                       color: NoirTheme.pink,
                     ),
@@ -142,8 +142,8 @@ class _AuthGateState extends State<AuthGate> {
               ),
               const SizedBox(height: 16),
               Text(
-                'Same credentials as Polybius developers & admins. '
-                'First login seeds a personal vault for this operator.',
+                'Privileged operator credentials only. '
+                'First login seeds a personal vault for this terminal.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: NoirTheme.mist.withValues(alpha: 0.55),
                     ),
@@ -209,10 +209,11 @@ class _VaultSetupScreenState extends State<VaultSetupScreen> {
                   const SizedBox(height: 12),
                   const Text(
                     'Seeding personal vault:\n'
-                    '• PØLYBĪUS Admin APK slot\n'
+                    '• Concealable PORTAL APK slot\n'
                     '• DARTH CHERRY companion slot\n'
                     '• GRØK-REBEL 6.0 alarm interface hook\n\n'
-                    'Ritual notes still unlock daily vault view in Planner.',
+                    'Vault unlock: calendar → 5 November + Gunpowder Plot '
+                    'riddle, then hold SAVE NOTE.',
                   ),
                   const Spacer(),
                   SizedBox(

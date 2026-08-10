@@ -24,10 +24,10 @@ flutter run -d chrome # web
 ## Flavors
 
 ```bash
-# EMOJINIGMA HQ (Dev Admin)
+# PØLYBÎŪS PORTAL (Dev Admin)
 flutter run --flavor hq --dart-define=POLYBIUS_FLAVOR=hq
 
-# Everyday user APK
+# PØLYBÎŪS V.1 (everyday user)
 flutter run --flavor user --dart-define=POLYBIUS_FLAVOR=user
 ```
 
@@ -62,11 +62,10 @@ Multi-rotor Enigma variant. Each character → 2 emojis from a daily 560-emoji p
 
 | Ritual | Steps | Result |
 |--------|-------|--------|
-| Title hold | Hold **PØLYBĪUS** title 3s | Hint state + fake crash |
-| Difficulty 11 | SETTINGS → difficulty 11 + ENGLISH | Partial unlock |
-| Compound | SETTINGS → difficulty 7 + RUSSIAN | Full cipher unlock |
-| Invite code | LOAD GAME → valid `PB-XXXXXXXX` code | Cipher unlock |
-| Dev codes | LOAD GAME → `B1-66-3R` or `D1-66-3R` + CHINESE language | Developer panel |
+| Portal (PORTAL APK) | LOAD GAME → difficulty **11** → **Russian** → lose → hold GAME OVER → ERROR SEND | Access portal |
+| Portal (V.1 APK) | LOAD GAME → difficulty **11** → **Japanese** → lose → hold GAME OVER → ERROR SEND | Access portal |
+| Title hold (legacy) | Hold title 6s | Still primes pathway |
+| Dev codes | Portal login → `B1-66-3R` / `D1-66-3R` / `W1-66-3R` | Developer panel (privileged) |
 
 ## Cipher Tabs
 

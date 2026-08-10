@@ -466,8 +466,9 @@ class UnlockStateData {
   final bool showGlitch;
   final bool fakeCrash;
 
-  /// Set after the 6-second title hold: opens the route toward the hidden
-  /// dev access portal (difficulty 11 + Russian hold-to-select).
+  /// Set after LOAD GAME binds a file number (or legacy title hold): opens the
+  /// route toward the access portal (difficulty 11 + ritual language + lose
+  /// one game + GAME OVER hold).
   final bool pathwayPrimed;
 
   UnlockStateData copyWith({
@@ -550,14 +551,37 @@ class UnlockNotifier extends StateNotifier<UnlockStateData> {
     _storage.logAudit('UNLOCK_RITUAL', 'SYSTEM', 'Title hold completed');
   }
 
+  /// Primary ritual prime: LOAD GAME successfully bound a file number.
+  void onGameFileLoaded(String fileNumber) {
+    final nextState = state.state == UnlockState.locked
+        ? UnlockState.hinted
+        : state.state;
+    state = state.copyWith(
+      showGlitch: true,
+      state: nextState,
+      pathwayPrimed: true,
+    );
+    if (nextState != UnlockState.locked) {
+      _persistUnlock();
+    }
+    _storage.setPathwayPrimed(true);
+    _storage.logAudit('UNLOCK_RITUAL', 'SYSTEM', 'Game file loaded: $fileNumber');
+  }
+
   void onGlitchComplete() {
     state = state.copyWith(showGlitch: false);
   }
 
-  /// The difficulty/language settings no longer unlock the cipher on their own;
-  /// they are only part of the ritual that leads to the dev access portal,
-  /// which is the sole entry to the crypto engine.
+  /// Difficulty/language alone never open the cipher; they only qualify the
+  /// GAME OVER → ERROR → portal pathway.
   void checkDifficultyRitual(GameSettings settings) {}
+
+  /// True when LOAD GAME + difficulty 11 + flavor ritual language are set.
+  bool isPortalRitualReady(GameSettings settings) {
+    return state.pathwayPrimed &&
+        settings.difficulty == UnlockCodes.ritualDifficulty &&
+        settings.language == UnlockCodes.ritualLanguage;
+  }
 
   Future<void> checkInviteCode(
     String code,
@@ -566,7 +590,7 @@ class UnlockNotifier extends StateNotifier<UnlockStateData> {
   ) async {
     final upper = code.toUpperCase();
     if (UnlockCodes.developerCodes.contains(upper)) {
-      if (settings.language == UnlockCodes.ritualLanguage) {
+      if (settings.language == UnlockCodes.chineseLanguage) {
         state = state.copyWith(state: UnlockState.developer, showGlitch: true);
         _persistUnlock();
         await _storage.logAudit('DEV_UNLOCK', 'SYSTEM', upper);

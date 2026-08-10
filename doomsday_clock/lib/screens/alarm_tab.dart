@@ -66,7 +66,7 @@ class _AlarmTabState extends State<AlarmTab> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'DARTH CHERRY (com.polybius.red_veil) required — install & ENABLE FILTER',
+            'DARTH CHERRY companion required — install & ENABLE FILTER',
           ),
         ),
       );
