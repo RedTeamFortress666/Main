@@ -93,6 +93,12 @@ class _SyncTabState extends ConsumerState<SyncTab> {
           textAlign: TextAlign.center,
           style: const TextStyle(color: Colors.white54, fontSize: 12),
         ),
+        const SizedBox(height: 6),
+        const Text(
+          'QR scan / share works across all certified tiers — HQ and user builds encrypt, decrypt, and align to the same pool.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.white38, fontSize: 11, height: 1.35),
+        ),
         const SizedBox(height: 16),
         ElevatedButton.icon(
           onPressed: () {

@@ -77,7 +77,10 @@ class _DecryptTabState extends ConsumerState<DecryptTab> {
             onPaste: (text) => setState(() => _inputController.text = text),
           ),
           const SizedBox(height: 4),
-          ElevatedButton(onPressed: _decrypt, child: const Text('DECRYPT')),
+          ElevatedButton(
+            onPressed: _decrypt,
+            child: const Text('DECRYPT VIA CURRENT ROTOR SETTINGS'),
+          ),
           const SizedBox(height: 12),
           Expanded(
             child: Container(

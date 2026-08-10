@@ -71,10 +71,11 @@ Multi-rotor Enigma variant. Each character → 2 emojis from a daily 560-emoji p
 ## Cipher Tabs
 
 - **🔒 ENCRYPT** — plaintext → emoji ciphertext
-- **🔓 DECRYPT** — emoji → plaintext
-- **🎲 POOL** — today's 560-emoji cipher pool
-- **📡 CONNECT** — device info, Bluetooth placeholder, logout
-- **⚙ Rotor Gear** — live rotor positions and step counts
+- **🔓 DECRYPT** — emoji → plaintext via current rotor / pool settings
+- **🎲 POOL** — today's 560-emoji cipher pool (game file number + 6-digit PIN to view)
+- **🔗 SYNC** — QR pool share/scan across all certified tiers (HQ + user)
+- **📡 CONNECT** — Bluetooth messaging, rotor/pool share with mutual confirm codes, relay, logout
+- **⚙ Rotor Gear** — live rotor positions + decrypt-via-current-rotor
 
 ## Build
 

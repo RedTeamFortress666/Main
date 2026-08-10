@@ -7,31 +7,15 @@ import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 import 'package:polybius/features/auth/screens/operator_cards_screen.dart';
 import 'package:polybius/features/bluetooth/bluetooth_link_service.dart';
+import 'package:polybius/features/bluetooth/bluetooth_messaging_panel.dart';
 
-class ConnectTab extends ConsumerStatefulWidget {
+class ConnectTab extends ConsumerWidget {
   const ConnectTab({super.key});
 
   @override
-  ConsumerState<ConnectTab> createState() => _ConnectTabState();
-}
-
-class _ConnectTabState extends ConsumerState<ConnectTab> {
-  final _btPayload = TextEditingController();
-  String? _selectedPeerId;
-
-  @override
-  void dispose() {
-    _btPayload.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final auth = ref.watch(authProvider);
     final engine = ref.watch(cipherEngineProvider);
-    final bt = ref.watch(bluetoothLinkProvider);
-    final operatorName =
-        auth.user?.displayName ?? auth.user?.username ?? 'OPERATOR';
 
     return ListView(
       padding: const EdgeInsets.all(20),
@@ -71,139 +55,7 @@ class _ConnectTabState extends ConsumerState<ConnectTab> {
           style: TextStyle(color: Colors.white38, fontSize: 11),
         ),
         const SizedBox(height: 28),
-        Row(
-          children: [
-            const Text(
-              'BLUETOOTH LINK',
-              style: TextStyle(
-                fontFamily: 'monospace',
-                color: NeonTheme.neonGreen,
-                fontSize: 15,
-              ),
-            ),
-            const Spacer(),
-            Switch(
-              value: bt.enabled,
-              activeThumbColor: NeonTheme.neonCyan,
-              onChanged: (v) {
-                ref.read(bluetoothLinkProvider.notifier).setEnabled(
-                      v,
-                      operatorName: operatorName,
-                    );
-              },
-            ),
-          ],
-        ),
-        Text(
-          bt.status,
-          style: TextStyle(
-            fontFamily: 'monospace',
-            fontSize: 11,
-            color: bt.enabled ? NeonTheme.neonCyan : Colors.white38,
-          ),
-        ),
-        if (bt.enabled) ...[
-          const SizedBox(height: 10),
-          if (bt.scanning)
-            const LinearProgressIndicator(
-              color: NeonTheme.neonCyan,
-              backgroundColor: Colors.white12,
-            ),
-          ...bt.peers.map((p) {
-            final selected = _selectedPeerId == p.id;
-            return ListTile(
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(
-                p.connected ? Icons.bluetooth_connected : Icons.bluetooth,
-                color: p.connected ? NeonTheme.neonGreen : NeonTheme.neonCyan,
-              ),
-              title: Text(
-                p.name,
-                style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
-              ),
-              subtitle: Text(
-                p.rssi != null ? '${p.rssi} dBm' : p.id,
-                style: const TextStyle(fontSize: 10, color: Colors.white38),
-              ),
-              trailing: selected
-                  ? const Icon(Icons.check_circle, color: NeonTheme.neonPink)
-                  : TextButton(
-                      onPressed: () async {
-                        await ref
-                            .read(bluetoothLinkProvider.notifier)
-                            .connect(p);
-                        setState(() => _selectedPeerId = p.id);
-                      },
-                      child: Text(p.connected ? 'SELECT' : 'LINK'),
-                    ),
-              onTap: () => setState(() => _selectedPeerId = p.id),
-            );
-          }),
-          if (bt.peers.isEmpty && !bt.scanning)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Text(
-                'No POLYBIUS-* peers yet. Enable Bluetooth on both devices.',
-                style: TextStyle(color: Colors.white38, fontSize: 11),
-              ),
-            ),
-          if (_selectedPeerId != null) ...[
-            const SizedBox(height: 8),
-            TextField(
-              controller: _btPayload,
-              maxLines: 2,
-              style: const TextStyle(fontSize: 16),
-              decoration: const InputDecoration(
-                labelText: 'Emoji ciphertext to peer',
-                labelStyle: TextStyle(color: NeonTheme.neonPink, fontSize: 12),
-              ),
-            ),
-            const SizedBox(height: 8),
-            ElevatedButton.icon(
-              onPressed: () {
-                ref.read(bluetoothLinkProvider.notifier).sendCiphertext(
-                      _selectedPeerId!,
-                      _btPayload.text,
-                    );
-                _btPayload.clear();
-              },
-              icon: const Icon(Icons.send),
-              label: const Text('SEND OVER BLUETOOTH'),
-            ),
-          ],
-          if (bt.messages.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            const Text(
-              'BT TRAFFIC',
-              style: TextStyle(
-                fontFamily: 'monospace',
-                color: NeonTheme.neonYellow,
-                fontSize: 11,
-              ),
-            ),
-            ...bt.messages.take(6).map(
-                  (m) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Text(
-                      '${m.outbound ? '→' : '←'} ${m.fromName}: ${m.payload}',
-                      style: TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 11,
-                        color: m.outbound
-                            ? NeonTheme.neonPink
-                            : NeonTheme.neonGreen,
-                      ),
-                    ),
-                  ),
-                ),
-          ],
-          TextButton(
-            onPressed: () =>
-                ref.read(bluetoothLinkProvider.notifier).startScan(),
-            child: const Text('RESCAN'),
-          ),
-        ],
+        const BluetoothMessagingPanel(),
         const SizedBox(height: 24),
         SizedBox(
           width: double.infinity,

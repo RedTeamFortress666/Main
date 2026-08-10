@@ -55,4 +55,24 @@ CONNECT → **RETICULUM RELAY**
 
 ## Bluetooth
 
-CONNECT → **BLUETOOTH LINK** toggle scans for nearby `POLYBIUS-*` devices, links a peer, and sends emoji ciphertext over GATT when a writable characteristic is present.
+CONNECT → **BLUETOOTH LINK** toggle scans for nearby `POLYBIUS-*` devices across
+HQ and user builds. The panel is a neo-noir cyberpunk messaging surface:
+
+- Peer rail + ciphertext composer
+- Message bubbles with **DECRYPT VIA CURRENT ROTOR**
+- **SHARE ROTOR / POOL** — sends the current pool-sync token; both devices show
+  a 6-digit onscreen code and must tap **CONFIRM CODE** before the receiver
+  applies the pool
+
+## Pool vault (leak prevention)
+
+The **POOL** tab no longer shows the 560 emojis by default. Operators must enter
+their **game file number** plus **6-digit PIN** to view the mapping. Encrypt,
+decrypt, QR sync, and Bluetooth messaging remain available without opening the
+vault.
+
+## Cross-tier QR sync
+
+User and HQ builds share the same `PoolSync` QR format. Any certified account
+can randomise / scan / share a pool so encrypt↔decrypt round-trips across tiers.
+
