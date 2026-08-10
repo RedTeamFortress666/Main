@@ -34,20 +34,15 @@ class StorageService {
 
   Future<void> _bootstrapDeveloper() async {
     final box = Hive.box(accountsBox);
-    if (!box.containsKey(AppConstants.developerUsername)) {
-      final dev = UserAccount(
-        username: AppConstants.developerUsername,
-        passwordHash: EncryptionService.hashPassword('developer'),
-        pinHash: EncryptionService.hashPin(AppConstants.developerDefaultPin),
-        tier: UserTier.developer,
-        createdAt: DateTime.now(),
+    // V1 Stable: DEVELOPER / developer is stricken — purge if an older install
+    // left the beta bootstrap account behind.
+    if (box.containsKey(AppConstants.retiredDeveloperUsername)) {
+      await deleteAccount(AppConstants.retiredDeveloperUsername);
+      await logAudit(
+        'BOOTSTRAP',
+        AppConstants.retiredDeveloperUsername,
+        'DEVELOPER account stricken for V1 Stable',
       );
-      await box.put(
-        dev.username,
-        _encryption.encrypt(_encodeJson(dev.toJson())),
-      );
-      await logAudit('BOOTSTRAP', AppConstants.developerUsername,
-          'DEVELOPER account created on first install');
     }
     // Operator admin account: RedTeam01, dev code B1-66-3R, dev number 816639.
     if (!box.containsKey(AppConstants.adminUsername)) {

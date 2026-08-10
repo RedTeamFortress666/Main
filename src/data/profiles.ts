@@ -37,9 +37,9 @@ export interface DeviceProfile {
   esp32?: Esp32Meta
 }
 
-const BRANCH = 'cursor/polybius-flutter-app-a932'
+const BRANCH = 'cursor/polybius-v1-stable-8c69'
 const RAW = `https://github.com/RedTeamFortress666/Main/raw/${BRANCH}`
-const ESP32 = `${RAW}/polybius/dist/esp32`
+const ESP32 = `https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/esp32`
 
 export const BOOT_MODE_LABELS: Record<BootMode, string> = {
   single: 'Single image',
@@ -161,12 +161,16 @@ export const profiles: DeviceProfile[] = [
     ],
     ports: [
       {
-        label: 'PØLYBĪUS Android APK (sideload on Lineage)',
-        url: `${RAW}/polybius/dist/polybius-1.0.0-beta.2-android-arm64.apk`,
+        label: 'PØLYBĪUS V1 STABLE — EMOJINIGMA HQ',
+        url: `${RAW}/polybius/dist/polybius-v1-stable-hq-android-arm64.apk`,
+      },
+      {
+        label: 'PØLYBĪUS V1 STABLE — User',
+        url: `${RAW}/polybius/dist/polybius-v1-stable-user-android-arm64.apk`,
       },
       {
         label: 'DARTH CHERRY filter APK',
-        url: `${RAW}/polybius/dist/darth-cherry-1.0.2-android-arm64.apk`,
+        url: `https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/darth-cherry-1.0.2-android-arm64.apk`,
       },
     ],
     notes: [

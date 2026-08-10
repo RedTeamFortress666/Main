@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:polybius/core/constants/unlock_codes.dart';
 import 'package:polybius/core/audio/music_service.dart';
+import 'package:polybius/core/constants/app_flavor.dart';
 import 'package:polybius/core/providers/intro_provider.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/routing/router_refresh.dart';
@@ -113,7 +114,7 @@ class _PolybiusAppState extends ConsumerState<PolybiusApp> {
     final unlock = ref.watch(unlockProvider);
 
     return MaterialApp.router(
-      title: 'PØLYBĪUS',
+      title: AppFlavor.displayName,
       debugShowCheckedModeBanner: false,
       theme: NeonTheme.dark,
       routerConfig: router,

@@ -3,7 +3,12 @@ library;
 
 class AppConstants {
   static const String appName = 'PØLYBĪUS';
-  static const String developerUsername = 'DEVELOPER';
+
+  /// Retired for V1 Stable — must never authenticate.
+  static const String retiredDeveloperUsername = 'DEVELOPER';
+
+  /// @Deprecated('Use adminUsername / operator accounts — DEVELOPER is stricken')
+  static const String developerUsername = retiredDeveloperUsername;
   static const String developerDefaultPin = '000000';
 
   /// Operator admin account (RedTeam01) bootstrapped on first install.

@@ -2,12 +2,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:polybius/core/constants/app_constants.dart';
+import 'package:polybius/core/constants/app_flavor.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 import 'package:polybius/core/widgets/crt_widgets.dart';
 
-/// Replit-style OIDC login gate. First install ships with DEVELOPER account.
+/// Layer-1 login gate. V1 Stable uses operator accounts (DEVELOPER retired).
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -72,12 +72,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      AppConstants.appName,
-                      style: Theme.of(context).textTheme.displayLarge,
+                      AppFlavor.displayName,
+                      style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                            fontSize: AppFlavor.isHq ? 36 : 48,
+                          ),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'CLASSIFIED ARCADE TERMINAL',
+                      AppFlavor.subtitle,
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                             color: NeonTheme.neonGreen,
                           ),
@@ -135,7 +137,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     if (kDebugMode) ...[
                       const SizedBox(height: 24),
                       Text(
-                        'First install: use DEVELOPER / developer',
+                        AppFlavor.isHq
+                            ? 'HQ: use an operator login from OPERATOR CARDS'
+                            : 'User build: operator / invite via portal ritual',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontSize: 11,
                               color: Colors.white38,

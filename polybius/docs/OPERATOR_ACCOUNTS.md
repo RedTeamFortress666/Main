@@ -1,14 +1,29 @@
-# PØLYBĪUS — operator accounts (bootstrap)
+# PØLYBĪUS — operator accounts (V1 Stable)
 
 Credentials bootstrapped on first install. Source of truth:
 
 - Named operators: `lib/core/constants/app_constants.dart`
 - BETA pool (10): `lib/core/constants/operator_roster.dart`
+- In-app cards: CONNECT → **OPERATOR IDENTITY CARDS**
+  - Public: neon Illuminati / matrix eye + username + invite / game-file code
+  - Under **DARTH CHERRY**: password, backup password, PIN
 
-**APK (sideload):**  
-https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/polybius-1.0.0-beta.2-android-arm64.apk
+~~**DEVELOPER / `developer`**~~ — **STRICKEN** for V1 Stable. Login is rejected
+and the bootstrap account is purged on upgrade.
 
-Use invite / access codes at **LOAD GAME**. Login with username + password; PIN for re-auth. Backup password is an alternate login password.
+## Downloads (V1 Stable)
+
+Branch: `cursor/polybius-v1-stable-8c69`
+
+| Build | Link |
+| --- | --- |
+| **EMOJINIGMA HQ** (Dev Admin / triple tier) | [polybius-v1-stable-hq-android-arm64.apk](https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-v1-stable-8c69/polybius/dist/polybius-v1-stable-hq-android-arm64.apk) |
+| **PØLYBĪUS User** (ENCRYPT / DECRYPT / SYNC / CONNECT) | [polybius-v1-stable-user-android-arm64.apk](https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-v1-stable-8c69/polybius/dist/polybius-v1-stable-user-android-arm64.apk) |
+| DARTH CHERRY dimmer | [darth-cherry-1.0.2-android-arm64.apk](https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/darth-cherry-1.0.2-android-arm64.apk) |
+
+See also `docs/V1_STABLE.md`.
+
+Use invite / access codes at **LOAD GAME** / portal. Login with username + password; PIN for re-auth. Backup password is an alternate login password.
 
 ---
 
@@ -16,7 +31,7 @@ Use invite / access codes at **LOAD GAME**. Login with username + password; PIN 
 
 | Display | Username | Tier | Invite / access code | PIN | Password | Backup password |
 |---------|----------|------|----------------------|-----|----------|-----------------|
-| DEVELOPER | `DEVELOPER` | developer | — | `000000` | `developer` | `developer` |
+| ~~DEVELOPER~~ | ~~`DEVELOPER`~~ | — | — | — | ~~`developer`~~ | **STRICKEN** |
 | RedTeam01 | `REDTEAM01` | admin | `B1-66-3R` | `816639` | `816639` | `816639` |
 | SpamKat2 | `SPAMKAT2` | developer | `W1-66-3R` | `810739` | `Ev1l-Schm33` | `LilB1tScary99` |
 | Gam3.0n | `GAM3.0N` | developer | `B1-66-3R` | `816639` | `Dig1tal.Ra1n99` | `01-p0lyb1u5-10` |
@@ -28,7 +43,7 @@ Use invite / access codes at **LOAD GAME**. Login with username + password; PIN 
 
 ---
 
-## BETA pool (10 Admin/user roster)
+## Pool (10 Admin/user roster)
 
 | Display | Username | Tier | Invite code | PIN | Password | Backup password |
 |---------|----------|------|-------------|-----|----------|-----------------|
@@ -42,139 +57,3 @@ Use invite / access codes at **LOAD GAME**. Login with username + password; PIN 
 | Gl1tchCat | `GL1TCHCAT` | agent | `GC7-66-3R` | `264575` | `CatGlitch1` | `GlitchMe2` |
 | H0neyBad | `H0NEYBAD` | agent | `HB8-66-3R` | `331127` | `HoneyRun7` | `BadHoney9` |
 | PixelW1z | `PIXELW1Z` | agent | `PW9-66-3R` | `367879` | `PixelZap12` | `WizPixel5` |
-
----
-
-## Quick copy (one block per account)
-
-### DEVELOPER
-- Username: `DEVELOPER`
-- PIN: `000000`
-- Password: `developer`
-- Backup: `developer`
-
-### RedTeam01
-- Username: `REDTEAM01`
-- Code: `B1-66-3R`
-- PIN: `816639`
-- Password: `816639`
-- Backup: `816639`
-
-### SpamKat2
-- Username: `SPAMKAT2`
-- Code: `W1-66-3R`
-- PIN: `810739`
-- Password: `Ev1l-Schm33`
-- Backup: `LilB1tScary99`
-
-### Gam3.0n
-- Username: `GAM3.0N`
-- Code: `B1-66-3R`
-- PIN: `816639`
-- Password: `Dig1tal.Ra1n99`
-- Backup: `01-p0lyb1u5-10`
-
-### KASP3R
-- Username: `KASP3R`
-- Code: `TR1-66-3R`
-- PIN: `791639`
-- Password: `BurnHideFr13d`
-- Backup: `P1ckl3M0rty69`
-
-### T3mptress
-- Username: `T3MPTRESS`
-- Code: `80-081-35`
-- PIN: `808135`
-- Password: `not1nkansas69`
-- Backup: `NoPlaceL1ke`
-
-### CrownOfCorns
-- Username: `CROWNOFCORNS`
-- Code: `C0-9N-3E`
-- PIN: `539667`
-- Password: `20YokoMicrowave14`
-- Backup: `C0rnS1lo14`
-
-### MizzPickl3s
-- Username: `MIZZPICKL3S`
-- Code: `SP-1N-33`
-- PIN: `080826`
-- Password: `8-Bit.Bitch3s`
-- Backup: `Glitch.B1tch99`
-
-### P!k.ZuP
-- Username: `P!K.ZUP`
-- Code: `D4-N6-3R`
-- PIN: `839093`
-- Password: `DocCh1ck3n`
-- Backup: `TakeAOrdaPr33z`
-
-### NiteQueen
-- Username: `NITEQUEEN`
-- Code: `NQ1-66-3R`
-- PIN: `314159`
-- Password: `NiteOwl42`
-- Backup: `NightOwl7`
-
-### Art3mas
-- Username: `ARTEM3S`
-- Code: `AR2-66-3R`
-- PIN: `271828`
-- Password: `BowArrow7`
-- Backup: `Huntress9`
-
-### Cup1d!
-- Username: `CUP1D!`
-- Code: `CU3-66-3R`
-- PIN: `161803`
-- Password: `LoveShot99`
-- Backup: `CupidsBow1`
-
-### Dyslex1c
-- Username: `DYSLEX1C`
-- Code: `DX4-66-3R`
-- PIN: `141421`
-- Password: `SpellMix8`
-- Backup: `LexiFix99`
-
-### WhyTwoK
-- Username: `WHYTWOK`
-- Code: `Y2K-66-3R`
-- PIN: `173205`
-- Password: `PartyY2K1`
-- Backup: `TwoKWave2`
-
-### M00nFox
-- Username: `M00NFOX`
-- Code: `MF5-66-3R`
-- PIN: `223606`
-- Password: `MoonRun88`
-- Backup: `FoxMoon11`
-
-### V3ctorKid
-- Username: `V3CTORKID`
-- Code: `VK6-66-3R`
-- PIN: `244949`
-- Password: `VecTor99`
-- Backup: `KidVector3`
-
-### Gl1tchCat
-- Username: `GL1TCHCAT`
-- Code: `GC7-66-3R`
-- PIN: `264575`
-- Password: `CatGlitch1`
-- Backup: `GlitchMe2`
-
-### H0neyBad
-- Username: `H0NEYBAD`
-- Code: `HB8-66-3R`
-- PIN: `331127`
-- Password: `HoneyRun7`
-- Backup: `BadHoney9`
-
-### PixelW1z
-- Username: `PIXELW1Z`
-- Code: `PW9-66-3R`
-- PIN: `367879`
-- Password: `PixelZap12`
-- Backup: `WizPixel5`
