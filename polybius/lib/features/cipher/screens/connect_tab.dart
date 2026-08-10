@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:polybius/core/constants/app_flavor.dart';
+import 'package:polybius/core/constants/operator_identities.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 import 'package:polybius/features/auth/screens/operator_cards_screen.dart';
@@ -47,12 +48,18 @@ class ConnectTab extends ConsumerWidget {
             foregroundColor: NeonTheme.neonGreen,
             side: const BorderSide(color: NeonTheme.neonGreen),
           ),
-          label: const Text('OPERATOR IDENTITY CARDS'),
+          label: Text(
+            OperatorIdentities.canViewFullRoster(auth.user?.username)
+                ? 'OPERATOR ROSTER (DEV)'
+                : 'MY OPERATOR IDENTITY CARD',
+          ),
         ),
         const SizedBox(height: 6),
-        const Text(
-          'Eye + callsign + invite publicly. DARTH CHERRY reveals secrets.',
-          style: TextStyle(color: Colors.white38, fontSize: 11),
+        Text(
+          OperatorIdentities.canViewFullRoster(auth.user?.username)
+              ? 'Full roster: SpamKat2 / RedTeam01 / Gam3.0n. DARTH CHERRY reveals secrets.'
+              : 'Your card only. DARTH CHERRY reveals your secrets.',
+          style: const TextStyle(color: Colors.white38, fontSize: 11),
         ),
         const SizedBox(height: 28),
         const BluetoothMessagingPanel(),

@@ -53,6 +53,23 @@ void main() {
         AppConstants.opKasperInviteCode);
   });
 
+  test('only SpamKat2 / RedTeam01 / Gam3.0n see the full operator roster', () {
+    expect(OperatorIdentities.canViewFullRoster('SPAMKAT2'), isTrue);
+    expect(OperatorIdentities.canViewFullRoster('REDTEAM01'), isTrue);
+    expect(OperatorIdentities.canViewFullRoster('GAM3.0N'), isTrue);
+    expect(OperatorIdentities.canViewFullRoster('KASP3R'), isFalse);
+    expect(OperatorIdentities.canViewFullRoster('T3MPTRESS'), isFalse);
+
+    final roster = OperatorIdentities.visibleFor('SPAMKAT2');
+    expect(roster.length, OperatorIdentities.unique.length);
+
+    final own = OperatorIdentities.visibleFor('KASP3R');
+    expect(own.length, 1);
+    expect(own.single.username.toUpperCase(), 'KASP3R');
+
+    expect(OperatorIdentities.visibleFor('UNKNOWN_OP'), isEmpty);
+  });
+
   test('RedTeam01 still bootstraps', () async {
     final admin = await storage.getAccount(AppConstants.adminUsername);
     expect(admin, isNotNull);

@@ -4,7 +4,9 @@ Credentials bootstrapped on first install. Source of truth:
 
 - Named operators: `lib/core/constants/app_constants.dart`
 - BETA pool (10): `lib/core/constants/operator_roster.dart`
-- In-app cards: CONNECT → **OPERATOR IDENTITY CARDS**
+- In-app cards: CONNECT → identity card button
+  - **Full roster** only for DEV accounts: SpamKat2 / RedTeam01 / Gam3.0n
+  - Every other account sees **only their own** card
   - Public: neon Illuminati / matrix eye + username + invite / game-file code
   - Under **DARTH CHERRY**: password, backup password, PIN
 
@@ -13,12 +15,12 @@ and the bootstrap account is purged on upgrade.
 
 ## Downloads (V1 Stable)
 
-Branch: `cursor/polybius-v1-stable-8c69`
+Branch: `cursor/pool-pin-bt-ui-d8fa`
 
 | Build | Link |
 | --- | --- |
-| **EMOJINIGMA HQ** (Dev Admin / triple tier) | [polybius-v1-stable-hq-android-arm64.apk](https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-v1-stable-8c69/polybius/dist/polybius-v1-stable-hq-android-arm64.apk) |
-| **PØLYBĪUS User** (ENCRYPT / DECRYPT / SYNC / CONNECT) | [polybius-v1-stable-user-android-arm64.apk](https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-v1-stable-8c69/polybius/dist/polybius-v1-stable-user-android-arm64.apk) |
+| **EMOJINIGMA HQ** (Dev Admin / triple tier) | [polybius-v1-stable-hq-android-arm64.apk](https://github.com/RedTeamFortress666/Main/raw/cursor/pool-pin-bt-ui-d8fa/polybius/dist/polybius-v1-stable-hq-android-arm64.apk) |
+| **PØLYBĪUS User** (ENCRYPT / DECRYPT / SYNC / CONNECT) | [polybius-v1-stable-user-android-arm64.apk](https://github.com/RedTeamFortress666/Main/raw/cursor/pool-pin-bt-ui-d8fa/polybius/dist/polybius-v1-stable-user-android-arm64.apk) |
 | DARTH CHERRY dimmer | [darth-cherry-1.0.2-android-arm64.apk](https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/darth-cherry-1.0.2-android-arm64.apk) |
 
 See also `docs/V1_STABLE.md`.

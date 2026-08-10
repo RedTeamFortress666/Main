@@ -37,7 +37,7 @@ export interface DeviceProfile {
   esp32?: Esp32Meta
 }
 
-const BRANCH = 'cursor/polybius-v1-stable-8c69'
+const BRANCH = 'cursor/pool-pin-bt-ui-d8fa'
 const RAW = `https://github.com/RedTeamFortress666/Main/raw/${BRANCH}`
 const ESP32 = `https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/esp32`
 
@@ -179,6 +179,7 @@ export const profiles: DeviceProfile[] = [
       'Optional: place empty `.noroms` on BOOT before first boot to give all storage to Android.',
       'OTA zips are recovery-only updates — do not flash those as a clean image.',
       'Dual OS swap: keep Lineage on one card and ArkOS/ROCKNIX on another; swap TF1 to switch OS.',
+      'Operator cards: full roster only for SpamKat2 / RedTeam01 / Gam3.0n; others see their own card.',
     ],
   },
   espProfile(

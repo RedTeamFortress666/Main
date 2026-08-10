@@ -220,6 +220,27 @@ class OperatorIdentities {
     return null;
   }
 
+  /// Dev accounts that may browse the full operator-card roster.
+  /// SpamKat2, RedTeam01, and Gam3.0n only — everyone else sees their own card.
+  static const Set<String> fullRosterDevUsernames = {
+    AppConstants.adminUsername, // REDTEAM01
+    AppConstants.opSpamKatUsername, // SPAMKAT2
+    AppConstants.opGameOnUsername, // GAM3.0N
+  };
+
+  static bool canViewFullRoster(String? username) {
+    if (username == null || username.trim().isEmpty) return false;
+    return fullRosterDevUsernames.contains(username.trim().toUpperCase());
+  }
+
+  /// Cards visible to [username]: full unique roster for the three DEV accounts,
+  /// otherwise only that operator's own card (empty if unknown).
+  static List<OperatorIdentity> visibleFor(String? username) {
+    if (canViewFullRoster(username)) return unique;
+    final own = username == null ? null : byUsername(username);
+    return own == null ? const [] : [own];
+  }
+
   /// Keep in sync with [OperatorRoster.pool] at compile time via tests.
   static List<OperatorIdentity> fromRoster() => OperatorRoster.pool
       .map(

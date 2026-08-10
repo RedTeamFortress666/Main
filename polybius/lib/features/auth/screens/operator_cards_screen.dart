@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:polybius/core/constants/operator_identities.dart';
+import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 import 'package:polybius/features/auth/widgets/operator_identity_card.dart';
 import 'package:polybius/features/cipher/veil/veil_state.dart';
 
-/// Gallery of operator identity cards. Secrets unlock under Darth Cherry.
+/// Operator identity cards.
+///
+/// Full roster: SpamKat2 / RedTeam01 / Gam3.0n only.
+/// All other accounts see only their own card.
 class OperatorCardsScreen extends ConsumerStatefulWidget {
   const OperatorCardsScreen({super.key});
 
@@ -35,16 +39,19 @@ class _OperatorCardsScreenState extends ConsumerState<OperatorCardsScreen> {
   @override
   Widget build(BuildContext context) {
     final veil = ref.watch(veilProvider);
+    final auth = ref.watch(authProvider);
     final secrets = veil.filterActive;
-    final cards = OperatorIdentities.unique;
+    final username = auth.user?.username;
+    final fullRoster = OperatorIdentities.canViewFullRoster(username);
+    final cards = OperatorIdentities.visibleFor(username);
 
     return Scaffold(
       backgroundColor: NeonTheme.background,
       appBar: AppBar(
         backgroundColor: NeonTheme.surface,
-        title: const Text(
-          '◈ OPERATOR CARDS ◈',
-          style: TextStyle(fontFamily: 'monospace', fontSize: 15),
+        title: Text(
+          fullRoster ? '◈ OPERATOR ROSTER ◈' : '◈ YOUR OPERATOR CARD ◈',
+          style: const TextStyle(fontFamily: 'monospace', fontSize: 15),
         ),
       ),
       body: Column(
@@ -57,8 +64,12 @@ class _OperatorCardsScreenState extends ConsumerState<OperatorCardsScreen> {
                 : const Color(0x2200FF66),
             child: Text(
               secrets
-                  ? 'DARTH CHERRY ACTIVE — credentials exposed'
-                  : 'PUBLIC FACE — eye · callsign · invite only',
+                  ? (fullRoster
+                      ? 'DARTH CHERRY ACTIVE — roster credentials exposed'
+                      : 'DARTH CHERRY ACTIVE — your credentials exposed')
+                  : (fullRoster
+                      ? 'DEV ROSTER — eye · callsign · invite (full list)'
+                      : 'YOUR CARD — eye · callsign · invite only'),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: 'monospace',
@@ -68,14 +79,25 @@ class _OperatorCardsScreenState extends ConsumerState<OperatorCardsScreen> {
             ),
           ),
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              itemCount: cards.length,
-              itemBuilder: (context, i) => OperatorIdentityCard(
-                identity: cards[i],
-                secretsUnlocked: secrets,
-              ),
-            ),
+            child: cards.isEmpty
+                ? const Center(
+                    child: Text(
+                      'NO OPERATOR CARD BOUND TO THIS LOGIN',
+                      style: TextStyle(
+                        fontFamily: 'monospace',
+                        color: Colors.white38,
+                        fontSize: 12,
+                      ),
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount: cards.length,
+                    itemBuilder: (context, i) => OperatorIdentityCard(
+                      identity: cards[i],
+                      secretsUnlocked: secrets,
+                    ),
+                  ),
           ),
         ],
       ),
