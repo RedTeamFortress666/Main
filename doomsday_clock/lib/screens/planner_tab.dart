@@ -343,8 +343,8 @@ class _PlannerTabState extends State<PlannerTab> {
                     onPressed: () => _toggleConceal(e),
                     icon: Icon(
                       e.concealed ? Icons.visibility : Icons.visibility_off,
-                      color: NoirTheme.mist,
-                      size: 20,
+                      color: e.concealed ? NoirTheme.yellow : NoirTheme.pink,
+                      size: 26,
                     ),
                   ),
               ],

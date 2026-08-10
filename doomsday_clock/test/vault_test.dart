@@ -18,11 +18,19 @@ void main() {
     expect(v.matchesRitual(phrase, nov4), isFalse);
     expect(v.matchesRitual('wrong words here', nov5), isFalse);
 
-    // Punctuation / casing tolerance
+    // Punctuation / casing / common variant tolerance
     expect(
       v.matchesRitual(
         'remember remember the 5th of november the gunpowder treason '
         'and plot i know of no reason why gunpowder treason should ever be forgot',
+        nov5,
+      ),
+      isTrue,
+    );
+    expect(
+      v.matchesRitual(
+        'Remember, remember the fifth of November, the gunpowder treason '
+        'and plot - I know of no reason why gunpowder treason should ever be forgotten',
         nov5,
       ),
       isTrue,

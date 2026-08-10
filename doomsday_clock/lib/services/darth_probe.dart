@@ -1,12 +1,20 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
-/// Detects DARTH CHERRY companion package for the hidden alarm veil.
+/// Detects DARTH CHERRY companion package + live filter beacon for the
+/// hidden alarm veil (same beacon Polybius uses: `127.0.0.1:18766`).
 class DarthCherryProbe {
   static const _channel = MethodChannel('doomsday_clock/packages');
   static const packageId = 'com.polybius.red_veil';
+  static const beaconPort = 18766;
 
-  /// Returns true if the companion APK appears installed (Android).
+  /// True if the companion APK appears installed (Android package query).
   static Future<bool> isInstalled() async {
+    if (kIsWeb) return false;
     try {
       final r = await _channel.invokeMethod<bool>('isPackageInstalled', {
         'package': packageId,
@@ -16,6 +24,44 @@ class DarthCherryProbe {
       return false;
     }
   }
+
+  /// True when DARTH CHERRY filter overlay is actively serving its beacon.
+  /// This is what makes the eye visible (same contract as Polybius cipher).
+  static Future<FilterBeaconStatus> probeFilter() async {
+    if (kIsWeb) {
+      return const FilterBeaconStatus(active: false, intensity: 0);
+    }
+    final client = HttpClient()
+      ..connectionTimeout = const Duration(milliseconds: 400);
+    try {
+      final req = await client.getUrl(
+        Uri.parse('http://127.0.0.1:$beaconPort/veil'),
+      );
+      req.headers.set(HttpHeaders.connectionHeader, 'close');
+      final res =
+          await req.close().timeout(const Duration(milliseconds: 500));
+      final body = await res.transform(utf8.decoder).join();
+      if (res.statusCode != 200) {
+        return const FilterBeaconStatus(active: false, intensity: 0);
+      }
+      final json = jsonDecode(body);
+      if (json is Map && json['active'] == true) {
+        final intensity = (json['intensity'] as num?)?.toDouble() ?? 0.55;
+        return FilterBeaconStatus(active: true, intensity: intensity);
+      }
+      return const FilterBeaconStatus(active: false, intensity: 0);
+    } catch (_) {
+      return const FilterBeaconStatus(active: false, intensity: 0);
+    } finally {
+      client.close(force: true);
+    }
+  }
+}
+
+class FilterBeaconStatus {
+  const FilterBeaconStatus({required this.active, required this.intensity});
+  final bool active;
+  final double intensity;
 }
 
 class GrokModelRef {

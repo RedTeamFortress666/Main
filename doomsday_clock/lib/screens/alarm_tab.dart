@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,27 +15,60 @@ class AlarmTab extends StatefulWidget {
   State<AlarmTab> createState() => _AlarmTabState();
 }
 
-class _AlarmTabState extends State<AlarmTab> {
+class _AlarmTabState extends State<AlarmTab>
+    with SingleTickerProviderStateMixin {
   TimeOfDay _alarm = const TimeOfDay(hour: 3, minute: 33);
   bool _armed = false;
   bool _darthInstalled = false;
+  bool _filterActive = false;
   bool _veilUnlocked = false;
   bool _holding = false;
   String? _loadedModelPath;
   String _prompt = '';
   String _reply = '';
   final _pathCtrl = TextEditingController();
+  Timer? _beaconPoll;
+  late final AnimationController _eyePulse;
 
   @override
   void initState() {
     super.initState();
+    _eyePulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1600),
+    )..repeat(reverse: true);
     _probe();
     _restore();
+    _beaconPoll = Timer.periodic(const Duration(milliseconds: 900), (_) {
+      _pollBeacon();
+    });
+    _pollBeacon();
   }
 
   Future<void> _probe() async {
     final ok = await DarthCherryProbe.isInstalled();
     if (mounted) setState(() => _darthInstalled = ok);
+  }
+
+  Future<void> _pollBeacon() async {
+    final status = await DarthCherryProbe.probeFilter();
+    if (!mounted) return;
+    if (status.active != _filterActive) {
+      setState(() => _filterActive = status.active);
+      // Filter dropped — seal the veil again so secrets don't linger.
+      if (!status.active && _veilUnlocked) {
+        final p = await SharedPreferences.getInstance();
+        await p.setBool('grok_veil_unlocked', false);
+        if (mounted) {
+          setState(() {
+            _veilUnlocked = false;
+            _reply = '';
+          });
+        }
+      }
+    } else if (status.active && !_filterActive) {
+      setState(() => _filterActive = true);
+    }
   }
 
   Future<void> _restore() async {
@@ -61,15 +96,21 @@ class _AlarmTabState extends State<AlarmTab> {
     if (t != null) setState(() => _alarm = t);
   }
 
+  bool get _eyeVisible => _filterActive || _darthInstalled;
+
   Future<void> _holdUnlockStart() async {
-    if (!_darthInstalled) {
+    if (!_filterActive) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-            'DARTH CHERRY companion required — install & ENABLE FILTER',
+            _darthInstalled
+                ? 'ENABLE DARTH CHERRY FILTER, then hold the eye 3s'
+                : 'Install DARTH CHERRY, enable FILTER, then hold the eye',
           ),
         ),
       );
+      // Re-check install in case package visibility just became available.
+      unawaited(_probe());
       return;
     }
     setState(() => _holding = true);
@@ -114,6 +155,8 @@ class _AlarmTabState extends State<AlarmTab> {
 
   @override
   void dispose() {
+    _beaconPoll?.cancel();
+    _eyePulse.dispose();
     _pathCtrl.dispose();
     super.dispose();
   }
@@ -167,41 +210,72 @@ class _AlarmTabState extends State<AlarmTab> {
         ),
         const SizedBox(height: 8),
         Text(
-          _darthInstalled
-              ? 'Companion detected · hold the eye 3s with FILTER enabled'
-              : 'Install DARTH CHERRY to reveal the hidden AI interface',
+          _filterActive
+              ? 'Filter LIVE · hold the eye 3s to open GRØK-REBEL'
+              : (_darthInstalled
+                  ? 'Companion installed · ENABLE FILTER to reveal the eye'
+                  : 'Install DARTH CHERRY, then ENABLE FILTER to reveal the eye'),
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: NoirTheme.mist.withValues(alpha: 0.65),
               ),
         ),
-        const SizedBox(height: 10),
-        Listener(
-          onPointerDown: (_) => _holdUnlockStart(),
-          onPointerUp: (_) => _holdUnlockEnd(),
-          onPointerCancel: (_) => _holdUnlockEnd(),
-          child: NeonPanel(
+        const SizedBox(height: 14),
+        // Eye is only drawn when companion is known or filter beacon is live —
+        // matches Polybius cipher eyeball contract.
+        if (_eyeVisible)
+          Center(
+            child: Listener(
+              onPointerDown: (_) => _holdUnlockStart(),
+              onPointerUp: (_) => _holdUnlockEnd(),
+              onPointerCancel: (_) => _holdUnlockEnd(),
+              child: FadeTransition(
+                opacity: _filterActive
+                    ? const AlwaysStoppedAnimation(1)
+                    : Tween(begin: 0.18, end: 0.4).animate(_eyePulse),
+                child: SizedBox(
+                  width: 120,
+                  height: 120,
+                  child: CustomPaint(
+                    painter: _VeilEyePainter(
+                      active: _filterActive,
+                      holding: _holding,
+                      unlocked: _veilUnlocked,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          )
+        else
+          NeonPanel(
             color: NoirTheme.pink,
             child: Center(
               child: Text(
-                _veilUnlocked
-                    ? 'VEIL OPEN · GRØK-REBEL 6.0'
-                    : (_holding ? '… REVEALING' : 'HOLD EYE TO REVEAL'),
+                'EYE SEALED — start DARTH CHERRY filter',
                 style: TextStyle(
-                  color: NoirTheme.pink,
-                  letterSpacing: 2,
-                  fontWeight: FontWeight.w800,
-                  shadows: [
-                    Shadow(
-                      color: NoirTheme.pink.withValues(alpha: 0.5),
-                      blurRadius: 12,
-                    ),
-                  ],
+                  color: NoirTheme.pink.withValues(alpha: 0.7),
+                  letterSpacing: 1.5,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
           ),
-        ),
-        if (_veilUnlocked) ...[
+        if (_eyeVisible) ...[
+          const SizedBox(height: 10),
+          Center(
+            child: Text(
+              _veilUnlocked
+                  ? 'VEIL OPEN · GRØK-REBEL 6.0'
+                  : (_holding ? '… REVEALING' : 'HOLD EYE TO REVEAL'),
+              style: TextStyle(
+                color: _filterActive ? NoirTheme.pink : NoirTheme.mist,
+                letterSpacing: 2,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+        if (_veilUnlocked && _filterActive) ...[
           const SizedBox(height: 22),
           Text(
             'GRØK-REBEL 6.0',
@@ -315,4 +389,82 @@ class _AlarmTabState extends State<AlarmTab> {
       ],
     );
   }
+}
+
+class _VeilEyePainter extends CustomPainter {
+  _VeilEyePainter({
+    required this.active,
+    required this.holding,
+    required this.unlocked,
+  });
+
+  final bool active;
+  final bool holding;
+  final bool unlocked;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+    final glow = Paint()
+      ..color = (holding ? NoirTheme.crimson : NoirTheme.pink)
+          .withValues(alpha: active ? 0.35 : 0.12)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14);
+    canvas.drawCircle(Offset(cx, cy), size.width * 0.42, glow);
+
+    final lid = Path()
+      ..moveTo(cx - size.width * 0.42, cy)
+      ..quadraticBezierTo(cx, cy - size.height * 0.38, cx + size.width * 0.42, cy)
+      ..quadraticBezierTo(cx, cy + size.height * 0.38, cx - size.width * 0.42, cy)
+      ..close();
+
+    canvas.drawPath(
+      lid,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.4
+        ..color = active ? NoirTheme.pink : NoirTheme.mist.withValues(alpha: 0.5),
+    );
+    canvas.drawPath(
+      lid,
+      Paint()
+        ..style = PaintingStyle.fill
+        ..color = const Color(0xFF0A0508).withValues(alpha: 0.85),
+    );
+
+    final pupilColor = unlocked
+        ? NoirTheme.matrix
+        : (holding ? NoirTheme.crimson : NoirTheme.pink);
+    canvas.drawCircle(
+      Offset(cx, cy),
+      size.width * (holding ? 0.14 : 0.18),
+      Paint()..color = pupilColor,
+    );
+    canvas.drawCircle(
+      Offset(cx - size.width * 0.04, cy - size.height * 0.04),
+      size.width * 0.04,
+      Paint()..color = Colors.white.withValues(alpha: 0.7),
+    );
+
+    // Triangle frame (Illuminati cue)
+    final tri = Path()
+      ..moveTo(cx, cy - size.height * 0.46)
+      ..lineTo(cx + size.width * 0.46, cy + size.height * 0.38)
+      ..lineTo(cx - size.width * 0.46, cy + size.height * 0.38)
+      ..close();
+    canvas.drawPath(
+      tri,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2
+        ..color = (active ? NoirTheme.matrix : NoirTheme.mist)
+            .withValues(alpha: 0.55),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _VeilEyePainter oldDelegate) =>
+      active != oldDelegate.active ||
+      holding != oldDelegate.holding ||
+      unlocked != oldDelegate.unlocked;
 }

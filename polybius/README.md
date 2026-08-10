@@ -31,7 +31,8 @@ flutter run --flavor hq --dart-define=POLYBIUS_FLAVOR=hq
 flutter run --flavor user --dart-define=POLYBIUS_FLAVOR=user
 ```
 
-See `docs/V1_STABLE.md` for download links and operator cards.
+See `docs/V1_STABLE.md` for download links and operator cards.  
+**Dev/admin only:** `docs/DEV_OPERATOR_MANUAL.md` (ops, OPSEC, mesh / hardware roadmap).
 
 ## Architecture
 

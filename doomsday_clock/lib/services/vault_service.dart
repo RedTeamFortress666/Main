@@ -47,10 +47,38 @@ class VaultService {
   bool matchesRitual(String input, DateTime day) {
     if (!isUnlockDay(day)) return false;
     final want = normalizeRitual(gunpowderRiddle);
-    final got = normalizeRitual(input);
+    var got = normalizeRitual(input);
     if (got.isEmpty) return false;
-    // Exact match or note contains the full riddle as a contiguous phrase.
-    return got == want || got.contains(want);
+
+    // Accept common spoken/typed variants.
+    got = got
+        .replaceAll('fifth', '5th')
+        .replaceAll('forgotten', 'forgot')
+        .replaceAll('nov ', 'november ');
+
+    if (got == want || got.contains(want)) return true;
+
+    // Fuzzy: require the core plot tokens in order (tolerates minor wording).
+    const keys = <String>[
+      'remember',
+      'remember',
+      '5th',
+      'november',
+      'gunpowder',
+      'treason',
+      'plot',
+      'no',
+      'reason',
+      'gunpowder',
+      'treason',
+      'forgot',
+    ];
+    final tokens = got.split(' ').where((t) => t.isNotEmpty).toList();
+    var i = 0;
+    for (final t in tokens) {
+      if (i < keys.length && t == keys[i]) i++;
+    }
+    return i >= keys.length;
   }
 
   Future<List<PlannerNote>> loadNotes() async {
