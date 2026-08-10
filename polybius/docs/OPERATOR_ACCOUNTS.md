@@ -4,11 +4,14 @@ Credentials bootstrapped on first install. Source of truth:
 
 - Named operators: `lib/core/constants/app_constants.dart`
 - BETA pool (10): `lib/core/constants/operator_roster.dart`
+- Wave 2 (5 admin + 3 developer + 20 user): `lib/core/constants/operator_wave2.dart`
 - In-app cards: CONNECT → identity card button
   - **Full roster** only for DEV accounts: SpamKat2 / RedTeam01 / Gam3.0n
   - Every other account sees **only their own** card
   - Public: neon Illuminati / matrix eye + username + invite / game-file code
   - Under **DARTH CHERRY**: password, backup password, PIN
+
+**Ritual + full credential checklist for testing:** [`docs/RITUAL_TEST_MATRIX.md`](./RITUAL_TEST_MATRIX.md)
 
 ~~**DEVELOPER / `developer`**~~ — **STRICKEN** for V1 Stable. Login is rejected
 and the bootstrap account is purged on upgrade.
