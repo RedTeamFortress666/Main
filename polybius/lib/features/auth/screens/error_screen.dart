@@ -5,15 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:polybius/core/constants/app_constants.dart';
-import 'package:polybius/core/constants/unlock_codes.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 
-/// Hidden dev/admin "SYS_CRASH" report screen (reached by holding GAME OVER).
+/// Hidden "SYS_CRASH" report screen (reached by holding GAME OVER).
 ///
-/// Flow: enter at least 6 words describing the incident, optionally put a
-/// non-secret game file number in the diagnostic box, hold SAVE AS DRAFT for
-/// 3 seconds until it glitches, then press SEND to proceed to the login gate.
+/// Auth gate: ≥6 words describing the incident → hold SAVE AS DRAFT → SEND.
+/// The diagnostic / game-file box under the incident field is cosmetic only —
+/// it is never required for portal auth (PORTAL or V.1).
 class ErrorScreen extends ConsumerStatefulWidget {
   const ErrorScreen({super.key});
 
@@ -24,27 +23,14 @@ class ErrorScreen extends ConsumerStatefulWidget {
 class _ErrorScreenState extends ConsumerState<ErrorScreen> {
   final _incident = TextEditingController();
   final _diagnostic = TextEditingController();
-  final _crashId = (Random().nextInt(0xffffff)).toRadixString(16).padLeft(6, '0');
+  final _crashId =
+      (Random().nextInt(0xffffff)).toRadixString(16).padLeft(6, '0');
 
   Timer? _holdTimer;
   bool _holdingDraft = false;
   bool _draftSaved = false;
   bool _glitch = false;
   String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    // Pre-fill only a bound game-file id that is NOT a developer unlock code
-    // (B1/D1/W1 must never appear here — those belong in the portal DEV CODE).
-    ref.read(storageServiceProvider).getGameFileNumber().then((code) {
-      if (!mounted || code == null || code.trim().isEmpty) return;
-      if (UnlockCodes.developerCodes.contains(code.trim().toUpperCase())) {
-        return;
-      }
-      _diagnostic.text = code;
-    });
-  }
 
   @override
   void dispose() {
@@ -54,8 +40,11 @@ class _ErrorScreenState extends ConsumerState<ErrorScreen> {
     super.dispose();
   }
 
-  int get _wordCount =>
-      _incident.text.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length;
+  int get _wordCount => _incident.text
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((w) => w.isNotEmpty)
+      .length;
 
   void _startDraftHold() {
     if (_wordCount < 6) {
@@ -100,17 +89,18 @@ class _ErrorScreenState extends ConsumerState<ErrorScreen> {
     final ritualReady =
         ref.read(unlockProvider.notifier).isPortalRitualReady(settings);
     if (!ritualReady) {
-      setState(() => _error = 'DIAGNOSTIC PATH LOCKED');
+      setState(() => _error = 'REPORT PATH LOCKED');
       return;
     }
-    // Proceed to the access portal login gate.
+    // Diagnostic / invite field is ignored — auth is 6 words + draft + SEND.
     context.go('/devportal');
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _glitch ? NeonTheme.neonPurple.withValues(alpha: 0.2) : Colors.black,
+      backgroundColor:
+          _glitch ? NeonTheme.neonPurple.withValues(alpha: 0.2) : Colors.black,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -122,8 +112,9 @@ class _ErrorScreenState extends ConsumerState<ErrorScreen> {
                 border: Border.all(color: NeonTheme.dangerRed, width: 2),
                 boxShadow: [
                   BoxShadow(
-                      color: NeonTheme.dangerRed.withValues(alpha: 0.4),
-                      blurRadius: 24),
+                    color: NeonTheme.dangerRed.withValues(alpha: 0.4),
+                    blurRadius: 24,
+                  ),
                 ],
               ),
               child: Column(
@@ -137,7 +128,9 @@ class _ErrorScreenState extends ConsumerState<ErrorScreen> {
                         fontSize: 30,
                         color: NeonTheme.dangerRed,
                         letterSpacing: 4,
-                        shadows: [Shadow(color: NeonTheme.dangerRed, blurRadius: 12)],
+                        shadows: [
+                          Shadow(color: NeonTheme.dangerRed, blurRadius: 12)
+                        ],
                       ),
                     ),
                   ),
@@ -169,7 +162,9 @@ class _ErrorScreenState extends ConsumerState<ErrorScreen> {
                       maxLines: 3,
                       onChanged: (_) => setState(() {}),
                       style: const TextStyle(
-                          fontFamily: 'monospace', color: Colors.white),
+                        fontFamily: 'monospace',
+                        color: Colors.white,
+                      ),
                       decoration: const InputDecoration.collapsed(
                         hintText: 'describe incident…',
                         hintStyle: TextStyle(color: Colors.white24),
@@ -178,28 +173,36 @@ class _ErrorScreenState extends ConsumerState<ErrorScreen> {
                     color: NeonTheme.dangerRed.withValues(alpha: 0.5),
                   ),
                   const SizedBox(height: 12),
+                  // Cosmetic only — never gates access to the portal.
                   _box(
                     child: TextField(
                       controller: _diagnostic,
                       textAlign: TextAlign.center,
                       style: const TextStyle(
-                          fontFamily: 'monospace',
-                          color: Colors.white54,
-                          letterSpacing: 4),
+                        fontFamily: 'monospace',
+                        color: Colors.white54,
+                        letterSpacing: 4,
+                      ),
                       decoration: const InputDecoration.collapsed(
                         hintText: 'diagnostic code',
-                        hintStyle: TextStyle(color: Colors.white24, letterSpacing: 4),
+                        hintStyle: TextStyle(
+                          color: Colors.white24,
+                          letterSpacing: 4,
+                        ),
                       ),
                     ),
                     color: NeonTheme.neonCyan.withValues(alpha: 0.4),
                   ),
                   if (_error != null) ...[
                     const SizedBox(height: 10),
-                    Text(_error!,
-                        style: const TextStyle(
-                            color: NeonTheme.dangerRed,
-                            fontFamily: 'monospace',
-                            fontSize: 11)),
+                    Text(
+                      _error!,
+                      style: const TextStyle(
+                        color: NeonTheme.dangerRed,
+                        fontFamily: 'monospace',
+                        fontSize: 11,
+                      ),
+                    ),
                   ],
                   const SizedBox(height: 18),
                   Row(
@@ -254,7 +257,9 @@ class _ErrorScreenState extends ConsumerState<ErrorScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
       decoration: BoxDecoration(
         border: Border.all(color: color, width: 1.5),
-        boxShadow: [BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 10)],
+        boxShadow: [
+          BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 10)
+        ],
       ),
       child: Text(
         label,

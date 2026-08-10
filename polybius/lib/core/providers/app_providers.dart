@@ -576,11 +576,16 @@ class UnlockNotifier extends StateNotifier<UnlockStateData> {
   /// GAME OVER → ERROR → portal pathway.
   void checkDifficultyRitual(GameSettings settings) {}
 
-  /// True when LOAD GAME + difficulty 11 + flavor ritual language are set.
+  /// True when difficulty 11 + flavor ritual language are set.
+  ///
+  /// PORTAL (HQ): game-file / invite is NOT required for the GAME OVER → ERROR
+  /// → portal path (the diagnostic box under "describe incident" is decoy only).
+  /// V.1 (user): LOAD GAME must have primed the pathway first.
   bool isPortalRitualReady(GameSettings settings) {
-    return state.pathwayPrimed &&
-        settings.difficulty == UnlockCodes.ritualDifficulty &&
+    final settingsOk = settings.difficulty == UnlockCodes.ritualDifficulty &&
         settings.language == UnlockCodes.ritualLanguage;
+    if (AppFlavor.isHq) return settingsOk;
+    return state.pathwayPrimed && settingsOk;
   }
 
   Future<void> checkInviteCode(

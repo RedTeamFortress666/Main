@@ -39,7 +39,7 @@ flutter build apk --release --flavor user --dart-define=POLYBIUS_FLAVOR=user
 
 | Flavor | App label | Dart define | Capabilities |
 | --- | --- | --- | --- |
-| `hq` | **PØLYBÎŪS PORTAL** | `POLYBIUS_FLAVOR=hq` | Login gate, agent + admin + developer unlock, HQ panel, POOL vault, cross encrypt/decrypt. Ritual: LOAD → diff 11 → **Russian** → lose → GAME OVER |
+| `hq` | **PØLYBÎŪS PORTAL** | `POLYBIUS_FLAVOR=hq` | Login gate, agent + admin + developer unlock, HQ panel, POOL vault, cross encrypt/decrypt. Ritual: diff 11 → **Russian** → lose → GAME OVER (diagnostic code unused) |
 | `user` | **PØLYBÎŪS V.1** | `POLYBIUS_FLAVOR=user` | Splash → game (no pre-login). Ritual: LOAD → diff 11 → **Japanese** → lose → GAME OVER → **USER ACCESS PORTAL**. Tabs: ENCRYPT / DECRYPT / SYNC / CONNECT (no POOL) |
 
 Both flavors accept certified accounts for encrypt / decrypt / QR sync / Bluetooth.

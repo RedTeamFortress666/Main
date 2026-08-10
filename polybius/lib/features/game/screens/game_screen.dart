@@ -105,8 +105,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             ref.read(unlockProvider.notifier).isPortalRitualReady(settings);
         setState(() {
           _finalScore = score;
-          // Ritual path: LOAD + diff 11 + flavor language → hold GAME OVER.
-          // Early-loss eligibility kept as a soft secondary cue for UI tint.
+          // Ritual path: diff 11 + flavor language → hold GAME OVER.
+          // PORTAL does not require a loaded game file for this gate.
           _errorEligible =
               ritualReady || (_game?.errorPathEligible ?? false);
           _showGameOver = true;
@@ -158,8 +158,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Hold "GAME OVER" when portal ritual is armed (LOAD GAME +
-              // difficulty 11 + flavor language) to reach the ERROR report.
+              // Hold "GAME OVER" when ritual settings are armed (diff 11 +
+              // flavor language; V.1 also needs LOAD GAME primed).
               GestureDetector(
                 onLongPressStart: (_) => _startGameOverHold(),
                 onLongPressEnd: (_) => _endGameOverHold(),
