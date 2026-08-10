@@ -44,7 +44,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       final needsPin = authState.needsPin && authState.user != null;
       final gateLogin = AppFlavor.requiresStartupLogin;
 
-      // After splash: HQ → login/menu; user → straight into the game.
+      // After splash: HQ → login/menu; user → arcade menu (START / LOAD / …).
       if (loc == '/') {
         if (!gateLogin) return AppFlavor.postSplashRoute;
         if (authState.isRestoring) return '/login';

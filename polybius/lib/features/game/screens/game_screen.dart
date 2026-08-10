@@ -65,10 +65,17 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   }
 
   void _startGameOverHold() {
+    // Previous / V.1 path: hold GAME OVER only when the early-loss error
+    // pathway is eligible (level < 3 || kills < 6). PORTAL also allows the
+    // settings ritual (diff 11 + Russian) to arm the hold.
     final settings = ref.read(gameSettingsProvider);
     final ritualReady =
         ref.read(unlockProvider.notifier).isPortalRitualReady(settings);
-    if (!ritualReady) return;
+    final earlyLoss = _errorEligible || (_game?.errorPathEligible ?? false);
+    final canHold = AppFlavor.isUser
+        ? earlyLoss
+        : (ritualReady || earlyLoss);
+    if (!canHold) return;
     setState(() => _holdingGameOver = true);
     _holdTimer = Timer(
       const Duration(milliseconds: AppConstants.gameOverHoldMs),
@@ -100,15 +107,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     _game ??= game.PolybiusGame(
       difficulty: settings.difficulty,
       onGameOver: (score) {
-        final settings = ref.read(gameSettingsProvider);
-        final ritualReady =
-            ref.read(unlockProvider.notifier).isPortalRitualReady(settings);
         setState(() {
           _finalScore = score;
-          // Ritual path: diff 11 + flavor language → hold GAME OVER.
-          // PORTAL does not require a loaded game file for this gate.
-          _errorEligible =
-              ritualReady || (_game?.errorPathEligible ?? false);
+          // Classic hold-GAME-OVER path: early loss unlocks the ERROR ritual.
+          _errorEligible = _game?.errorPathEligible ?? false;
           _showGameOver = true;
           _scoreSaved = false;
           if (_nameController.text.trim().isEmpty) {
@@ -158,8 +160,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Hold "GAME OVER" when ritual settings are armed (diff 11 +
-              // flavor language; V.1 also needs LOAD GAME primed).
+              // Hold "GAME OVER" when early-loss eligible (classic pathway).
               GestureDetector(
                 onLongPressStart: (_) => _startGameOverHold(),
                 onLongPressEnd: (_) => _endGameOverHold(),

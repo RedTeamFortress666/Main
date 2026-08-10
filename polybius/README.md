@@ -64,7 +64,7 @@ Multi-rotor Enigma variant. Each character → 2 emojis from a daily 560-emoji p
 | Ritual | Steps | Result |
 |--------|-------|--------|
 | Portal (PORTAL APK) | Difficulty **11** → **Russian** → lose → hold GAME OVER → ERROR (6 words + draft SEND; diagnostic unused) | Access portal |
-| Portal (V.1 APK) | LOAD GAME → difficulty **11** → **Japanese** → lose → hold GAME OVER → ERROR SEND | Access portal |
+| Portal (V.1 APK) | Lose early → hold **GAME OVER** → ERROR (6 words + draft SEND) | Access portal |
 | Title hold (legacy) | Hold title 6s | Still primes pathway |
 | Dev codes | Portal login → `B1-66-3R` / `D1-66-3R` / `W1-66-3R` | Developer panel (privileged) |
 

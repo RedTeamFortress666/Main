@@ -42,7 +42,7 @@ class AppFlavor {
   /// Developer unlock state + red-team panel only on the HQ fork.
   static bool get allowDeveloperTools => isHq;
 
-  /// HQ keeps the Layer-1 login gate; user builds boot straight into play.
+  /// HQ keeps the Layer-1 login gate; user builds skip pre-login.
   static bool get requiresStartupLogin => isHq;
 
   /// Raw 560-emoji pool viewer is HQ-only (leak prevention + admin tooling).
@@ -52,10 +52,11 @@ class AppFlavor {
   static String get accessPortalTitle =>
       isHq ? 'DEV ACCESS PORTAL' : 'USER ACCESS PORTAL';
 
-  /// After cinematic splash: HQ → login/menu; user → game.
-  static String get postSplashRoute => isUser ? '/game' : '/menu';
+  /// After cinematic splash: both flavors land on the arcade menu
+  /// (START GAME / LOAD GAME / …). HQ still routes through login first.
+  static String get postSplashRoute => '/menu';
 
   /// Language that completes the GAME OVER → portal ritual for this flavor.
-  /// HQ / Portal: Russian. User V.1: Japanese.
+  /// HQ / Portal: Russian. User V.1: Japanese (optional settings cue).
   static String get ritualLanguage => isHq ? 'RUSSIAN' : 'JAPANESE';
 }

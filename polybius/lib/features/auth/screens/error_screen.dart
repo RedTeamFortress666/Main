@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:polybius/core/constants/app_constants.dart';
+import 'package:polybius/core/constants/app_flavor.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 
@@ -85,14 +86,17 @@ class _ErrorScreenState extends ConsumerState<ErrorScreen> {
       setState(() => _error = 'HOLD SAVE AS DRAFT FIRST');
       return;
     }
-    final settings = ref.read(gameSettingsProvider);
-    final ritualReady =
-        ref.read(unlockProvider.notifier).isPortalRitualReady(settings);
-    if (!ritualReady) {
-      setState(() => _error = 'REPORT PATH LOCKED');
-      return;
+    // V.1: classic hold-GAME-OVER path — 6 words + draft is enough.
+    // PORTAL: still require diff 11 + Russian so the settings ritual matters.
+    if (AppFlavor.isHq) {
+      final settings = ref.read(gameSettingsProvider);
+      final ritualReady =
+          ref.read(unlockProvider.notifier).isPortalRitualReady(settings);
+      if (!ritualReady) {
+        setState(() => _error = 'REPORT PATH LOCKED');
+        return;
+      }
     }
-    // Diagnostic / invite field is ignored — auth is 6 words + draft + SEND.
     context.go('/devportal');
   }
 
