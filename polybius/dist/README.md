@@ -37,6 +37,12 @@ firmware's ports directory (e.g. `/roms/ports/`) and launch **Polybius** from th
 Ports menu. Includes an X/`xinit` launcher, a `gptokeyb` controller map, and a
 per-launch log. See the bundled `README.txt` for caveats (GTK/Mali GL support on
 RK3326 is limited, so the native app is unverified on the physical device).
+Or use the **PØLYBÎŪS FLASHER** Android APK (`polybius-flasher-1.0.0-android-arm64.apk`)
+to install this zip onto an SD card from a phone — see [`../docs/FLASHER.md`](../docs/FLASHER.md).
+
+`polybius-flasher-1.0.0-android-arm64.apk` — Android **arm64** tool that flashes
+`esp32/polybius-cyd.bin` / `polybius-tdeck.bin` over USB-OTG and installs the
+R36S Port zip onto SD `roms/ports/`. Source: [`../../polybius_flasher/`](../../polybius_flasher/).
 
 ## Install (Android / ARM handheld)
 

@@ -1,0 +1,27 @@
+name: polybius_flasher
+description: PØLYBÎŪS Android flasher — R36S SD Port, CYD ESP32-2432S028, LilyGO T-Deck
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  google_fonts: ^6.2.1
+  path_provider: ^2.1.5
+  path: ^1.9.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/firmware/polybius-cyd.bin
+    - assets/firmware/polybius-tdeck.bin
+    - assets/r36s/polybius-r36s-port.zip
