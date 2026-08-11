@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">GAME ØVER! Red Team Fortress</string>
+    <string name="title_activity_main">GAME ØVER! Red Team Fortress</string>
+    <string name="package_name">com.redteamfortress.gameover</string>
+    <string name="custom_url_scheme">com.redteamfortress.gameover</string>
+</resources>

@@ -4,25 +4,24 @@ test.beforeEach(async ({ page }) => {
   await page.goto('/')
 })
 
-test('shows the attack modules home screen', async ({ page }) => {
+test('shows login gate for GAME ØVER! Red Team Fortress', async ({ page }) => {
+  await expect(page.getByText(/GAME ØVER! Red Team Fortress/i)).toBeVisible()
+  await expect(page.getByRole('button', { name: /enter fortress/i })).toBeVisible()
+})
+
+test('logs in and shows attack modules', async ({ page }) => {
+  await page.getByPlaceholder(/operator id/i).fill('SpamKat2')
+  await page.getByPlaceholder(/••••/).fill('Ev1lSchm33')
+  await page.getByRole('button', { name: /enter fortress/i }).click()
   await expect(page.getByText(/ATTACK MODULES/i)).toBeVisible()
-  await expect(page.getByText(/GÅMÊ-ØVĒR Cyber Solutions/i)).toBeVisible()
-  await expect(page.getByRole('button', { name: /AI Vuln Scanner/i })).toBeVisible()
 })
 
-test('navigates to scanner tab', async ({ page }) => {
-  await page.getByRole('button', { name: /^Scanner$/i }).click()
-  await expect(page.getByText(/AI VULNERABILITY SCANNER/i)).toBeVisible()
-})
-
-test('opens NetHunter bridge from home', async ({ page }) => {
-  await page.getByRole('button', { name: /NetHunter Suite/i }).click()
-  await expect(page.getByText(/Kali NetHunter Suite/i)).toBeVisible()
-  await expect(page.getByText(/msfconsole/i)).toBeVisible()
-})
-
-test('shows captures sample data', async ({ page }) => {
-  await page.getByRole('button', { name: /^Captures$/i }).click()
-  await expect(page.getByText(/CREDENTIAL CAPTURE/i)).toBeVisible()
-  await expect(page.getByText('192.168.4.12')).toBeVisible()
+test('unlocks batcave vault for Gam3.0n', async ({ page }) => {
+  await page.getByPlaceholder(/operator id/i).fill('Gam3.0n')
+  await page.getByPlaceholder(/••••/).fill('Dig1tal.Ra1n99')
+  await page.getByRole('button', { name: /enter fortress/i }).click()
+  await page.getByRole('button', { name: /^Vault$/i }).click()
+  await page.getByPlaceholder(/XX-XX-XR/i).fill('B1-66-3R')
+  await page.getByRole('button', { name: /open batcave/i }).click()
+  await expect(page.getByText(/OFFLINE AIR CHAMBER/i)).toBeVisible()
 })

@@ -1,46 +1,40 @@
-# GÅMÊ-ØVĒR Pentest Suite
+# GAME ØVER! Red Team Fortress
 
-Mobile-first **authorized engagement console** for [GÅMÊ-ØVĒR Cyber Solutions](https://github.com/RedTeamFortress666/Main).
+Mobile-first **authorized engagement console** for Red Team Fortress.
 
-## What this is
+## Operators
 
-A React + Vite operator UI for customer/lab pentests:
+| Username | Password | Vault code |
+|----------|----------|------------|
+| `SpamKat2` | `Ev1lSchm33` | `W1-66-3R` |
+| `Gam3.0n` | `Dig1tal.Ra1n99` | `B1-66-3R` |
 
-- Attack module grid (scanner, NetHunter, portals, WiFi, BLE, BadUSB, IR, payloads, devices)
-- Kali NetHunter bridge panel (tool catalog + heartbeat simulation)
-- ESP32 Bluetooth / USB-serial device picker (Bruce-compatible command link UI)
-- Evil Portal lab builder → HTML edit/preview → T-Deck flash queue (simulated)
-- Captures log with sample data + CSV export
-- WiFi arsenal board with attack-device selection
+After login, open **Vault** → enter your operator unlock code → **Enter AIR Console** for the offline local LLM bridge (Ollama / LM Studio / Gemma abliterated / Heretic GGUF).
 
-**This build does not execute real exploits, deauth frames, credential theft, or HID payloads.** Actions are simulated so you can demo the console and later wire your private NetHunter / ESP32 / Bruce backends.
+## Download APK
 
-## Run
+Debug APK (Tesla-coil launcher icon):
+
+- Repo path: [`releases/GAME-OVER-Red-Team-Fortress-debug.apk`](./releases/GAME-OVER-Red-Team-Fortress-debug.apk)
+
+Rebuild:
 
 ```bash
 npm install
+export ANDROID_HOME=$HOME/android-sdk   # or your SDK path
+npm run apk:debug
+```
+
+## Web / Android
+
+```bash
 npm run dev      # http://localhost:5173
 npm run test
 npm run lint
 npm run build
+npx cap sync android
 ```
 
-## Android packaging
+## Safety
 
-Wrap the Vite build with Capacitor (or Cordova) when you are ready for Play / sideload:
-
-```bash
-npm run build
-# npx cap add android && npx cap sync android
-```
-
-Pair real hardware later via:
-
-- NetHunter chroot / ADB bridge
-- ESP32 BLE (Bruce / Marauder profiles)
-- USB-C serial (CH340 / CP2102) direct line
-- LilyGO T-Deck SD flash for portal artifacts
-
-## Legal
-
-For authorized security research and contracted customer assessments only. Obtain explicit written permission before testing any system you do not own.
+Control-plane UI with simulated attack actions. AIR talks to a **local** Ollama-compatible endpoint by default. Authorized research only.

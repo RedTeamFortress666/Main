@@ -58,6 +58,13 @@
   text-transform: uppercase;
 }
 
+.topbar__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+}
+
 .topbar__status {
   display: inline-flex;
   align-items: center;
@@ -66,6 +73,24 @@
   font-family: var(--font-mono);
   font-size: 0.62rem;
   letter-spacing: 0.08em;
+}
+
+.topbar__logout {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  padding: 0.2rem 0.45rem;
+  cursor: pointer;
+}
+
+.topbar__logout:hover,
+.topbar__logout:focus-visible {
+  color: var(--neon);
+  border-color: color-mix(in srgb, var(--neon) 45%, var(--line));
+  outline: none;
 }
 
 .topbar__dot {

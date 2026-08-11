@@ -1,4 +1,4 @@
-export type NavTab = 'home' | 'scanner' | 'portal' | 'captures' | 'wifi'
+export type NavTab = 'home' | 'scanner' | 'portal' | 'captures' | 'wifi' | 'vault'
 
 export type ModuleId =
   | 'ai-scanner'

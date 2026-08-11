@@ -35,7 +35,7 @@ export function PortalScreen({ toast }: PortalScreenProps) {
   function runClone() {
     const seed = url.trim() || 'lab.example'
     setHtml(
-      `<!doctype html>\n<html><head><meta charset="utf-8"><title>Lab Portal</title></head>\n<body style="font-family:monospace;background:#111;color:#0f0;padding:2rem">\n  <h1>Training captive portal</h1>\n  <p>Seeded from: ${seed}</p>\n  <p>GÅMÊ-ØVĒR Cyber Solutions — authorized use only</p>\n  <form><label>Email <input name="email"></label><br><label>Password <input name="password" type="password"></label><br><button>Continue</button></form>\n</body></html>\n`,
+      `<!doctype html>\n<html><head><meta charset="utf-8"><title>Lab Portal</title></head>\n<body style="font-family:monospace;background:#111;color:#0f0;padding:2rem">\n  <h1>Training captive portal</h1>\n  <p>Seeded from: ${seed}</p>\n  <p>GAME ØVER! Red Team Fortress — authorized use only</p>\n  <form><label>Email <input name="email"></label><br><label>Password <input name="password" type="password"></label><br><button>Continue</button></form>\n</body></html>\n`,
     )
     setTool('editor')
     toast('Generated self-contained lab portal HTML')
@@ -154,8 +154,8 @@ export function PortalScreen({ toast }: PortalScreenProps) {
                 (document.getElementById('ai-brief') as HTMLTextAreaElement)?.value ||
                 'generic guest wifi'
               setHtml(
-                `<!doctype html><title>AI Lab Portal</title><h1>Awareness portal</h1><p>${brief}</p><p>AP: ${ssid}</p>`,
-              )
+                  `<!doctype html><title>AI Lab Portal</title><h1>Awareness portal</h1><p>${brief}</p><p>AP: ${ssid}</p><p>GAME ØVER! Red Team Fortress</p>`,
+                )
               setTool('editor')
               toast('AI lab portal draft ready')
             }}
