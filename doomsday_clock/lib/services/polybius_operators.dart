@@ -1,4 +1,4 @@
-/// Polybius developer / admin identities accepted for Doomsday Clock vault login.
+/// Privileged developer / admin identities accepted for vault login.
 class PolybiusOperator {
   const PolybiusOperator({
     required this.username,
@@ -19,7 +19,7 @@ class PolybiusOperator {
   final String? inviteOrDevCode;
 }
 
-/// Only Admins + Developers of Polybius may open the Doomsday vault.
+/// Only privileged admins + developers may open the vault.
 /// DEVELOPER / developer is stricken for V1 Stable.
 const polybiusPrivilegedOperators = <PolybiusOperator>[
   PolybiusOperator(

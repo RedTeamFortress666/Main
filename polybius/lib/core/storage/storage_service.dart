@@ -4,6 +4,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:polybius/core/constants/app_constants.dart';
 import 'package:polybius/core/constants/operator_roster.dart';
 import 'package:polybius/core/constants/unlock_codes.dart';
+import 'package:polybius/core/constants/operator_wave2.dart';
 import 'package:polybius/core/crypto/encryption_service.dart';
 import 'package:polybius/core/models/models.dart';
 
@@ -174,6 +175,31 @@ class StorageService {
           tier: op.tier == UserTier.admin
               ? InviteTier.admin
               : InviteTier.standard,
+          createdBy: 'SYSTEM',
+          createdAt: DateTime.now(),
+        ));
+      }
+    }
+    // Wave 2 — 5 admins + 3 developers + 20 users.
+    for (final op in OperatorWave2.all) {
+      await _bootstrapOperator(
+        username: op.username,
+        displayName: op.displayName,
+        password: op.password,
+        backupPassword: op.backupPassword,
+        pin: op.pin,
+        tier: op.tier,
+        note: '${op.displayName} ${op.tier.name} (${op.inviteCode})',
+      );
+      if (await getInvite(op.inviteCode) == null) {
+        final inviteTier = switch (op.tier) {
+          UserTier.developer => InviteTier.developer,
+          UserTier.admin => InviteTier.admin,
+          _ => InviteTier.standard,
+        };
+        await saveInvite(InviteCode(
+          code: op.inviteCode.toUpperCase(),
+          tier: inviteTier,
           createdBy: 'SYSTEM',
           createdAt: DateTime.now(),
         ));
@@ -430,6 +456,32 @@ class StorageService {
 
   Future<void> setPoolWindowHours(int hours) async {
     await Hive.box(settingsBox).put('poolWindowHours', hours);
+  }
+
+  /// Arcade high-score board (merged across QR pool sync).
+  Future<List<Map<String, dynamic>>> getHighScores() async {
+    final raw = Hive.box(settingsBox).get('highScores');
+    if (raw is! List) return const [];
+    return [
+      for (final e in raw)
+        if (e is Map)
+          Map<String, dynamic>.from(
+            e.map((k, v) => MapEntry(k.toString(), v)),
+          ),
+    ];
+  }
+
+  Future<void> setHighScores(List<Map<String, dynamic>> scores) async {
+    await Hive.box(settingsBox).put('highScores', scores);
+  }
+
+  Future<String?> getPlayerDisplayName() async {
+    final raw = Hive.box(settingsBox).get('playerDisplayName');
+    return raw is String && raw.trim().isNotEmpty ? raw.trim() : null;
+  }
+
+  Future<void> setPlayerDisplayName(String name) async {
+    await Hive.box(settingsBox).put('playerDisplayName', name.trim());
   }
 
   Future<void> deleteAccount(String username) async {

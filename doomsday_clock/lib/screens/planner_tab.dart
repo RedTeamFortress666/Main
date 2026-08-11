@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/models.dart';
+import '../services/apk_installer.dart';
 import '../services/auth_service.dart';
 import '../services/vault_service.dart';
 import '../theme/noir_theme.dart';
@@ -22,6 +23,7 @@ class PlannerTab extends StatefulWidget {
 
 class _PlannerTabState extends State<PlannerTab> {
   final _vault = VaultService();
+  final _auth = AuthService();
   final _noteCtrl = TextEditingController();
   DateTime _selected = DateTime.now();
   List<PlannerNote> _notes = [];
@@ -30,6 +32,7 @@ class _PlannerTabState extends State<PlannerTab> {
   String _holdLabel = 'SAVE NOTE';
   bool _holding = false;
   DateTime? _holdStarted;
+  bool _showConcealed = false;
 
   @override
   void initState() {
@@ -68,6 +71,24 @@ class _PlannerTabState extends State<PlannerTab> {
     return list
         .map((e) => VaultEntry.fromJson(Map<String, dynamic>.from(e as Map)))
         .toList();
+  }
+
+  Future<void> _persistVault(List<VaultEntry> entries) async {
+    await _auth.saveUserVault(widget.session.username, entries);
+    if (mounted) setState(() => _vaultEntries = entries);
+  }
+
+  Future<void> _toggleConceal(VaultEntry entry) async {
+    if (!entry.concealable) return;
+    final next = _vaultEntries
+        .map(
+          (e) => e.id == entry.id
+              ? e.copyWith(concealed: !e.concealed)
+              : e,
+        )
+        .toList();
+    await _persistVault(next);
+    HapticFeedback.selectionClick();
   }
 
   Future<void> _pickDate() async {
@@ -117,6 +138,9 @@ class _PlannerTabState extends State<PlannerTab> {
       await _vault.unlockVaultForDay(widget.session.username, _selected);
       unlocked = true;
       HapticFeedback.heavyImpact();
+      if (_vault.isMechaHDay(_selected)) {
+        await _auth.ensureMechaHDevPortal(widget.session.username);
+      }
     }
 
     if (!mounted) return;
@@ -144,6 +168,12 @@ class _PlannerTabState extends State<PlannerTab> {
   Widget build(BuildContext context) {
     final dayKey = _vault.dayKey(_selected);
     final dayNotes = _notes.where((n) => n.dayKey == dayKey);
+    final visibleEntries = _vaultEntries.where((e) {
+      if (!e.concealed) return true;
+      return _showConcealed;
+    }).toList();
+    final concealedCount =
+        _vaultEntries.where((e) => e.concealable && e.concealed).length;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
@@ -170,7 +200,11 @@ class _PlannerTabState extends State<PlannerTab> {
                     children: [
                       Text(
                         DateFormat('EEEE').format(_selected).toUpperCase(),
-                        style: const TextStyle(color: NoirTheme.pink),
+                        style: TextStyle(
+                          color: _vault.isUnlockDay(_selected)
+                              ? NoirTheme.crimson
+                              : NoirTheme.pink,
+                        ),
                       ),
                       Text(
                         DateFormat('d MMM yyyy').format(_selected),
@@ -201,10 +235,10 @@ class _PlannerTabState extends State<PlannerTab> {
         const SizedBox(height: 14),
         TextField(
           controller: _noteCtrl,
-          maxLines: 4,
+          maxLines: 5,
           style: const TextStyle(color: NoirTheme.mist),
           decoration: InputDecoration(
-            hintText: 'Note for $dayKey — ritual words unlock vault…',
+            hintText: _vault.unlockHintFor(_selected),
             hintStyle: TextStyle(color: NoirTheme.mist.withValues(alpha: 0.35)),
             filled: true,
             fillColor: NoirTheme.panel,
@@ -237,44 +271,138 @@ class _PlannerTabState extends State<PlannerTab> {
         ...dayNotes.map((n) => Text('• ${n.body}')),
         if (_vaultOpen) ...[
           const SizedBox(height: 18),
-          Text('VAULT · ${widget.session.displayName}',
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: NoirTheme.peace,
-                  )),
-          const SizedBox(height: 8),
-          ..._vaultEntries.map(
-            (e) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: NeonPanel(
-                color: NoirTheme.peace,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(e.title,
-                        style: const TextStyle(
-                          color: NoirTheme.peace,
-                          fontWeight: FontWeight.w700,
-                        )),
-                    if (e.detail.isNotEmpty) Text(e.detail),
-                    if (e.apkHint != null)
-                      SelectableText(e.apkHint!,
-                          style: const TextStyle(
-                            color: NoirTheme.cyan,
-                            fontSize: 11,
-                          )),
-                  ],
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'VAULT · ${widget.session.displayName}',
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: NoirTheme.peace,
+                      ),
                 ),
               ),
-            ),
+              if (concealedCount > 0 || _showConcealed)
+                TextButton(
+                  onPressed: () =>
+                      setState(() => _showConcealed = !_showConcealed),
+                  child: Text(
+                    _showConcealed ? 'HIDE SLOT' : 'REVEAL SLOT',
+                    style: const TextStyle(
+                      color: NoirTheme.yellow,
+                      letterSpacing: 1,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+            ],
           ),
+          const SizedBox(height: 8),
+          ...visibleEntries.map((e) => _vaultCard(e)),
+          if (concealedCount > 0 && !_showConcealed)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                '$concealedCount concealable slot(s) hidden',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: NoirTheme.mist.withValues(alpha: 0.4),
+                      fontSize: 11,
+                    ),
+              ),
+            ),
         ] else
           Text(
-            'VAULT SEALED — enter that day\'s ritual words, hold until OPEN.',
+            'VAULT SEALED — rituals: 5 Nov (Gunpowder Plot) or 20 Apr '
+            '(Happy Birthday MechaH! I grok thee). Hold SAVE NOTE until OPEN.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: NoirTheme.mist.withValues(alpha: 0.45),
                 ),
           ),
       ],
+    );
+  }
+
+  Widget _vaultCard(VaultEntry e) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: NeonPanel(
+        color: e.concealed ? NoirTheme.yellow : NoirTheme.peace,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    e.concealed ? '∎ CONCEALED' : e.title,
+                    style: TextStyle(
+                      color: e.concealed ? NoirTheme.yellow : NoirTheme.peace,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                if (e.concealable)
+                  IconButton(
+                    tooltip: e.concealed ? 'Reveal portal' : 'Conceal portal',
+                    onPressed: () => _toggleConceal(e),
+                    icon: Icon(
+                      e.concealed ? Icons.visibility : Icons.visibility_off,
+                      color: e.concealed ? NoirTheme.yellow : NoirTheme.pink,
+                      size: 26,
+                    ),
+                  ),
+              ],
+            ),
+            if (!e.concealed) ...[
+              if (e.detail.isNotEmpty) Text(e.detail),
+              if (e.apkHint != null) ...[
+                const SizedBox(height: 4),
+                SelectableText(
+                  e.apkHint!,
+                  style: const TextStyle(
+                    color: NoirTheme.cyan,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+              if (e.assetApk != null) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton(
+                    onPressed: () async {
+                      try {
+                        await ApkInstaller.installAsset(e.assetApk!);
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Install prompt launched'),
+                          ),
+                        );
+                      } catch (err) {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Install failed: $err')),
+                        );
+                      }
+                    },
+                    style: TextButton.styleFrom(
+                      foregroundColor: NoirTheme.peace,
+                    ),
+                    child: const Text(
+                      'INSTALL EMBEDDED APK',
+                      style: TextStyle(letterSpacing: 1.5, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+              ],
+            ] else
+              const Text(
+                'Portal slot concealed — tap the eye to restore.',
+                style: TextStyle(fontSize: 12, color: NoirTheme.mist),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 import 'package:polybius/core/widgets/arcade_ui.dart';
+import 'package:polybius/features/arcade/high_score_models.dart';
 
-/// High-score board (cosmetic arcade layer), matching the design mockup.
+/// High-score board — players enter their real name; QR pool sync merges
+/// peer boards so operators can compete across devices.
 class HighScoreScreen extends ConsumerStatefulWidget {
   const HighScoreScreen({super.key});
 
@@ -13,30 +16,58 @@ class HighScoreScreen extends ConsumerStatefulWidget {
 }
 
 class _HighScoreScreenState extends ConsumerState<HighScoreScreen> {
-  static const _rows = <(String, String, String)>[
-    ('1.', '', '9999999'),
-    ('2.', 'AAA', '8899889'),
-    ('3.', 'BBB', '8867788'),
-    ('4.', 'DDC', '666555'),
-    ('6.', 'EEF', '4589444'),
-    ('7.', 'FEF', '222444'),
-    ('9.', 'HI', '111000'),
-    ('10.', 'JJJ', '000000'),
-  ];
+  late final TextEditingController _nameController;
+  final _scoreController = TextEditingController();
 
-  final List<TextEditingController> _initials =
-      List.generate(3, (_) => TextEditingController());
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(
+      text: ref.read(playerDisplayNameProvider),
+    );
+  }
 
   @override
   void dispose() {
-    for (final c in _initials) {
-      c.dispose();
-    }
+    _nameController.dispose();
+    _scoreController.dispose();
     super.dispose();
+  }
+
+  Future<void> _saveName() async {
+    final name = _nameController.text.trim();
+    if (name.isEmpty) return;
+    await ref.read(playerDisplayNameProvider.notifier).setName(name);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: NeonTheme.surface,
+        content: Text(
+          'PLAYER NAME SET — $name',
+          style: const TextStyle(
+            fontFamily: 'monospace',
+            color: NeonTheme.neonGreen,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _manualSubmit() async {
+    final name = _nameController.text.trim();
+    final score = int.tryParse(_scoreController.text.trim()) ?? 0;
+    if (name.isEmpty || score <= 0) return;
+    await ref.read(highScoresProvider.notifier).submit(name: name, score: score);
+    _scoreController.clear();
   }
 
   @override
   Widget build(BuildContext context) {
+    final scores = ref.watch(highScoresProvider);
+    final rows = scores.isEmpty
+        ? const <HighScoreEntry>[]
+        : scores.take(10).toList();
+
     return ArcadeScaffold(
       accent: NeonTheme.neonCyan,
       child: Column(
@@ -45,75 +76,136 @@ class _HighScoreScreenState extends ConsumerState<HighScoreScreen> {
           const ArcadeTitle(fontSize: 34, showStrapline: false),
           const SizedBox(height: 16),
           const ArcadeHeading('HIGH SCORES', color: NeonTheme.neonCyan),
-          const SizedBox(height: 20),
+          const SizedBox(height: 8),
+          const Text(
+            'Enter your name. Sync a pool QR with another player to merge boards.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.white38, fontSize: 11, height: 1.3),
+          ),
+          const SizedBox(height: 16),
           const Row(
             children: [
               Expanded(child: _HeaderCell('RANK')),
-              Expanded(child: _HeaderCell('NAME')),
+              Expanded(flex: 2, child: _HeaderCell('NAME')),
               Expanded(child: _HeaderCell('SCORE', align: TextAlign.right)),
             ],
           ),
           const SizedBox(height: 6),
           Expanded(
-            child: ListView.builder(
-              itemCount: _rows.length,
-              itemBuilder: (context, i) {
-                final (rank, name, score) = _rows[i];
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(rank, style: _rowStyle(NeonTheme.neonCyan)),
+            child: rows.isEmpty
+                ? const Center(
+                    child: Text(
+                      'NO SCORES YET — PLAY A ROUND',
+                      style: TextStyle(
+                        fontFamily: 'monospace',
+                        color: Colors.white38,
+                        fontSize: 12,
                       ),
-                      Expanded(
-                        child: Text(name, style: _rowStyle(NeonTheme.neonCyan)),
-                      ),
-                      Expanded(
-                        child: Text(
-                          score,
-                          textAlign: TextAlign.right,
-                          style: _rowStyle(Colors.white70),
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: rows.length,
+                    itemBuilder: (context, i) {
+                      final entry = rows[i];
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '${i + 1}.',
+                                style: _rowStyle(NeonTheme.neonCyan),
+                              ),
+                            ),
+                            Expanded(
+                              flex: 2,
+                              child: Text(
+                                entry.name,
+                                overflow: TextOverflow.ellipsis,
+                                style: _rowStyle(NeonTheme.neonCyan),
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                '${entry.score}',
+                                textAlign: TextAlign.right,
+                                style: _rowStyle(Colors.white70),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
           Row(
             children: [
               const Text(
-                'ENTER INITIALS:',
+                'YOUR NAME:',
                 style: TextStyle(
                   fontFamily: 'monospace',
                   color: Colors.white70,
-                  letterSpacing: 2,
+                  letterSpacing: 1,
+                  fontSize: 12,
                 ),
               ),
               const SizedBox(width: 10),
-              for (var i = 0; i < 3; i++)
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: SizedBox(
-                    width: 34,
-                    child: ArcadeField(
-                      controller: _initials[i],
-                      fontSize: 18,
-                      letterSpacing: 0,
-                      textColor: NeonTheme.neonCyan,
-                    ),
-                  ),
+              Expanded(
+                child: ArcadeField(
+                  controller: _nameController,
+                  fontSize: 16,
+                  letterSpacing: 1,
+                  textColor: NeonTheme.neonCyan,
+                  textAlign: TextAlign.left,
                 ),
+              ),
+              const SizedBox(width: 8),
+              ArcadeMenuButton(
+                label: 'SET',
+                color: NeonTheme.neonGreen,
+                dense: true,
+                onPressed: _saveName,
+              ),
             ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: ArcadeField(
+                  controller: _scoreController,
+                  fontSize: 14,
+                  letterSpacing: 1,
+                  textColor: NeonTheme.neonYellow,
+                  textAlign: TextAlign.left,
+                ),
+              ),
+              const SizedBox(width: 8),
+              ArcadeMenuButton(
+                label: 'ADD SCORE',
+                color: NeonTheme.neonYellow,
+                dense: true,
+                onPressed: _manualSubmit,
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Tip: finish a game to post your score automatically.',
+            style: TextStyle(color: Colors.white24, fontSize: 10),
           ),
           const SizedBox(height: 12),
           ArcadeMenuButton(
             label: 'BACK',
             color: NeonTheme.neonPink,
             dense: true,
-            onPressed: () => context.pop(),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/menu');
+              }
+            },
           ),
           const SizedBox(height: 8),
         ],
@@ -123,7 +215,7 @@ class _HighScoreScreenState extends ConsumerState<HighScoreScreen> {
 
   TextStyle _rowStyle(Color color) => TextStyle(
         fontFamily: 'monospace',
-        fontSize: 18,
+        fontSize: 16,
         color: color,
         letterSpacing: 1,
       );

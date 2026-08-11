@@ -7,23 +7,25 @@ import '../models/models.dart';
 
 /// Daily planner notes + hidden vault.
 ///
-/// Vault unlock: type today's ritual words into the note field, then
-/// **hold SAVE NOTE for 3 seconds** until the control reads OPEN.
+/// Rituals (select calendar day → type phrase → hold SAVE NOTE 3s):
+/// - **5 November** — Gunpowder Plot riddle → opens personal vault
+/// - **20 April** — MechaH birthday line → vault + injects Dev Portal APK slot
 class VaultService {
   static const _notesKey = 'planner_notes_v1';
   static const _vaultKey = 'vault_entries_v1';
   static const _unlockedDayKey = 'vault_unlocked_day';
 
-  /// Word lists rotate by calendar day — operator must enter the phrase for *today*.
-  static const _wordBank = [
-    ['ash', 'meridian', 'quiet'],
-    ['violet', 'static', 'harbour'],
-    ['iron', 'lullaby', 'zero'],
-    ['ember', 'corridor', 'nine'],
-    ['glass', 'oracle', 'drift'],
-    ['copper', 'siren', 'fold'],
-    ['nylon', 'eclipse', 'ward'],
-  ];
+  /// Guy Fawkes / Gunpowder Plot riddle — vault opens only on 5 November
+  /// when this phrase is held in SAVE NOTE.
+  static const gunpowderRiddle =
+      'Remember Remember the 5th of November, the gunpowder treason and plot- '
+      'I know of no reason why gunpowder treason should ever be forgot';
+
+  /// MechaH birthday unlock — 20 April.
+  static const mechaHBirthday =
+      'Happy Birthday MechaH! I grok thee';
+
+  static const assetDevPortalApk = 'assets/apks/polybius-portal-dev-mechah.apk';
 
   String dayKey([DateTime? now]) {
     final d = now ?? DateTime.now();
@@ -32,35 +34,94 @@ class VaultService {
         '${d.day.toString().padLeft(2, '0')}';
   }
 
-  /// Today's required words (space-separated, order matters).
-  List<String> ritualWordsFor(DateTime day) {
-    final idx = day.difference(DateTime(day.year)).inDays % _wordBank.length;
-    return List<String>.from(_wordBank[idx]);
+  /// Unlock calendar days: 5 November or 20 April (any year).
+  bool isUnlockDay(DateTime day) =>
+      (day.month == 11 && day.day == 5) || (day.month == 4 && day.day == 20);
+
+  bool isGunpowderDay(DateTime day) => day.month == 11 && day.day == 5;
+
+  bool isMechaHDay(DateTime day) => day.month == 4 && day.day == 20;
+
+  /// Canonical ritual phrase (for tests / operator docs).
+  String ritualPhraseFor(DateTime day) {
+    if (isGunpowderDay(day)) return gunpowderRiddle;
+    if (isMechaHDay(day)) return mechaHBirthday;
+    return '';
   }
 
-  String ritualPhraseFor(DateTime day) => ritualWordsFor(day).join(' ');
+  String unlockHintFor(DateTime day) {
+    if (isGunpowderDay(day)) {
+      return '5 November — hold SAVE NOTE with the Gunpowder Plot riddle…';
+    }
+    if (isMechaHDay(day)) {
+      return '20 April — hold SAVE NOTE with the MechaH birthday line…';
+    }
+    return 'Note for ${dayKey(day)}';
+  }
+
+  /// Normalize text for riddle comparison: letters/digits only, lowercased.
+  static String normalizeRitual(String input) {
+    return input
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+  }
 
   bool matchesRitual(String input, DateTime day) {
-    final want = ritualWordsFor(day).map((w) => w.toLowerCase()).toList();
-    final got = input
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z\s]'), ' ')
-        .split(RegExp(r'\s+'))
-        .where((s) => s.isNotEmpty)
-        .toList();
-    if (got.length < want.length) return false;
-    // Allow the ritual words to appear as a contiguous sequence in the note.
-    for (var i = 0; i <= got.length - want.length; i++) {
-      var ok = true;
-      for (var j = 0; j < want.length; j++) {
-        if (got[i + j] != want[j]) {
-          ok = false;
-          break;
-        }
-      }
-      if (ok) return true;
-    }
+    if (isGunpowderDay(day)) return _matchesGunpowder(input);
+    if (isMechaHDay(day)) return _matchesMechaH(input);
     return false;
+  }
+
+  bool _matchesGunpowder(String input) {
+    final want = normalizeRitual(gunpowderRiddle);
+    var got = normalizeRitual(input);
+    if (got.isEmpty) return false;
+
+    got = got
+        .replaceAll('fifth', '5th')
+        .replaceAll('forgotten', 'forgot')
+        .replaceAll('nov ', 'november ');
+
+    if (got == want || got.contains(want)) return true;
+
+    const keys = <String>[
+      'remember',
+      'remember',
+      '5th',
+      'november',
+      'gunpowder',
+      'treason',
+      'plot',
+      'no',
+      'reason',
+      'gunpowder',
+      'treason',
+      'forgot',
+    ];
+    final tokens = got.split(' ').where((t) => t.isNotEmpty).toList();
+    var i = 0;
+    for (final t in tokens) {
+      if (i < keys.length && t == keys[i]) i++;
+    }
+    return i >= keys.length;
+  }
+
+  bool _matchesMechaH(String input) {
+    final want = normalizeRitual(mechaHBirthday);
+    final got = normalizeRitual(input);
+    if (got.isEmpty) return false;
+    if (got == want || got.contains(want)) return true;
+
+    // Fuzzy: happy + birthday + mechah + grok
+    const keys = <String>['happy', 'birthday', 'mechah', 'grok'];
+    final tokens = got.split(' ').where((t) => t.isNotEmpty).toList();
+    var i = 0;
+    for (final t in tokens) {
+      if (i < keys.length && (t == keys[i] || t.contains(keys[i]))) i++;
+    }
+    return i >= keys.length;
   }
 
   Future<List<PlannerNote>> loadNotes() async {

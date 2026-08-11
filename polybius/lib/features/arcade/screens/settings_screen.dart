@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:polybius/core/constants/app_constants.dart';
-import 'package:polybius/core/constants/unlock_codes.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 import 'package:polybius/core/widgets/arcade_ui.dart';
@@ -217,8 +216,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        // Hold-to-select. On RUSSIAN with the pathway primed + difficulty 11,
-        // a 3-second hold opens the dev access portal.
+        // Hold-to-select confirms the language. Portal entry is the GAME OVER
+        // ritual after LOAD GAME + difficulty 11 + flavor ritual language.
         GestureDetector(
           onLongPressStart: (_) => _startSelectHold(),
           onLongPressEnd: (_) => _endSelectHold(),
@@ -278,15 +277,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   void _completeSelectHold() {
     if (!_holdingSelect) return;
     setState(() => _holdingSelect = false);
-    final settings = ref.read(gameSettingsProvider);
-    final unlock = ref.read(unlockProvider);
-    final ritualReady = unlock.pathwayPrimed &&
-        settings.difficulty == UnlockCodes.ritualDifficulty &&
-        settings.language == UnlockCodes.compoundLanguage;
-    if (ritualReady) {
-      context.push('/devportal');
-      return;
-    }
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('LANGUAGE SET'),

@@ -13,14 +13,33 @@ class DecryptTab extends ConsumerStatefulWidget {
   ConsumerState<DecryptTab> createState() => _DecryptTabState();
 }
 
-class _DecryptTabState extends ConsumerState<DecryptTab> {
+class _DecryptTabState extends ConsumerState<DecryptTab>
+    with WidgetsBindingObserver {
   final _inputController = TextEditingController();
   String _output = '';
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _inputController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Re-entering Polybius with Darth Cherry off must wipe lingering plaintext.
+    if (state == AppLifecycleState.resumed) {
+      final active = ref.read(veilProvider).filterActive;
+      if (!active && _output.isNotEmpty) {
+        setState(() => _output = '');
+      }
+    }
   }
 
   void _decrypt() {
@@ -37,6 +56,15 @@ class _DecryptTabState extends ConsumerState<DecryptTab> {
   @override
   Widget build(BuildContext context) {
     final veil = ref.watch(veilProvider);
+    // When DARTH CHERRY filter drops, wipe recovered plaintext immediately.
+    ref.listen<bool>(
+      veilProvider.select((v) => v.filterActive),
+      (prev, next) {
+        if (prev == true && next == false && _output.isNotEmpty) {
+          setState(() => _output = '');
+        }
+      },
+    );
     // Under matrix veil the recovered plaintext does not appear at all.
     final hidePlain = veil.mode == VeilMode.matrix;
 
@@ -77,7 +105,10 @@ class _DecryptTabState extends ConsumerState<DecryptTab> {
             onPaste: (text) => setState(() => _inputController.text = text),
           ),
           const SizedBox(height: 4),
-          ElevatedButton(onPressed: _decrypt, child: const Text('DECRYPT')),
+          ElevatedButton(
+            onPressed: _decrypt,
+            child: const Text('DECRYPT VIA CURRENT ROTOR SETTINGS'),
+          ),
           const SizedBox(height: 12),
           Expanded(
             child: Container(

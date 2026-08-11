@@ -61,6 +61,10 @@ class _LoadGameScreenState extends ConsumerState<LoadGameScreen> {
         await storage.setGameFileNumber(code);
       }
 
+      // Prime the portal ritual pathway (diff 11 + ritual language + GAME OVER).
+      final bound = await storage.getGameFileNumber() ?? code;
+      ref.read(unlockProvider.notifier).onGameFileLoaded(bound);
+
       if (!mounted) return;
       setState(() => _message = 'SAVE FILE LOADED');
       await Future.delayed(const Duration(milliseconds: 700));

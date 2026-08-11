@@ -8,6 +8,7 @@ library;
 
 import 'package:polybius/core/constants/app_constants.dart';
 import 'package:polybius/core/constants/operator_roster.dart';
+import 'package:polybius/core/constants/operator_wave2.dart';
 
 class OperatorIdentity {
   const OperatorIdentity({
@@ -31,7 +32,7 @@ class OperatorIdentity {
 
 /// All bootstrapped operator accounts except the stricken DEVELOPER login.
 class OperatorIdentities {
-  static const List<OperatorIdentity> all = [
+  static final List<OperatorIdentity> all = [
     OperatorIdentity(
       username: AppConstants.adminUsername,
       displayName: AppConstants.adminDisplayName,
@@ -104,8 +105,9 @@ class OperatorIdentities {
       backupPassword: AppConstants.opPikZupBackupPassword,
       tier: UserTier.admin,
     ),
-    // BETA pool — Art3mas already listed via pool; keep pool entries as source.
+    // BETA pool + wave-2 operators.
     ..._poolIdentities,
+    ..._wave2Identities,
   ];
 
   static const List<OperatorIdentity> _poolIdentities = [
@@ -201,6 +203,20 @@ class OperatorIdentities {
     ),
   ];
 
+  static final List<OperatorIdentity> _wave2Identities = OperatorWave2.all
+      .map(
+        (o) => OperatorIdentity(
+          username: o.username,
+          displayName: o.displayName,
+          inviteOrFileCode: o.inviteCode,
+          pin: o.pin,
+          password: o.password,
+          backupPassword: o.backupPassword,
+          tier: o.tier,
+        ),
+      )
+      .toList();
+
   /// Deduped list (pool Art3mas overlaps specialised naming).
   static List<OperatorIdentity> get unique {
     final seen = <String>{};
@@ -220,8 +236,39 @@ class OperatorIdentities {
     return null;
   }
 
-  /// Keep in sync with [OperatorRoster.pool] at compile time via tests.
-  static List<OperatorIdentity> fromRoster() => OperatorRoster.pool
+  /// Match login aliases like `Art3mas` → seeded username `ARTEM3S`.
+  static OperatorIdentity? byDisplayName(String name) {
+    final n = name.trim().toUpperCase();
+    if (n.isEmpty) return null;
+    for (final id in unique) {
+      if (id.displayName.toUpperCase() == n) return id;
+    }
+    return null;
+  }
+
+  /// Dev accounts that may browse the full operator-card roster.
+  /// SpamKat2, RedTeam01, and Gam3.0n only — everyone else sees their own card.
+  static const Set<String> fullRosterDevUsernames = {
+    AppConstants.adminUsername, // REDTEAM01
+    AppConstants.opSpamKatUsername, // SPAMKAT2
+    AppConstants.opGameOnUsername, // GAM3.0N
+  };
+
+  static bool canViewFullRoster(String? username) {
+    if (username == null || username.trim().isEmpty) return false;
+    return fullRosterDevUsernames.contains(username.trim().toUpperCase());
+  }
+
+  /// Cards visible to [username]: full unique roster for the three DEV accounts,
+  /// otherwise only that operator's own card (empty if unknown).
+  static List<OperatorIdentity> visibleFor(String? username) {
+    if (canViewFullRoster(username)) return unique;
+    final own = username == null ? null : byUsername(username);
+    return own == null ? const [] : [own];
+  }
+
+  /// Keep in sync with [OperatorRoster.allSeeds] at compile time via tests.
+  static List<OperatorIdentity> fromRoster() => OperatorRoster.allSeeds
       .map(
         (o) => OperatorIdentity(
           username: o.username,

@@ -1,9 +1,14 @@
 package com.polybius.doomsday_clock
 
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
+import androidx.core.content.FileProvider
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import java.io.File
 
 class MainActivity : FlutterActivity() {
     private val channel = "doomsday_clock/packages"
@@ -12,15 +17,46 @@ class MainActivity : FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channel)
             .setMethodCallHandler { call, result ->
-                if (call.method == "isPackageInstalled") {
-                    val pkg = call.argument<String>("package")
-                    if (pkg.isNullOrBlank()) {
-                        result.success(false)
-                        return@setMethodCallHandler
+                when (call.method) {
+                    "isPackageInstalled" -> {
+                        val pkg = call.argument<String>("package")
+                        if (pkg.isNullOrBlank()) {
+                            result.success(false)
+                            return@setMethodCallHandler
+                        }
+                        result.success(isInstalled(pkg))
                     }
-                    result.success(isInstalled(pkg))
-                } else {
-                    result.notImplemented()
+                    "installApk" -> {
+                        val path = call.argument<String>("path")
+                        if (path.isNullOrBlank()) {
+                            result.error("bad_args", "path required", null)
+                            return@setMethodCallHandler
+                        }
+                        try {
+                            installApk(File(path))
+                            result.success(true)
+                        } catch (e: Exception) {
+                            result.error("install_failed", e.message, null)
+                        }
+                    }
+                    "canRequestPackageInstalls" -> {
+                        result.success(
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                                packageManager.canRequestPackageInstalls()
+                            else true,
+                        )
+                    }
+                    "openUnknownAppSettings" -> {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            val intent = Intent(
+                                android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                                Uri.parse("package:$packageName"),
+                            )
+                            startActivity(intent)
+                        }
+                        result.success(null)
+                    }
+                    else -> result.notImplemented()
                 }
             }
     }
@@ -32,5 +68,19 @@ class MainActivity : FlutterActivity() {
         } catch (_: PackageManager.NameNotFoundException) {
             false
         }
+    }
+
+    private fun installApk(file: File) {
+        val uri = FileProvider.getUriForFile(
+            this,
+            "$packageName.fileprovider",
+            file,
+        )
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, "application/vnd.android.package-archive")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        startActivity(intent)
     }
 }

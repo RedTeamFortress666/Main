@@ -37,7 +37,7 @@ export interface DeviceProfile {
   esp32?: Esp32Meta
 }
 
-const BRANCH = 'cursor/polybius-v1-stable-8c69'
+const BRANCH = 'cursor/pool-pin-bt-ui-d8fa'
 const RAW = `https://github.com/RedTeamFortress666/Main/raw/${BRANCH}`
 const ESP32 = `https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/esp32`
 
@@ -161,16 +161,20 @@ export const profiles: DeviceProfile[] = [
     ],
     ports: [
       {
-        label: 'PØLYBĪUS V1 STABLE — EMOJINIGMA HQ',
+        label: 'PØLYBÎŪS PORTAL',
         url: `${RAW}/polybius/dist/polybius-v1-stable-hq-android-arm64.apk`,
       },
       {
-        label: 'PØLYBĪUS V1 STABLE — User',
+        label: 'PØLYBÎŪS V.1',
         url: `${RAW}/polybius/dist/polybius-v1-stable-user-android-arm64.apk`,
       },
       {
+        label: 'PØLYBÎŪS V.1 — iOS (Safari web portable)',
+        url: `${RAW}/polybius/dist/polybius-v1-stable-user-ios-web-portable.zip`,
+      },
+      {
         label: 'DARTH CHERRY filter APK',
-        url: `https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/darth-cherry-1.0.2-android-arm64.apk`,
+        url: `${RAW}/polybius/dist/darth-cherry-1.0.2-android-arm64.apk`,
       },
     ],
     notes: [
@@ -179,6 +183,7 @@ export const profiles: DeviceProfile[] = [
       'Optional: place empty `.noroms` on BOOT before first boot to give all storage to Android.',
       'OTA zips are recovery-only updates — do not flash those as a clean image.',
       'Dual OS swap: keep Lineage on one card and ArkOS/ROCKNIX on another; swap TF1 to switch OS.',
+      'Operator cards: full roster only for SpamKat2 / RedTeam01 / Gam3.0n; others see their own card.',
     ],
   },
   espProfile(

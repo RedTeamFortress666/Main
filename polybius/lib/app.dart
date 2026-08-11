@@ -36,20 +36,30 @@ final routerProvider = Provider<GoRouter>((ref) {
       final loc = state.matchedLocation;
 
       // Stay on splash only while the cinematic intro runs.
-      // Do NOT block on auth restore — that previously trapped Android on
-      // "loading..." forever when restore lagged or failed.
       if (!introDone) {
         return loc == '/' ? null : '/';
       }
 
       final loggedIn = authState.isAuthenticated;
       final needsPin = authState.needsPin && authState.user != null;
+      final gateLogin = AppFlavor.requiresStartupLogin;
 
-      // Route away from the splash once intro has finished.
+      // After splash: HQ → login/menu; user → arcade menu (START / LOAD / …).
       if (loc == '/') {
+        if (!gateLogin) return AppFlavor.postSplashRoute;
         if (authState.isRestoring) return '/login';
         if (needsPin) return '/pin';
         return loggedIn ? '/menu' : '/login';
+      }
+
+      // User APK: arcade routes are open without the Layer-1 login gate.
+      // Cipher still requires portal unlock; PIN only when a session needs it.
+      if (!gateLogin) {
+        if (needsPin && loc != '/pin') return '/pin';
+        final cipherUnlocked = unlockState.state == UnlockState.unlocked ||
+            unlockState.state == UnlockState.developer;
+        if (loc == '/cipher' && !cipherUnlocked) return '/menu';
+        return null;
       }
 
       if (!loggedIn && !needsPin && loc != '/login' && loc != '/register') {
@@ -102,9 +112,6 @@ class _PolybiusAppState extends ConsumerState<PolybiusApp> {
 
   @override
   Widget build(BuildContext context) {
-    // Note: logging in does NOT auto-open the cipher. The crypto engine is
-    // reachable only via the dev access portal with a valid access code.
-
     // Start/stop the soundtrack when the sound setting changes.
     ref.listen(gameSettingsProvider.select((s) => s.soundEnabled), (_, enabled) {
       ref.read(musicServiceProvider).setEnabled(enabled);

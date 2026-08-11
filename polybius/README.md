@@ -24,14 +24,15 @@ flutter run -d chrome # web
 ## Flavors
 
 ```bash
-# EMOJINIGMA HQ (Dev Admin)
+# PØLYBÎŪS PORTAL (Dev Admin)
 flutter run --flavor hq --dart-define=POLYBIUS_FLAVOR=hq
 
-# Everyday user APK
+# PØLYBÎŪS V.1 (everyday user)
 flutter run --flavor user --dart-define=POLYBIUS_FLAVOR=user
 ```
 
-See `docs/V1_STABLE.md` for download links and operator cards.
+See `docs/V1_STABLE.md` for download links and operator cards.  
+**Dev/admin only:** `docs/DEV_OPERATOR_MANUAL.md` (ops, OPSEC, mesh / hardware roadmap).
 
 ## Architecture
 
@@ -62,19 +63,24 @@ Multi-rotor Enigma variant. Each character → 2 emojis from a daily 560-emoji p
 
 | Ritual | Steps | Result |
 |--------|-------|--------|
-| Title hold | Hold **PØLYBĪUS** title 3s | Hint state + fake crash |
-| Difficulty 11 | SETTINGS → difficulty 11 + ENGLISH | Partial unlock |
-| Compound | SETTINGS → difficulty 7 + RUSSIAN | Full cipher unlock |
-| Invite code | LOAD GAME → valid `PB-XXXXXXXX` code | Cipher unlock |
-| Dev codes | LOAD GAME → `B1-66-3R` or `D1-66-3R` + CHINESE language | Developer panel |
+| Portal (PORTAL APK) | Difficulty **11** → **Russian** → lose → hold GAME OVER → ERROR (6 words + draft SEND; diagnostic unused) | Access portal |
+| Portal (V.1 APK) | Lose early → hold **GAME OVER** → ERROR (6 words + draft SEND) | Access portal |
+| Title hold (legacy) | Hold title 6s | Still primes pathway |
+| Dev codes | Portal login → `B1-66-3R` / `D1-66-3R` / `W1-66-3R` | Developer panel (privileged) |
 
 ## Cipher Tabs
 
 - **🔒 ENCRYPT** — plaintext → emoji ciphertext
-- **🔓 DECRYPT** — emoji → plaintext
-- **🎲 POOL** — today's 560-emoji cipher pool
-- **📡 CONNECT** — device info, Bluetooth placeholder, logout
-- **⚙ Rotor Gear** — live rotor positions and step counts
+- **🔓 DECRYPT** — emoji → plaintext via current rotor / pool settings
+- **🎲 POOL** — HQ only: 560-emoji vault (game file number + 6-digit PIN)
+- **🔗 SYNC** — QR pool share/scan + high-score board merge across tiers
+- **📡 CONNECT** — Bluetooth messaging, rotor/pool share with mutual confirm codes, relay, logout
+- **⚙ Rotor Gear** — live rotor positions + decrypt-via-current-rotor
+
+User APK: splash → arcade menu (no Layer-1 login). Ritual portal reads **USER ACCESS PORTAL**.
+
+**Test matrix (credentials + rituals):** `docs/RITUAL_TEST_MATRIX.md`  
+**Dev/admin ops manual:** `docs/DEV_OPERATOR_MANUAL.md`
 
 ## Build
 

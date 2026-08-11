@@ -3,7 +3,7 @@
 library;
 
 enum PolybiusFlavor {
-  /// EMOJINIGMA HQ — Dev Admin fork with triple-tier (agent / admin / developer)
+  /// PØLYBÎŪS PORTAL — Dev Admin fork with triple-tier (agent / admin / developer)
   /// access and cross encrypt/decrypt tooling.
   hq,
 
@@ -33,12 +33,30 @@ class AppFlavor {
   static bool get isUser => current == PolybiusFlavor.user;
 
   static String get displayName =>
-      isHq ? 'EMOJINIGMA HQ' : 'PØLYBĪUS';
+      isHq ? 'PØLYBÎŪS PORTAL' : 'PØLYBÎŪS V.1';
 
   static String get subtitle => isHq
       ? 'DEV ADMIN · TRIPLE TIER · V1 STABLE'
-      : 'OPERATOR TERMINAL · V1 STABLE';
+      : 'USER BUILD · V1 STABLE';
 
   /// Developer unlock state + red-team panel only on the HQ fork.
   static bool get allowDeveloperTools => isHq;
+
+  /// HQ keeps the Layer-1 login gate; user builds skip pre-login.
+  static bool get requiresStartupLogin => isHq;
+
+  /// Raw 560-emoji pool viewer is HQ-only (leak prevention + admin tooling).
+  static bool get showPoolTab => isHq;
+
+  /// Ritual portal title — never "DEV" on the everyday user APK.
+  static String get accessPortalTitle =>
+      isHq ? 'DEV ACCESS PORTAL' : 'USER ACCESS PORTAL';
+
+  /// After cinematic splash: both flavors land on the arcade menu
+  /// (START GAME / LOAD GAME / …). HQ still routes through login first.
+  static String get postSplashRoute => '/menu';
+
+  /// Language that completes the GAME OVER → portal ritual for this flavor.
+  /// HQ / Portal: Russian. User V.1: Japanese (optional settings cue).
+  static String get ritualLanguage => isHq ? 'RUSSIAN' : 'JAPANESE';
 }

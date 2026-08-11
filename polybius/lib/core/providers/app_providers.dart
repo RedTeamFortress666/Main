@@ -1,11 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:polybius/core/constants/app_constants.dart';
 import 'package:polybius/core/constants/app_flavor.dart';
+import 'package:polybius/core/constants/operator_identities.dart';
 import 'package:polybius/core/storage/create_polybius_secret_store.dart';
 import 'package:polybius/core/constants/unlock_codes.dart';
 import 'package:polybius/core/crypto/encryption_service.dart';
 import 'package:polybius/core/models/models.dart';
 import 'package:polybius/core/storage/storage_service.dart';
+import 'package:polybius/features/arcade/high_score_models.dart';
 import 'package:polybius/features/cipher/engine/cipher_engine.dart';
 import 'package:polybius/features/cipher/engine/daily_pool.dart';
 import 'dart:convert';
@@ -108,6 +110,99 @@ class GameSettingsNotifier extends StateNotifier<GameSettings> {
   }
 }
 
+/// Local arcade high-score board — merged when peers share a pool-sync QR.
+final highScoresProvider =
+    StateNotifierProvider<HighScoresNotifier, List<HighScoreEntry>>((ref) {
+  return HighScoresNotifier(ref.read(storageServiceProvider));
+});
+
+class HighScoresNotifier extends StateNotifier<List<HighScoreEntry>> {
+  HighScoresNotifier(this._storage) : super(const []) {
+    _load();
+  }
+
+  final StorageService _storage;
+  static const _maxEntries = 20;
+
+  Future<void> _load() async {
+    final raw = await _storage.getHighScores();
+    state = _sorted([
+      for (final m in raw) HighScoreEntry.fromJson(m),
+    ]);
+  }
+
+  Future<void> _persist() async {
+    await _storage.setHighScores([for (final e in state) e.toJson()]);
+  }
+
+  List<HighScoreEntry> _sorted(List<HighScoreEntry> input) {
+    final copy = [...input]..sort((a, b) {
+        final byScore = b.score.compareTo(a.score);
+        if (byScore != 0) return byScore;
+        return b.at.compareTo(a.at);
+      });
+    if (copy.length <= _maxEntries) return copy;
+    return copy.sublist(0, _maxEntries);
+  }
+
+  Future<void> submit({required String name, required int score}) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty || score <= 0) return;
+    state = _sorted([
+      ...state,
+      HighScoreEntry(name: trimmed, score: score, at: DateTime.now()),
+    ]);
+    await _persist();
+    await _storage.setPlayerDisplayName(trimmed);
+  }
+
+  /// Merge remote scores from a pool-sync QR (keeps the best unique name+score).
+  Future<int> mergeRemote(List<HighScoreEntry> remote) async {
+    if (remote.isEmpty) return 0;
+    final beforeKeys = {
+      for (final e in state) '${e.name.toUpperCase()}::${e.score}',
+    };
+    var added = 0;
+    final keyed = <String, HighScoreEntry>{
+      for (final e in state) '${e.name.toUpperCase()}::${e.score}': e,
+    };
+    for (final e in remote) {
+      if (e.name.trim().isEmpty || e.score <= 0) continue;
+      final key = '${e.name.toUpperCase()}::${e.score}';
+      if (!beforeKeys.contains(key) && !keyed.containsKey(key)) added++;
+      final existing = keyed[key];
+      if (existing == null || e.at.isAfter(existing.at)) {
+        keyed[key] = e;
+      }
+    }
+    state = _sorted(keyed.values.toList());
+    await _persist();
+    return added;
+  }
+}
+
+final playerDisplayNameProvider =
+    StateNotifierProvider<PlayerDisplayNameNotifier, String>((ref) {
+  return PlayerDisplayNameNotifier(ref.read(storageServiceProvider));
+});
+
+class PlayerDisplayNameNotifier extends StateNotifier<String> {
+  PlayerDisplayNameNotifier(this._storage) : super('') {
+    _load();
+  }
+
+  final StorageService _storage;
+
+  Future<void> _load() async {
+    state = await _storage.getPlayerDisplayName() ?? '';
+  }
+
+  Future<void> setName(String name) async {
+    state = name.trim();
+    await _storage.setPlayerDisplayName(state);
+  }
+}
+
 class AuthState {
   const AuthState({
     this.user,
@@ -197,7 +292,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return false;
     }
     state = const AuthState(isLoading: true);
-    final account = await _storage.getAccount(normalized);
+    // Resolve display-name aliases (e.g. Art3mas → ARTEM3S) before lookup.
+    var lookupKey = normalized;
+    final byName = OperatorIdentities.byUsername(normalized) ??
+        OperatorIdentities.byDisplayName(normalized);
+    if (byName != null) {
+      lookupKey = byName.username.toUpperCase();
+    }
+    final account = await _storage.getAccount(lookupKey);
     // Same error for unknown user and bad password to avoid enumeration.
     final primaryOk = account != null &&
         EncryptionService.verifyPassword(password, account.passwordHash);
@@ -229,6 +331,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await _storage.logAudit('LOGIN_OK', username);
     state = AuthState(user: updated, needsPin: updated.requiresPin);
     return true;
+  }
+
+  /// Clears the PIN gate after a successful access-portal login so User APK
+  /// operators (requiresPin=true) are not bounced away from `/cipher`.
+  void clearPinGate() {
+    final user = state.user;
+    if (user == null) return;
+    state = AuthState(user: user, needsPin: false);
   }
 
   /// Creates a new user-tier account. Returns null on success, or an error
@@ -372,8 +482,9 @@ class UnlockStateData {
   final bool showGlitch;
   final bool fakeCrash;
 
-  /// Set after the 6-second title hold: opens the route toward the hidden
-  /// dev access portal (difficulty 11 + Russian hold-to-select).
+  /// Set after LOAD GAME binds a file number (or legacy title hold): opens the
+  /// route toward the access portal (difficulty 11 + ritual language + lose
+  /// one game + GAME OVER hold).
   final bool pathwayPrimed;
 
   UnlockStateData copyWith({
@@ -456,14 +567,42 @@ class UnlockNotifier extends StateNotifier<UnlockStateData> {
     _storage.logAudit('UNLOCK_RITUAL', 'SYSTEM', 'Title hold completed');
   }
 
+  /// Primary ritual prime: LOAD GAME successfully bound a file number.
+  void onGameFileLoaded(String fileNumber) {
+    final nextState = state.state == UnlockState.locked
+        ? UnlockState.hinted
+        : state.state;
+    state = state.copyWith(
+      showGlitch: true,
+      state: nextState,
+      pathwayPrimed: true,
+    );
+    if (nextState != UnlockState.locked) {
+      _persistUnlock();
+    }
+    _storage.setPathwayPrimed(true);
+    _storage.logAudit('UNLOCK_RITUAL', 'SYSTEM', 'Game file loaded: $fileNumber');
+  }
+
   void onGlitchComplete() {
     state = state.copyWith(showGlitch: false);
   }
 
-  /// The difficulty/language settings no longer unlock the cipher on their own;
-  /// they are only part of the ritual that leads to the dev access portal,
-  /// which is the sole entry to the crypto engine.
+  /// Difficulty/language alone never open the cipher; they only qualify the
+  /// GAME OVER → ERROR → portal pathway.
   void checkDifficultyRitual(GameSettings settings) {}
+
+  /// True when difficulty 11 + flavor ritual language are set.
+  ///
+  /// PORTAL (HQ): game-file / invite is NOT required for the GAME OVER → ERROR
+  /// → portal path (the diagnostic box under "describe incident" is decoy only).
+  /// V.1 (user): LOAD GAME must have primed the pathway first.
+  bool isPortalRitualReady(GameSettings settings) {
+    final settingsOk = settings.difficulty == UnlockCodes.ritualDifficulty &&
+        settings.language == UnlockCodes.ritualLanguage;
+    if (AppFlavor.isHq) return settingsOk;
+    return state.pathwayPrimed && settingsOk;
+  }
 
   Future<void> checkInviteCode(
     String code,
@@ -472,7 +611,7 @@ class UnlockNotifier extends StateNotifier<UnlockStateData> {
   ) async {
     final upper = code.toUpperCase();
     if (UnlockCodes.developerCodes.contains(upper)) {
-      if (settings.language == UnlockCodes.ritualLanguage) {
+      if (settings.language == UnlockCodes.chineseLanguage) {
         state = state.copyWith(state: UnlockState.developer, showGlitch: true);
         _persistUnlock();
         await _storage.logAudit('DEV_UNLOCK', 'SYSTEM', upper);

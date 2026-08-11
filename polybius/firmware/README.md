@@ -71,3 +71,10 @@ firmware/
   TCA8418). USB serial works on both.
 - CYD touch coordinates vary by panel revision; use serial if taps feel off.
 - Arcade decoy, Red Veil, and Reticulum are **not** ported — cipher + pool sync only.
+
+## Android flasher
+
+Field updates without a PC: install **PØLYBÎŪS FLASHER**
+(`polybius/dist/polybius-flasher-*-android-arm64.apk`). It flashes the CYD /
+T-Deck app images over USB-OTG at `0x10000` and can install the R36S Port zip
+onto an SD card. See [`../docs/FLASHER.md`](../docs/FLASHER.md).
