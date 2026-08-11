@@ -262,6 +262,24 @@ class StorageService {
     }
   }
 
+  /// Resolves a login field to a bootstrapped account by stored username
+  /// (case-insensitive) or by display name (e.g. `Art3mas` → `ARTEM3S`).
+  Future<UserAccount?> resolveLoginAccount(String login) async {
+    final trimmed = login.trim();
+    if (trimmed.isEmpty) return null;
+    final byKey = await getAccount(trimmed.toUpperCase());
+    if (byKey != null) return byKey;
+    final needle = trimmed.toUpperCase();
+    for (final key in Hive.box(accountsBox).keys) {
+      final account = await getAccount(key as String);
+      final display = account?.displayName;
+      if (display != null && display.toUpperCase() == needle) {
+        return account;
+      }
+    }
+    return null;
+  }
+
   Future<void> saveAccount(UserAccount account) async {
     final box = Hive.box(accountsBox);
     await box.put(

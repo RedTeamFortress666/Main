@@ -52,7 +52,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         return loggedIn ? '/menu' : '/login';
       }
 
-      if (!loggedIn && !needsPin && loc != '/login' && loc != '/register') {
+      // Portal and error ritual screens carry their own login gate.
+      const publicRoutes = {'/login', '/register', '/devportal', '/error'};
+      if (!loggedIn && !needsPin && !publicRoutes.contains(loc)) {
         return '/login';
       }
       if (needsPin && loc != '/pin') return '/pin';

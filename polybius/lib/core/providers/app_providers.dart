@@ -197,7 +197,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return false;
     }
     state = const AuthState(isLoading: true);
-    final account = await _storage.getAccount(normalized);
+    final account = await _storage.resolveLoginAccount(username);
     // Same error for unknown user and bad password to avoid enumeration.
     final primaryOk = account != null &&
         EncryptionService.verifyPassword(password, account.passwordHash);

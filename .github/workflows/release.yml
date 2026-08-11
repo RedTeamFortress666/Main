@@ -26,16 +26,35 @@ jobs:
           channel: ${{ env.FLUTTER_CHANNEL }}
       - run: flutter pub get
         working-directory: ${{ env.WORKING_DIR }}
-      - run: flutter build web --release
+      - name: Build HQ web portable (EMOJINIGMA portal)
+        run: |
+          flutter build web --release --dart-define=POLYBIUS_FLAVOR=hq
         working-directory: ${{ env.WORKING_DIR }}
-      - name: Package web build
+      - name: Package HQ web portable
         run: |
           cd ${{ env.WORKING_DIR }}/build/web
-          zip -r "$GITHUB_WORKSPACE/polybius-web.zip" .
+          zip -r "$GITHUB_WORKSPACE/polybius-v1-stable-hq-web-portable.zip" .
+          mkdir -p "${{ env.WORKING_DIR }}/dist"
+          cp "$GITHUB_WORKSPACE/polybius-v1-stable-hq-web-portable.zip" \
+            "${{ env.WORKING_DIR }}/dist/"
+      - name: Build User web portable (V1 USER STABLE)
+        run: |
+          flutter build web --release --dart-define=POLYBIUS_FLAVOR=user
+        working-directory: ${{ env.WORKING_DIR }}
+      - name: Package User web portable
+        run: |
+          cd ${{ env.WORKING_DIR }}/build/web
+          zip -r "$GITHUB_WORKSPACE/polybius-v1-stable-user-web-portable.zip" .
+          cp "$GITHUB_WORKSPACE/polybius-v1-stable-user-web-portable.zip" \
+            "${{ env.WORKING_DIR }}/dist/"
       - uses: actions/upload-artifact@v4
         with:
-          name: polybius-web
-          path: polybius-web.zip
+          name: polybius-web-hq
+          path: polybius-v1-stable-hq-web-portable.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: polybius-web-user
+          path: polybius-v1-stable-user-web-portable.zip
 
   android:
     runs-on: ubuntu-latest
@@ -136,8 +155,8 @@ jobs:
           name: polybius-linux-arm64
           path: polybius-linux-arm64.tar.gz
 
-  # iOS build (unsigned). A distributable IPA requires an Apple signing
-  # identity; add code signing to produce a side-loadable/App Store build.
+  # iOS builds (unsigned). Two IPAs: HQ portal + User stable. Sideload with
+  # AltStore / Sideloadly / TrollStore and your Apple ID.
   ios:
     runs-on: macos-latest
     steps:
@@ -147,21 +166,43 @@ jobs:
           channel: ${{ env.FLUTTER_CHANNEL }}
       - run: flutter pub get
         working-directory: ${{ env.WORKING_DIR }}
-      - run: flutter build ios --release --no-codesign
+      - name: Build HQ (EMOJINIGMA portal) iOS
+        run: |
+          flutter build ios --release --no-codesign \
+            --dart-define=POLYBIUS_FLAVOR=hq
         working-directory: ${{ env.WORKING_DIR }}
-      - name: Package unsigned .ipa (Payload/Runner.app)
+      - name: Package HQ unsigned .ipa
         run: |
           cd ${{ env.WORKING_DIR }}/build/ios/iphoneos
           rm -rf Payload && mkdir Payload
           cp -R Runner.app Payload/
-          # A .ipa is just a zip with a top-level Payload/ dir; this layout is
-          # what AltStore / Sideloadly / TrollStore expect. It is UNSIGNED —
-          # sideload with your own Apple ID, or sign for TestFlight/App Store.
-          zip -r "$GITHUB_WORKSPACE/polybius-ios-unsigned.ipa" Payload
+          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName EMOJINIGMA HQ" Payload/Runner.app/Info.plist
+          zip -r "$GITHUB_WORKSPACE/polybius-v1-stable-hq-ios-unsigned.ipa" Payload
+          mkdir -p "${{ env.WORKING_DIR }}/dist"
+          cp "$GITHUB_WORKSPACE/polybius-v1-stable-hq-ios-unsigned.ipa" \
+            "${{ env.WORKING_DIR }}/dist/"
+      - name: Build User (V1 STABLE) iOS
+        run: |
+          flutter build ios --release --no-codesign \
+            --dart-define=POLYBIUS_FLAVOR=user
+        working-directory: ${{ env.WORKING_DIR }}
+      - name: Package User unsigned .ipa
+        run: |
+          cd ${{ env.WORKING_DIR }}/build/ios/iphoneos
+          rm -rf Payload && mkdir Payload
+          cp -R Runner.app Payload/
+          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName PØLYBĪUS" Payload/Runner.app/Info.plist
+          zip -r "$GITHUB_WORKSPACE/polybius-v1-stable-user-ios-unsigned.ipa" Payload
+          cp "$GITHUB_WORKSPACE/polybius-v1-stable-user-ios-unsigned.ipa" \
+            "${{ env.WORKING_DIR }}/dist/"
       - uses: actions/upload-artifact@v4
         with:
-          name: polybius-ios-unsigned
-          path: polybius-ios-unsigned.ipa
+          name: polybius-ios-hq
+          path: polybius-v1-stable-hq-ios-unsigned.ipa
+      - uses: actions/upload-artifact@v4
+        with:
+          name: polybius-ios-user
+          path: polybius-v1-stable-user-ios-unsigned.ipa
 
   release:
     needs: [web, android, linux, linux-arm64, ios]
