@@ -1,7 +1,7 @@
 name: polybius_flasher
-description: PØLYBÎŪS Android flasher — R36S SD, CYD, ESP32-32E resistive, LilyGO T-Deck
+description: PØLYBÎŪS Android flasher — R36S SD, CYD, ESP32-32E, T-Deck, Android OTG ADB
 publish_to: 'none'
-version: 1.2.0+3
+version: 1.3.0+4
 
 environment:
   sdk: ^3.12.2
@@ -14,6 +14,8 @@ dependencies:
   path_provider: ^2.1.5
   path: ^1.9.1
   shared_preferences: ^2.5.5
+  http: ^1.2.2
+  file_picker: ^8.1.7
 
 dev_dependencies:
   flutter_test:

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -15,6 +16,8 @@ class UsbDeviceInfo {
     required this.manufacturerName,
     required this.hasPermission,
     this.usbJtag = false,
+    this.isAdb = false,
+    this.serial = '',
   });
 
   final int deviceId;
@@ -25,6 +28,8 @@ class UsbDeviceInfo {
   final String manufacturerName;
   final bool hasPermission;
   final bool usbJtag;
+  final bool isAdb;
+  final String serial;
 
   factory UsbDeviceInfo.fromMap(Map<dynamic, dynamic> m) {
     return UsbDeviceInfo(
@@ -36,6 +41,8 @@ class UsbDeviceInfo {
       manufacturerName: (m['manufacturerName'] as String?) ?? '',
       hasPermission: m['hasPermission'] as bool? ?? false,
       usbJtag: m['usbJtag'] as bool? ?? false,
+      isAdb: m['hasAdbInterface'] as bool? ?? m['isAdb'] as bool? ?? false,
+      serial: (m['serial'] as String?) ?? '',
     );
   }
 
@@ -44,9 +51,12 @@ class UsbDeviceInfo {
         ? productName
         : manufacturerName.trim().isNotEmpty
             ? manufacturerName
-            : deviceName;
+            : deviceName.isNotEmpty
+                ? deviceName
+                : 'ADB device';
     final jtag = usbJtag ? ' · USB-JTAG' : '';
-    return '$name  (VID 0x${vendorId.toRadixString(16)} PID 0x${productId.toRadixString(16)}$jtag)';
+    final adb = isAdb ? ' · ADB' : '';
+    return '$name  (VID 0x${vendorId.toRadixString(16)} PID 0x${productId.toRadixString(16)}$jtag$adb)';
   }
 }
 
@@ -74,12 +84,78 @@ class ProgressInfo {
   final int total;
 }
 
+/// Catalog entry for APKs installable over OTG ADB.
+class ApkCatalogItem {
+  const ApkCatalogItem({
+    required this.id,
+    required this.title,
+    required this.fileName,
+    required this.url,
+    this.subtitle = '',
+  });
+
+  final String id;
+  final String title;
+  final String fileName;
+  final String url;
+  final String subtitle;
+}
+
 class FlasherBridge {
   FlasherBridge._();
   static final FlasherBridge instance = FlasherBridge._();
 
   static const _methods = MethodChannel('com.polybius.flasher/native');
   static const _events = EventChannel('com.polybius.flasher/events');
+
+  /// Raw GitHub URLs for dist APKs on the shipping branch.
+  static const distBase =
+      'https://github.com/RedTeamFortress666/Main/raw/cursor/pool-pin-bt-ui-d8fa/polybius/dist';
+
+  static const apkCatalog = <ApkCatalogItem>[
+    ApkCatalogItem(
+      id: 'portal_hq',
+      title: 'PØLYBÎŪS PORTAL',
+      subtitle: 'Dev Admin / triple tier',
+      fileName: 'polybius-v1-stable-hq-android-arm64.apk',
+      url: '$distBase/polybius-v1-stable-hq-android-arm64.apk',
+    ),
+    ApkCatalogItem(
+      id: 'v1_user',
+      title: 'PØLYBÎŪS V.1',
+      subtitle: 'ENCRYPT / DECRYPT / SYNC / CONNECT',
+      fileName: 'polybius-v1-stable-user-android-arm64.apk',
+      url: '$distBase/polybius-v1-stable-user-android-arm64.apk',
+    ),
+    ApkCatalogItem(
+      id: 'doomsday',
+      title: 'DOØMSDAY CLØCK',
+      subtitle: '2.1.0 · MechaH portal unlock',
+      fileName: 'doomsday-clock-2.1.0-android-arm64.apk',
+      url: '$distBase/doomsday-clock-2.1.0-android-arm64.apk',
+    ),
+    ApkCatalogItem(
+      id: 'darth_cherry',
+      title: 'DARTH CHERRY',
+      subtitle: 'Dimmer / temptress',
+      fileName: 'darth-cherry-1.0.2-android-arm64.apk',
+      url: '$distBase/darth-cherry-1.0.2-android-arm64.apk',
+    ),
+    ApkCatalogItem(
+      id: 'dev_portal',
+      title: 'DEV PORTAL (MechaH)',
+      subtitle: 'Embedded ritual portal APK',
+      fileName: 'polybius-portal-dev-mechah-android-arm64.apk',
+      url: '$distBase/polybius-portal-dev-mechah-android-arm64.apk',
+    ),
+    ApkCatalogItem(
+      id: 'red_veil',
+      title: 'RED VEIL',
+      subtitle: '1.0.0',
+      fileName: 'red-veil-1.0.0-android-arm64.apk',
+      url: '$distBase/red-veil-1.0.0-android-arm64.apk',
+    ),
+  ];
 
   StreamSubscription<dynamic>? _sub;
   final _logController = StreamController<String>.broadcast();
@@ -119,6 +195,29 @@ class FlasherBridge {
         .toList();
   }
 
+  Future<List<UsbDeviceInfo>> listAdbUsbDevices() async {
+    final raw =
+        await _methods.invokeMethod<List<dynamic>>('listAdbUsbDevices');
+    return (raw ?? [])
+        .whereType<Map>()
+        .map((m) {
+          final info = UsbDeviceInfo.fromMap(m);
+          return UsbDeviceInfo(
+            deviceId: info.deviceId,
+            vendorId: info.vendorId,
+            productId: info.productId,
+            deviceName: info.deviceName,
+            productName: info.productName,
+            manufacturerName: info.manufacturerName,
+            hasPermission: info.hasPermission,
+            usbJtag: info.usbJtag,
+            isAdb: true,
+            serial: info.serial,
+          );
+        })
+        .toList();
+  }
+
   Future<bool> requestUsbPermission(int deviceId) async {
     final raw = await _methods.invokeMethod<Map<dynamic, dynamic>>(
       'requestUsbPermission',
@@ -143,7 +242,7 @@ class FlasherBridge {
       'flashEsp',
       {
         'deviceId': deviceId,
-        if (firmwarePath != null) 'firmwarePath': firmwarePath,
+        'firmwarePath': ?firmwarePath,
         'chip': chip,
         'offset': offset,
         'baud': baud,
@@ -174,6 +273,31 @@ class FlasherBridge {
     return NativeResult.fromMap(raw ?? {});
   }
 
+  Future<NativeResult> installApkAdbUsb({
+    required int deviceId,
+    required String apkPath,
+  }) async {
+    ensureListening();
+    final raw = await _methods.invokeMethod<Map<dynamic, dynamic>>(
+      'installApkAdbUsb',
+      {'deviceId': deviceId, 'apkPath': apkPath},
+    );
+    return NativeResult.fromMap(raw ?? {});
+  }
+
+  Future<NativeResult> installApkAdbTcp({
+    required String host,
+    required int port,
+    required String apkPath,
+  }) async {
+    ensureListening();
+    final raw = await _methods.invokeMethod<Map<dynamic, dynamic>>(
+      'installApkAdbTcp',
+      {'host': host, 'port': port, 'apkPath': apkPath},
+    );
+    return NativeResult.fromMap(raw ?? {});
+  }
+
   Future<String> materializeAsset(String assetPath, String fileName) async {
     final dir = await getApplicationDocumentsDirectory();
     final out = File(p.join(dir.path, fileName));
@@ -189,5 +313,55 @@ class FlasherBridge {
       flush: true,
     );
     return out.path;
+  }
+
+  /// Download (or reuse cached) catalog APK into app documents.
+  Future<String> downloadApk(
+    ApkCatalogItem item, {
+    void Function(double progress, int received, int total)? onProgress,
+  }) async {
+    final dir = await getApplicationDocumentsDirectory();
+    final cacheDir = Directory(p.join(dir.path, 'apk_cache'));
+    if (!await cacheDir.exists()) {
+      await cacheDir.create(recursive: true);
+    }
+    final out = File(p.join(cacheDir.path, item.fileName));
+    if (await out.exists() && await out.length() > 1024 * 100) {
+      onProgress?.call(1.0, await out.length(), await out.length());
+      return out.path;
+    }
+
+    final client = http.Client();
+    try {
+      final request = http.Request('GET', Uri.parse(item.url));
+      final response = await client.send(request);
+      if (response.statusCode != 200) {
+        throw HttpException(
+          'Download failed HTTP ${response.statusCode} for ${item.url}',
+        );
+      }
+      final total = response.contentLength ?? 0;
+      final sink = out.openWrite();
+      var received = 0;
+      await for (final chunk in response.stream) {
+        sink.add(chunk);
+        received += chunk.length;
+        if (total > 0) {
+          onProgress?.call(received / total, received, total);
+        } else {
+          onProgress?.call(0, received, 0);
+        }
+      }
+      await sink.flush();
+      await sink.close();
+      if (await out.length() < 1024) {
+        await out.delete();
+        throw HttpException('Downloaded APK too small');
+      }
+      onProgress?.call(1.0, received, total > 0 ? total : received);
+      return out.path;
+    } finally {
+      client.close();
+    }
   }
 }

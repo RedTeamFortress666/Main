@@ -18,6 +18,7 @@ import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 
 class MainActivity : FlutterFragmentActivity() {
     private val methodChannelName = "com.polybius.flasher/native"
@@ -30,6 +31,7 @@ class MainActivity : FlutterFragmentActivity() {
     private var pendingUsbResult: MethodChannel.Result? = null
     private var pendingTreeResult: MethodChannel.Result? = null
     private var activeFlasher: EspFlasher? = null
+    private val adbCancel = AtomicBoolean(false)
 
     private val treePicker =
         registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
@@ -133,6 +135,8 @@ class MainActivity : FlutterFragmentActivity() {
                     }
                     "cancelFlash" -> {
                         activeFlasher?.cancel()
+                        adbCancel.set(true)
+                        AdbOtgInstaller.cancelActive()
                         result.success(true)
                     }
                     "pickSdTree" -> {
@@ -147,6 +151,26 @@ class MainActivity : FlutterFragmentActivity() {
                             return@setMethodCallHandler
                         }
                         installR36s(zipPath, treeUri, result)
+                    }
+                    "listAdbUsbDevices" -> result.success(listAdbUsbDevices())
+                    "installApkAdbUsb" -> {
+                        val deviceId = call.argument<Int>("deviceId")
+                        val apkPath = call.argument<String>("apkPath")
+                        if (deviceId == null || apkPath.isNullOrBlank()) {
+                            result.error("bad_args", "deviceId and apkPath required", null)
+                            return@setMethodCallHandler
+                        }
+                        installApkAdbUsb(deviceId, apkPath, result)
+                    }
+                    "installApkAdbTcp" -> {
+                        val host = call.argument<String>("host") ?: "127.0.0.1"
+                        val port = call.argument<Int>("port") ?: 5555
+                        val apkPath = call.argument<String>("apkPath")
+                        if (apkPath.isNullOrBlank()) {
+                            result.error("bad_args", "apkPath required", null)
+                            return@setMethodCallHandler
+                        }
+                        installApkAdbTcp(host, port, apkPath, result)
                     }
                     else -> result.notImplemented()
                 }
@@ -336,6 +360,125 @@ class MainActivity : FlutterFragmentActivity() {
                         "message" to installResult.message,
                     ),
                 )
+            }
+        }
+    }
+
+    private fun listAdbUsbDevices(): List<Map<String, Any?>> {
+        return AdbOtgInstaller.listAdbDevices(this).map { d ->
+            mapOf(
+                "deviceId" to d.deviceId,
+                "vendorId" to d.vendorId,
+                "productId" to d.productId,
+                "productName" to (d.productName ?: ""),
+                "manufacturerName" to (d.manufacturerName ?: ""),
+                "serial" to (d.serial ?: ""),
+                "hasAdbInterface" to d.hasAdbInterface,
+                "hasPermission" to d.hasPermission,
+            )
+        }
+    }
+
+    private fun installApkAdbUsb(deviceId: Int, apkPath: String, result: MethodChannel.Result) {
+        io.execute {
+            adbCancel.set(false)
+            val device = AdbOtgInstaller.findDevice(this, deviceId)
+            if (device == null) {
+                mainHandler.post { result.error("no_device", "ADB USB device not found", null) }
+                return@execute
+            }
+            val manager = getSystemService(USB_SERVICE) as UsbManager
+            if (!manager.hasPermission(device)) {
+                mainHandler.post { result.error("no_permission", "USB permission denied", null) }
+                return@execute
+            }
+            val apk = File(apkPath)
+            if (!apk.isFile) {
+                mainHandler.post { result.error("no_file", "APK not found: $apkPath", null) }
+                return@execute
+            }
+            try {
+                val msg =
+                    AdbOtgInstaller.installViaUsb(
+                        context = this,
+                        device = device,
+                        apkFile = apk,
+                        cancel = adbCancel,
+                        onProgress = { p, log ->
+                            emit("log", log)
+                            emit(
+                                "progress",
+                                mapOf(
+                                    "progress" to p,
+                                    "written" to 0L,
+                                    "total" to 0L,
+                                ),
+                            )
+                        },
+                    )
+                mainHandler.post {
+                    result.success(mapOf("ok" to true, "message" to msg))
+                }
+            } catch (e: Exception) {
+                emit("log", "ADB install error: ${e.message}")
+                mainHandler.post {
+                    result.success(
+                        mapOf(
+                            "ok" to false,
+                            "message" to (e.message ?: e.toString()),
+                        ),
+                    )
+                }
+            }
+        }
+    }
+
+    private fun installApkAdbTcp(
+        host: String,
+        port: Int,
+        apkPath: String,
+        result: MethodChannel.Result,
+    ) {
+        io.execute {
+            adbCancel.set(false)
+            val apk = File(apkPath)
+            if (!apk.isFile) {
+                mainHandler.post { result.error("no_file", "APK not found: $apkPath", null) }
+                return@execute
+            }
+            try {
+                val msg =
+                    AdbOtgInstaller.installViaTcp(
+                        context = this,
+                        host = host,
+                        port = port,
+                        apkFile = apk,
+                        cancel = adbCancel,
+                        onProgress = { p, log ->
+                            emit("log", log)
+                            emit(
+                                "progress",
+                                mapOf(
+                                    "progress" to p,
+                                    "written" to 0L,
+                                    "total" to 0L,
+                                ),
+                            )
+                        },
+                    )
+                mainHandler.post {
+                    result.success(mapOf("ok" to true, "message" to msg))
+                }
+            } catch (e: Exception) {
+                emit("log", "ADB TCP install error: ${e.message}")
+                mainHandler.post {
+                    result.success(
+                        mapOf(
+                            "ok" to false,
+                            "message" to (e.message ?: e.toString()),
+                        ),
+                    )
+                }
             }
         }
     }

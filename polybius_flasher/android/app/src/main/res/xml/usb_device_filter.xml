@@ -18,4 +18,6 @@
     <usb-device vendor-id="12346" product-id="33041" />
     <!-- CDC ACM catch-all classes (T-Deck, etc.) — matched in code too -->
     <usb-device class="2" subclass="2" protocol="1" />
+    <!-- Android ADB gadget (OTG phone-to-phone) -->
+    <usb-device class="255" subclass="66" protocol="1" />
 </resources>

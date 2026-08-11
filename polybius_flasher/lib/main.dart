@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -55,13 +56,15 @@ class FlasherColors {
   static const grid = Color(0x145CFF8A);
 }
 
-enum FlashTarget { r36s, cyd, esp32e, tdeck }
+enum FlashTarget { r36s, cyd, esp32e, tdeck, androidOtg }
 
 extension FlashTargetX on FlashTarget {
   bool get isEsp =>
       this == FlashTarget.cyd ||
       this == FlashTarget.esp32e ||
       this == FlashTarget.tdeck;
+
+  bool get isAndroidOtg => this == FlashTarget.androidOtg;
 
   String get defaultChip =>
       this == FlashTarget.tdeck ? 'esp32s3' : 'esp32';
@@ -71,19 +74,20 @@ extension FlashTargetX on FlashTarget {
         FlashTarget.cyd => 115200,
         FlashTarget.tdeck => 115200,
         FlashTarget.r36s => 115200,
+        FlashTarget.androidOtg => 115200,
       };
 
   String get firmwareAsset => switch (this) {
         FlashTarget.cyd || FlashTarget.esp32e =>
           'assets/firmware/polybius-cyd.bin',
         FlashTarget.tdeck => 'assets/firmware/polybius-tdeck.bin',
-        FlashTarget.r36s => '',
+        FlashTarget.r36s || FlashTarget.androidOtg => '',
       };
 
   String get firmwareFileName => switch (this) {
         FlashTarget.cyd || FlashTarget.esp32e => 'polybius-cyd.bin',
         FlashTarget.tdeck => 'polybius-tdeck.bin',
-        FlashTarget.r36s => '',
+        FlashTarget.r36s || FlashTarget.androidOtg => '',
       };
 }
 
@@ -123,6 +127,13 @@ class _FlasherHomePageState extends State<FlasherHomePage>
   String? _lastSdTreeUri;
   bool _didAutoSuggest = false;
 
+  // Android OTG ADB
+  ApkCatalogItem? _apkItem;
+  String? _localApkPath;
+  bool _useTcpAdb = false;
+  final _tcpHostCtrl = TextEditingController(text: '192.168.1.1');
+  final _tcpPortCtrl = TextEditingController(text: '5555');
+
   static const _baudOptions = [115200, 230400, 460800, 921600];
 
   @override
@@ -156,6 +167,8 @@ class _FlasherHomePageState extends State<FlasherHomePage>
     _logSub?.cancel();
     _progressSub?.cancel();
     _customOffsetCtrl.dispose();
+    _tcpHostCtrl.dispose();
+    _tcpPortCtrl.dispose();
     super.dispose();
   }
 
@@ -169,8 +182,18 @@ class _FlasherHomePageState extends State<FlasherHomePage>
         'esp32e' => FlashTarget.esp32e,
         'tdeck' => FlashTarget.tdeck,
         'r36s' => FlashTarget.r36s,
+        'androidOtg' => FlashTarget.androidOtg,
         _ => null,
       };
+      if (_target == FlashTarget.androidOtg) {
+        final apkId = prefs.getString('android_apk_id');
+        _apkItem = FlasherBridge.apkCatalog
+            .where((a) => a.id == apkId)
+            .firstOrNull;
+        _useTcpAdb = prefs.getBool('android_use_tcp') ?? false;
+        _tcpHostCtrl.text = prefs.getString('android_tcp_host') ?? '192.168.1.1';
+        _tcpPortCtrl.text = prefs.getString('android_tcp_port') ?? '5555';
+      }
       if (_target != null && _target!.isEsp) {
         _applyTargetDefaults(_target!, loadSaved: true, prefs: prefs);
       }
@@ -188,6 +211,15 @@ class _FlasherHomePageState extends State<FlasherHomePage>
       }
       return;
     }
+    if (_target == FlashTarget.androidOtg) {
+      if (_apkItem != null) {
+        await prefs.setString('android_apk_id', _apkItem!.id);
+      }
+      await prefs.setBool('android_use_tcp', _useTcpAdb);
+      await prefs.setString('android_tcp_host', _tcpHostCtrl.text.trim());
+      await prefs.setString('android_tcp_port', _tcpPortCtrl.text.trim());
+      return;
+    }
     await prefs.setString('${key}_addressMode', _addressMode.name);
     await prefs.setString('${key}_customOffset', _customOffsetCtrl.text);
     await prefs.setString('${key}_chip', _chip);
@@ -201,7 +233,7 @@ class _FlasherHomePageState extends State<FlasherHomePage>
     bool loadSaved = false,
     SharedPreferences? prefs,
   }) {
-    if (t == FlashTarget.r36s) return;
+    if (t == FlashTarget.r36s || t == FlashTarget.androidOtg) return;
     final key = t.name;
     if (loadSaved && prefs != null) {
       final mode = prefs.getString('${key}_addressMode');
@@ -236,6 +268,21 @@ class _FlasherHomePageState extends State<FlasherHomePage>
 
   Future<void> _refreshUsb() async {
     try {
+      if (_target == FlashTarget.androidOtg) {
+        final list = await FlasherBridge.instance.listAdbUsbDevices();
+        setState(() {
+          _devices = list;
+          if (_selected != null) {
+            _selected = list
+                .where((d) => d.deviceId == _selected!.deviceId)
+                .firstOrNull;
+          }
+        });
+        for (final d in list) {
+          _append('ADB ${d.label}');
+        }
+        return;
+      }
       final list = await FlasherBridge.instance.listUsbDevices();
       setState(() {
         _devices = list;
@@ -512,6 +559,12 @@ class _FlasherHomePageState extends State<FlasherHomePage>
             fileName: target.firmwareFileName,
             testOnly: testOnly,
           );
+        case FlashTarget.androidOtg:
+          if (testOnly) {
+            setState(() => _status = 'Test connection not used for Android OTG');
+            return;
+          }
+          await _runAndroidOtg();
       }
     } catch (e) {
       setState(() => _status = 'Failed: $e');
@@ -659,6 +712,156 @@ class _FlasherHomePageState extends State<FlasherHomePage>
     }
   }
 
+  Future<void> _runAndroidOtg() async {
+    final localPath = _localApkPath;
+    final catalog = _apkItem;
+    if (localPath == null && catalog == null) {
+      setState(() => _status = 'Pick a catalog APK or a local .apk file');
+      return;
+    }
+
+    if (!_useTcpAdb) {
+      final ok = await _confirmAndroidOtg();
+      if (!ok) {
+        setState(() => _status = 'Cancelled');
+        return;
+      }
+    }
+
+    late final String apkPath;
+    if (localPath != null) {
+      apkPath = localPath;
+      _append('Using local APK: $apkPath');
+    } else {
+      _append('Downloading ${catalog!.fileName}…');
+      setState(() => _status = 'Downloading ${catalog.title}…');
+      apkPath = await FlasherBridge.instance.downloadApk(
+        catalog,
+        onProgress: (p, recv, total) {
+          setState(() {
+            _progress = p.clamp(0.0, 1.0);
+            _written = recv;
+            _total = total;
+          });
+        },
+      );
+      _append('Cached: $apkPath');
+    }
+
+    if (_useTcpAdb) {
+      final host = _tcpHostCtrl.text.trim();
+      final port = int.tryParse(_tcpPortCtrl.text.trim()) ?? 5555;
+      _append('TCP ADB install → $host:$port');
+      setState(() => _status = 'Installing over TCP ADB…');
+      final result = await FlasherBridge.instance.installApkAdbTcp(
+        host: host,
+        port: port,
+        apkPath: apkPath,
+      );
+      setState(() => _status = result.message);
+      _append(result.ok ? 'OK ${result.message}' : 'FAIL ${result.message}');
+      return;
+    }
+
+    final device = await _ensureAdbDevice();
+    if (device == null) return;
+    _append(device.label);
+    setState(() => _status = 'Installing over USB OTG ADB…');
+    final result = await FlasherBridge.instance.installApkAdbUsb(
+      deviceId: device.deviceId,
+      apkPath: apkPath,
+    );
+    setState(() => _status = result.message);
+    _append(result.ok ? 'OK ${result.message}' : 'FAIL ${result.message}');
+  }
+
+  Future<bool> _confirmAndroidOtg() async {
+    if (!mounted) return false;
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: FlasherColors.panel,
+        title: Text(
+          'ANDROID OTG ADB',
+          style: GoogleFonts.orbitron(color: FlasherColors.amber, fontSize: 14),
+        ),
+        content: Text(
+          'On the TARGET phone:\n'
+          '1. Enable Developer options → USB debugging\n'
+          '2. Connect with a data OTG cable (host = this flasher phone)\n'
+          '3. When prompted, tap Allow USB debugging (RSA key)\n'
+          '4. Leave the target unlocked during install\n\n'
+          'Then tap INSTALL.',
+          style: GoogleFonts.shareTechMono(
+            color: FlasherColors.phosphor,
+            fontSize: 13,
+            height: 1.4,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('CANCEL', style: GoogleFonts.shareTechMono()),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              'INSTALL',
+              style: GoogleFonts.shareTechMono(color: FlasherColors.phosphor),
+            ),
+          ),
+        ],
+      ),
+    );
+    return go == true;
+  }
+
+  Future<UsbDeviceInfo?> _ensureAdbDevice() async {
+    await _refreshUsb();
+    if (_devices.isEmpty) {
+      setState(
+        () => _status =
+            'No ADB USB device — enable USB debugging on the target and reconnect OTG',
+      );
+      return null;
+    }
+    var device = _selected ?? _devices.first;
+    if (!device.hasPermission) {
+      _append('Requesting USB permission…');
+      final ok =
+          await FlasherBridge.instance.requestUsbPermission(device.deviceId);
+      if (!ok) {
+        setState(() => _status = 'USB permission denied');
+        return null;
+      }
+      await _refreshUsb();
+      device = _devices
+              .where((d) => d.deviceId == device.deviceId)
+              .firstOrNull ??
+          device;
+    }
+    return device;
+  }
+
+  Future<void> _pickLocalApk() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['apk'],
+      withData: false,
+    );
+    if (result == null || result.files.isEmpty) return;
+    final path = result.files.single.path;
+    if (path == null) {
+      _append('Could not read picked APK path');
+      return;
+    }
+    setState(() {
+      _localApkPath = path;
+      _apkItem = null;
+    });
+    _append('Local APK selected: $path');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -719,6 +922,7 @@ class _FlasherHomePageState extends State<FlasherHomePage>
 
   Widget _buildControls() {
     final esp = _target?.isEsp ?? false;
+    final android = _target?.isAndroidOtg ?? false;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -776,17 +980,34 @@ class _FlasherHomePageState extends State<FlasherHomePage>
           enabled: !_busy,
           onTap: () => _selectTarget(FlashTarget.tdeck),
         ),
+        const SizedBox(height: 10),
+        _TargetTile(
+          selected: _target == FlashTarget.androidOtg,
+          title: 'ANDROID (OTG ADB)',
+          subtitle:
+              'Install Portal / V.1 / Doomsday / etc onto another phone via USB',
+          enabled: !_busy,
+          onTap: () async {
+            await _selectTarget(FlashTarget.androidOtg);
+            await _refreshUsb();
+          },
+        ),
         if (esp) ...[
           const SizedBox(height: 16),
           _UsbPicker(
             devices: _devices,
             selected: _selected,
             busy: _busy,
+            emptyHint: 'None found — connect OTG cable to the board.',
             onRefresh: _refreshUsb,
             onSelect: (d) => setState(() => _selected = d),
           ),
           const SizedBox(height: 16),
           _buildEspOptions(),
+        ],
+        if (android) ...[
+          const SizedBox(height: 16),
+          _buildAndroidOtgOptions(),
         ],
         const SizedBox(height: 20),
         FilledButton(
@@ -799,7 +1020,11 @@ class _FlasherHomePageState extends State<FlasherHomePage>
             shape: const RoundedRectangleBorder(),
           ),
           child: Text(
-            _busy ? 'WORKING…' : 'FLASH',
+            _busy
+                ? 'WORKING…'
+                : android
+                    ? 'INSTALL APK'
+                    : 'FLASH',
             style: GoogleFonts.shareTechMono(
               fontWeight: FontWeight.w700,
               letterSpacing: 4,
@@ -831,6 +1056,155 @@ class _FlasherHomePageState extends State<FlasherHomePage>
               'CANCEL',
               style: GoogleFonts.shareTechMono(color: FlasherColors.danger),
             ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildAndroidOtgOptions() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'APK TO INSTALL',
+          style: GoogleFonts.shareTechMono(
+            color: FlasherColors.amber,
+            letterSpacing: 2,
+            fontSize: 11,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Downloads once into cache, then pushes over ADB sync + pm install.',
+          style: GoogleFonts.shareTechMono(
+            color: FlasherColors.dim,
+            fontSize: 11,
+            height: 1.35,
+          ),
+        ),
+        const SizedBox(height: 10),
+        for (final item in FlasherBridge.apkCatalog) ...[
+          InkWell(
+            onTap: _busy
+                ? null
+                : () => setState(() {
+                      _apkItem = item;
+                      _localApkPath = null;
+                    }),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    _apkItem?.id == item.id && _localApkPath == null
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_off,
+                    size: 18,
+                    color: FlasherColors.phosphor,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.title,
+                          style: GoogleFonts.orbitron(
+                            fontSize: 12,
+                            color: FlasherColors.phosphor,
+                          ),
+                        ),
+                        Text(
+                          item.subtitle,
+                          style: GoogleFonts.shareTechMono(
+                            fontSize: 10,
+                            color: FlasherColors.dim,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+        const SizedBox(height: 8),
+        OutlinedButton(
+          onPressed: _busy ? null : _pickLocalApk,
+          style: OutlinedButton.styleFrom(
+            foregroundColor: FlasherColors.amber,
+            side: const BorderSide(color: FlasherColors.amber),
+            minimumSize: const Size.fromHeight(44),
+            shape: const RoundedRectangleBorder(),
+          ),
+          child: Text(
+            _localApkPath == null
+                ? 'PICK LOCAL .APK'
+                : 'LOCAL: ${_localApkPath!.split('/').last}',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.shareTechMono(fontSize: 12),
+          ),
+        ),
+        const SizedBox(height: 12),
+        CheckboxListTile(
+          contentPadding: EdgeInsets.zero,
+          dense: true,
+          value: _useTcpAdb,
+          activeColor: FlasherColors.phosphor,
+          title: Text(
+            'Use TCP ADB instead of USB (adb tcpip 5555)',
+            style: GoogleFonts.shareTechMono(fontSize: 12),
+          ),
+          onChanged: _busy
+              ? null
+              : (v) => setState(() => _useTcpAdb = v ?? false),
+        ),
+        if (_useTcpAdb) ...[
+          Row(
+            children: [
+              Expanded(
+                flex: 3,
+                child: TextField(
+                  controller: _tcpHostCtrl,
+                  enabled: !_busy,
+                  style: GoogleFonts.shareTechMono(color: FlasherColors.phosphor),
+                  decoration: InputDecoration(
+                    labelText: 'HOST',
+                    labelStyle: GoogleFonts.shareTechMono(color: FlasherColors.dim),
+                    isDense: true,
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: _tcpPortCtrl,
+                  enabled: !_busy,
+                  keyboardType: TextInputType.number,
+                  style: GoogleFonts.shareTechMono(color: FlasherColors.phosphor),
+                  decoration: InputDecoration(
+                    labelText: 'PORT',
+                    labelStyle: GoogleFonts.shareTechMono(color: FlasherColors.dim),
+                    isDense: true,
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ] else ...[
+          _UsbPicker(
+            devices: _devices,
+            selected: _selected,
+            busy: _busy,
+            emptyHint:
+                'No ADB gadget — enable USB debugging on the target phone.',
+            onRefresh: _refreshUsb,
+            onSelect: (d) => setState(() => _selected = d),
           ),
         ],
       ],
@@ -1110,7 +1484,7 @@ class _HeroHeader extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'R36S SD · CYD · LilyGO T-Deck — robust download-mode entry.',
+              'R36S SD · CYD · T-Deck · Android OTG ADB — flash boards & install apps.',
               style: GoogleFonts.shareTechMono(
                 color: FlasherColors.dim,
                 fontSize: 12,
@@ -1255,6 +1629,7 @@ class _UsbPicker extends StatelessWidget {
     required this.busy,
     required this.onRefresh,
     required this.onSelect,
+    this.emptyHint = 'None found — connect OTG cable to the board.',
   });
 
   final List<UsbDeviceInfo> devices;
@@ -1262,6 +1637,7 @@ class _UsbPicker extends StatelessWidget {
   final bool busy;
   final VoidCallback onRefresh;
   final ValueChanged<UsbDeviceInfo> onSelect;
+  final String emptyHint;
 
   @override
   Widget build(BuildContext context) {
@@ -1293,7 +1669,7 @@ class _UsbPicker extends StatelessWidget {
         ),
         if (devices.isEmpty)
           Text(
-            'None found — connect OTG cable to the board.',
+            emptyHint,
             style: GoogleFonts.shareTechMono(
               color: FlasherColors.dim,
               fontSize: 12,
