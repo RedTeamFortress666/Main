@@ -55,7 +55,37 @@ class FlasherColors {
   static const grid = Color(0x145CFF8A);
 }
 
-enum FlashTarget { r36s, cyd, tdeck }
+enum FlashTarget { r36s, cyd, esp32e, tdeck }
+
+extension FlashTargetX on FlashTarget {
+  bool get isEsp =>
+      this == FlashTarget.cyd ||
+      this == FlashTarget.esp32e ||
+      this == FlashTarget.tdeck;
+
+  String get defaultChip =>
+      this == FlashTarget.tdeck ? 'esp32s3' : 'esp32';
+
+  int get defaultBaud => switch (this) {
+        FlashTarget.esp32e => 460800,
+        FlashTarget.cyd => 115200,
+        FlashTarget.tdeck => 115200,
+        FlashTarget.r36s => 115200,
+      };
+
+  String get firmwareAsset => switch (this) {
+        FlashTarget.cyd || FlashTarget.esp32e =>
+          'assets/firmware/polybius-cyd.bin',
+        FlashTarget.tdeck => 'assets/firmware/polybius-tdeck.bin',
+        FlashTarget.r36s => '',
+      };
+
+  String get firmwareFileName => switch (this) {
+        FlashTarget.cyd || FlashTarget.esp32e => 'polybius-cyd.bin',
+        FlashTarget.tdeck => 'polybius-tdeck.bin',
+        FlashTarget.r36s => '',
+      };
+}
 
 enum AddressMode { fullImage, appOnly, custom }
 
@@ -91,6 +121,7 @@ class _FlasherHomePageState extends State<FlasherHomePage>
   bool _skipAutoReset = false;
 
   String? _lastSdTreeUri;
+  bool _didAutoSuggest = false;
 
   static const _baudOptions = [115200, 230400, 460800, 921600];
 
@@ -133,10 +164,14 @@ class _FlasherHomePageState extends State<FlasherHomePage>
     setState(() {
       _lastSdTreeUri = prefs.getString('r36s_tree_uri');
       final t = prefs.getString('last_target');
-      if (t == 'cyd') _target = FlashTarget.cyd;
-      if (t == 'tdeck') _target = FlashTarget.tdeck;
-      if (t == 'r36s') _target = FlashTarget.r36s;
-      if (_target == FlashTarget.cyd || _target == FlashTarget.tdeck) {
+      _target = switch (t) {
+        'cyd' => FlashTarget.cyd,
+        'esp32e' => FlashTarget.esp32e,
+        'tdeck' => FlashTarget.tdeck,
+        'r36s' => FlashTarget.r36s,
+        _ => null,
+      };
+      if (_target != null && _target!.isEsp) {
         _applyTargetDefaults(_target!, loadSaved: true, prefs: prefs);
       }
     });
@@ -176,17 +211,16 @@ class _FlasherHomePageState extends State<FlasherHomePage>
       );
       _customOffsetCtrl.text =
           prefs.getString('${key}_customOffset') ?? '0x0';
-      _chip = prefs.getString('${key}_chip') ??
-          (t == FlashTarget.tdeck ? 'esp32s3' : 'esp32');
-      _baud = prefs.getInt('${key}_baud') ?? 115200;
+      _chip = prefs.getString('${key}_chip') ?? t.defaultChip;
+      _baud = prefs.getInt('${key}_baud') ?? t.defaultBaud;
       _eraseAll = prefs.getBool('${key}_eraseAll') ?? false;
       _hardResetAfter = prefs.getBool('${key}_hardReset') ?? true;
       return;
     }
-    _chip = t == FlashTarget.tdeck ? 'esp32s3' : 'esp32';
+    _chip = t.defaultChip;
     _addressMode = AddressMode.fullImage;
     _customOffsetCtrl.text = '0x0';
-    _baud = 115200;
+    _baud = t.defaultBaud;
     _eraseAll = false;
     _skipAutoReset = false;
   }
@@ -214,8 +248,55 @@ class _FlasherHomePageState extends State<FlasherHomePage>
       for (final d in list) {
         _append('USB ${d.label}');
       }
+      await _maybeSuggestEsp32e(list);
     } catch (e) {
       _append('USB scan failed: $e');
+    }
+  }
+
+  /// Classic ESP32 UART bridges (CP210x / CH340 / FTDI) — not Espressif USB-JTAG.
+  Future<void> _maybeSuggestEsp32e(List<UsbDeviceInfo> list) async {
+    if (_didAutoSuggest || _target != null || list.isEmpty || !mounted) return;
+    final classic = list.where((d) => !d.usbJtag).toList();
+    if (classic.isEmpty) return;
+    _didAutoSuggest = true;
+    final d = classic.first;
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: FlasherColors.panel,
+        title: Text(
+          'CLASSIC ESP32 DETECTED?',
+          style: GoogleFonts.orbitron(color: FlasherColors.amber, fontSize: 13),
+        ),
+        content: Text(
+          'USB ${d.label}\n\n'
+          'This looks like a classic ESP32 UART bridge (not S3 USB-JTAG). '
+          'Use ESP32-32E 240×320 Resistive / CYD-compatible target?',
+          style: GoogleFonts.shareTechMono(
+            color: FlasherColors.phosphor,
+            fontSize: 12,
+            height: 1.4,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('NO', style: GoogleFonts.shareTechMono()),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              'YES — ESP32-32E',
+              style: GoogleFonts.shareTechMono(color: FlasherColors.phosphor),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (go == true && mounted) {
+      await _selectTarget(FlashTarget.esp32e);
+      setState(() => _selected = d);
     }
   }
 
@@ -260,6 +341,16 @@ class _FlasherHomePageState extends State<FlasherHomePage>
             '4. Release BOOT.\n'
             '5. Tap CONTINUE FLASH.\n\n'
             'If auto-reset works you can skip the buttons — we still try DTR/RTS first.';
+      case FlashTarget.esp32e:
+        return 'ESP32-32E 240×320 Resistive\n\n'
+            '1. Plug USB-OTG into the phone and the board.\n'
+            '2. Hold BOOT.\n'
+            '3. Press and release RESET.\n'
+            '4. Release BOOT.\n'
+            '5. Keep holding BOOT until the flasher says “Syncing…”, '
+            'then release and tap CONTINUE FLASH.\n\n'
+            'Common “ESP32-32E + 2.8″ 240×320 resistive” boards are often '
+            'sold as CYD-compatible — same polybius-cyd.bin firmware.';
       default:
         return '';
     }
@@ -414,14 +505,11 @@ class _FlasherHomePageState extends State<FlasherHomePage>
         case FlashTarget.r36s:
           await _runR36s();
         case FlashTarget.cyd:
+        case FlashTarget.esp32e:
         case FlashTarget.tdeck:
           await _runEsp(
-            asset: target == FlashTarget.cyd
-                ? 'assets/firmware/polybius-cyd.bin'
-                : 'assets/firmware/polybius-tdeck.bin',
-            fileName: target == FlashTarget.cyd
-                ? 'polybius-cyd.bin'
-                : 'polybius-tdeck.bin',
+            asset: target.firmwareAsset,
+            fileName: target.firmwareFileName,
             testOnly: testOnly,
           );
       }
@@ -630,7 +718,7 @@ class _FlasherHomePageState extends State<FlasherHomePage>
   }
 
   Widget _buildControls() {
-    final esp = _target == FlashTarget.cyd || _target == FlashTarget.tdeck;
+    final esp = _target?.isEsp ?? false;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -658,6 +746,27 @@ class _FlasherHomePageState extends State<FlasherHomePage>
           enabled: !_busy,
           onTap: () => _selectTarget(FlashTarget.cyd),
         ),
+        const SizedBox(height: 10),
+        _TargetTile(
+          selected: _target == FlashTarget.esp32e,
+          title: 'ESP32-32E 240×320 Resistive',
+          subtitle:
+              'USB serial flash · polybius-cyd.bin @ 0x0 · chip esp32',
+          enabled: !_busy,
+          onTap: () => _selectTarget(FlashTarget.esp32e),
+        ),
+        if (_target == FlashTarget.esp32e) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Note: common ESP32-32E + 2.8″ 240×320 resistive boards are often '
+            'sold as CYD-compatible — same firmware as CYD.',
+            style: GoogleFonts.shareTechMono(
+              color: FlasherColors.dim,
+              fontSize: 11,
+              height: 1.35,
+            ),
+          ),
+        ],
         const SizedBox(height: 10),
         _TargetTile(
           selected: _target == FlashTarget.tdeck,

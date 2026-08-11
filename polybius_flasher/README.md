@@ -6,9 +6,10 @@ Phone-side installer for shipping PØLYBĪUS onto handheld / MCU targets:
 | --- | --- |
 | **R36S** | Unzips the PortMaster port into an SD card `roms/ports/` tree via SAF |
 | **CYD ESP32-2432S028** | USB-OTG serial flash of `polybius-cyd.bin` |
+| **ESP32-32E 240×320 Resistive** | Same CYD firmware on classic ESP32 + 2.8″ resistive panels |
 | **LilyGO T-Deck** | USB-OTG serial flash of `polybius-tdeck.bin` (ESP32-S3 USB-JTAG) |
 
-Package id: `com.polybius.flasher` · Version **1.1.0**
+Package id: `com.polybius.flasher` · Version **1.2.0**
 
 ## T-Deck download mode (important)
 
@@ -37,4 +38,4 @@ flutter test
 flutter build apk --release --target-platform=android-arm64
 ```
 
-Dist: `polybius/dist/polybius-flasher-1.1.0-android-arm64.apk`
+Dist: `polybius/dist/polybius-flasher-1.2.0-android-arm64.apk`

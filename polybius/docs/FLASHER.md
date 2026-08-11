@@ -10,7 +10,7 @@ Phone-side installer for shipping PØLYBĪUS onto handheld / MCU targets without
 
 - App source: [`../../polybius_flasher/`](../../polybius_flasher/)
 - Package id: `com.polybius.flasher`
-- Dist APK: [`../dist/polybius-flasher-1.1.0-android-arm64.apk`](../dist/polybius-flasher-1.1.0-android-arm64.apk)
+- Dist APK: [`../dist/polybius-flasher-1.2.0-android-arm64.apk`](../dist/polybius-flasher-1.2.0-android-arm64.apk)
 
 ## Requirements
 

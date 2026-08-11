@@ -1,7 +1,7 @@
 name: polybius_flasher
-description: PØLYBÎŪS Android flasher — R36S SD Port, CYD ESP32-2432S028, LilyGO T-Deck
+description: PØLYBÎŪS Android flasher — R36S SD, CYD, ESP32-32E resistive, LilyGO T-Deck
 publish_to: 'none'
-version: 1.1.0+2
+version: 1.2.0+3
 
 environment:
   sdk: ^3.12.2
