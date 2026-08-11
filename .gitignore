@@ -26,3 +26,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# PlatformIO / firmware
+phant0m/.pio
+phant0m/.vscode/.browse.c_cpp.db*
+phant0m/.vscode/c_cpp_properties.json
+phant0m/.vscode/launch.json
+phant0m/.vscode/ipch
+*.map
