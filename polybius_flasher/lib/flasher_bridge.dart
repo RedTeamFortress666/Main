@@ -14,6 +14,7 @@ class UsbDeviceInfo {
     required this.productName,
     required this.manufacturerName,
     required this.hasPermission,
+    this.usbJtag = false,
   });
 
   final int deviceId;
@@ -23,6 +24,7 @@ class UsbDeviceInfo {
   final String productName;
   final String manufacturerName;
   final bool hasPermission;
+  final bool usbJtag;
 
   factory UsbDeviceInfo.fromMap(Map<dynamic, dynamic> m) {
     return UsbDeviceInfo(
@@ -33,6 +35,7 @@ class UsbDeviceInfo {
       productName: (m['productName'] as String?) ?? '',
       manufacturerName: (m['manufacturerName'] as String?) ?? '',
       hasPermission: m['hasPermission'] as bool? ?? false,
+      usbJtag: m['usbJtag'] as bool? ?? false,
     );
   }
 
@@ -42,7 +45,8 @@ class UsbDeviceInfo {
         : manufacturerName.trim().isNotEmpty
             ? manufacturerName
             : deviceName;
-    return '$name  (VID ${vendorId.toRadixString(16)} PID ${productId.toRadixString(16)})';
+    final jtag = usbJtag ? ' · USB-JTAG' : '';
+    return '$name  (VID 0x${vendorId.toRadixString(16)} PID 0x${productId.toRadixString(16)}$jtag)';
   }
 }
 
@@ -59,6 +63,17 @@ class NativeResult {
   }
 }
 
+class ProgressInfo {
+  ProgressInfo({
+    required this.progress,
+    this.written = 0,
+    this.total = 0,
+  });
+  final double progress;
+  final int written;
+  final int total;
+}
+
 class FlasherBridge {
   FlasherBridge._();
   static final FlasherBridge instance = FlasherBridge._();
@@ -68,10 +83,10 @@ class FlasherBridge {
 
   StreamSubscription<dynamic>? _sub;
   final _logController = StreamController<String>.broadcast();
-  final _progressController = StreamController<double>.broadcast();
+  final _progressController = StreamController<ProgressInfo>.broadcast();
 
   Stream<String> get logs => _logController.stream;
-  Stream<double> get progress => _progressController.stream;
+  Stream<ProgressInfo> get progress => _progressController.stream;
 
   void ensureListening() {
     _sub ??= _events.receiveBroadcastStream().listen((event) {
@@ -80,8 +95,18 @@ class FlasherBridge {
       final value = event['value'];
       if (type == 'log' && value is String) {
         _logController.add(value);
-      } else if (type == 'progress' && value is num) {
-        _progressController.add(value.toDouble());
+      } else if (type == 'progress') {
+        if (value is num) {
+          _progressController.add(ProgressInfo(progress: value.toDouble()));
+        } else if (value is Map) {
+          _progressController.add(
+            ProgressInfo(
+              progress: (value['progress'] as num?)?.toDouble() ?? 0,
+              written: (value['written'] as num?)?.toInt() ?? 0,
+              total: (value['total'] as num?)?.toInt() ?? 0,
+            ),
+          );
+        }
       }
     });
   }
@@ -104,20 +129,28 @@ class FlasherBridge {
 
   Future<NativeResult> flashEsp({
     required int deviceId,
-    required String firmwarePath,
+    String? firmwarePath,
     required String chip,
-    int offset = 0x10000,
-    int baud = 460800,
+    int offset = 0x0,
+    int baud = 115200,
+    bool eraseAll = false,
+    bool skipAutoReset = false,
+    bool syncOnly = false,
+    bool hardResetAfter = true,
   }) async {
     ensureListening();
     final raw = await _methods.invokeMethod<Map<dynamic, dynamic>>(
       'flashEsp',
       {
         'deviceId': deviceId,
-        'firmwarePath': firmwarePath,
+        if (firmwarePath != null) 'firmwarePath': firmwarePath,
         'chip': chip,
         'offset': offset,
         'baud': baud,
+        'eraseAll': eraseAll,
+        'skipAutoReset': skipAutoReset,
+        'syncOnly': syncOnly,
+        'hardResetAfter': hardResetAfter,
       },
     );
     return NativeResult.fromMap(raw ?? {});
@@ -141,12 +174,10 @@ class FlasherBridge {
     return NativeResult.fromMap(raw ?? {});
   }
 
-  /// Copies a bundled asset into app documents and returns the absolute path.
   Future<String> materializeAsset(String assetPath, String fileName) async {
     final dir = await getApplicationDocumentsDirectory();
     final out = File(p.join(dir.path, fileName));
     if (await out.exists() && await out.length() > 0) {
-      // Refresh if asset may have changed (size mismatch is a cheap check).
       final data = await rootBundle.load(assetPath);
       if (await out.length() == data.lengthInBytes) {
         return out.path;

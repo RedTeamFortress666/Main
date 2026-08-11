@@ -10,7 +10,7 @@ Phone-side installer for shipping PØLYBĪUS onto handheld / MCU targets without
 
 - App source: [`../../polybius_flasher/`](../../polybius_flasher/)
 - Package id: `com.polybius.flasher`
-- Dist APK: [`../dist/polybius-flasher-1.0.0-android-arm64.apk`](../dist/polybius-flasher-1.0.0-android-arm64.apk)
+- Dist APK: [`../dist/polybius-flasher-1.1.0-android-arm64.apk`](../dist/polybius-flasher-1.1.0-android-arm64.apk)
 
 ## Requirements
 
@@ -21,7 +21,7 @@ Phone-side installer for shipping PØLYBĪUS onto handheld / MCU targets without
 
 ## Operator flow
 
-1. Sideload `polybius-flasher-1.0.0-android-arm64.apk`.
+1. Sideload `polybius-flasher-1.1.0-android-arm64.apk`.
 2. Open **PØLYBÎŪS FLASHER**.
 3. Select target → **FLASH**.
 4. ESP: grant USB permission; if sync fails, hold **BOOT**, tap **RESET**.
@@ -34,3 +34,9 @@ cd polybius/firmware
 pio run -e cyd -t upload
 pio run -e tdeck -t upload
 ```
+
+
+## T-Deck tip (1.1)
+
+If sync times out on cmd `0x08`, hold trackball BOOT, reset, then use **Skip auto-reset** in the flasher.
+Default flash address is now **0x0** (full image).

@@ -45,7 +45,6 @@ class MainActivity : FlutterFragmentActivity() {
                     Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
                 )
             } catch (_: SecurityException) {
-                // Some providers don't allow persistable grants; continue anyway.
             }
             result?.success(uri.toString())
         }
@@ -92,9 +91,7 @@ class MainActivity : FlutterFragmentActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, methodChannelName)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
-                    "listUsbDevices" -> {
-                        result.success(listUsbDevices())
-                    }
+                    "listUsbDevices" -> result.success(listUsbDevices())
                     "requestUsbPermission" -> {
                         val deviceId = call.argument<Int>("deviceId")
                         if (deviceId == null) {
@@ -107,13 +104,32 @@ class MainActivity : FlutterFragmentActivity() {
                         val deviceId = call.argument<Int>("deviceId")
                         val firmwarePath = call.argument<String>("firmwarePath")
                         val chip = call.argument<String>("chip") ?: "esp32"
-                        val offset = call.argument<Int>("offset") ?: EspFlasher.DEFAULT_APP_OFFSET
-                        val baud = call.argument<Int>("baud") ?: 460800
-                        if (deviceId == null || firmwarePath.isNullOrBlank()) {
-                            result.error("bad_args", "deviceId and firmwarePath required", null)
+                        val offset = call.argument<Int>("offset") ?: EspFlasher.DEFAULT_FULL_OFFSET
+                        val baud = call.argument<Int>("baud") ?: 115200
+                        val eraseAll = call.argument<Boolean>("eraseAll") ?: false
+                        val skipAutoReset = call.argument<Boolean>("skipAutoReset") ?: false
+                        val syncOnly = call.argument<Boolean>("syncOnly") ?: false
+                        val hardResetAfter = call.argument<Boolean>("hardResetAfter") ?: true
+                        if (deviceId == null) {
+                            result.error("bad_args", "deviceId required", null)
                             return@setMethodCallHandler
                         }
-                        flashEsp(deviceId, firmwarePath, chip, offset, baud, result)
+                        if (!syncOnly && firmwarePath.isNullOrBlank()) {
+                            result.error("bad_args", "firmwarePath required", null)
+                            return@setMethodCallHandler
+                        }
+                        flashEsp(
+                            deviceId = deviceId,
+                            firmwarePath = firmwarePath,
+                            chipName = chip,
+                            offset = offset,
+                            baud = baud,
+                            eraseAll = eraseAll,
+                            skipAutoReset = skipAutoReset,
+                            syncOnly = syncOnly,
+                            hardResetAfter = hardResetAfter,
+                            result = result,
+                        )
                     }
                     "cancelFlash" -> {
                         activeFlasher?.cancel()
@@ -158,6 +174,8 @@ class MainActivity : FlutterFragmentActivity() {
     private fun listUsbDevices(): List<Map<String, Any?>> {
         val manager = getSystemService(USB_SERVICE) as UsbManager
         return manager.deviceList.values.map { d ->
+            val jtag = d.vendorId == 0x303A &&
+                (d.productId == 0x1001 || d.productId == 0x8140 || d.productId == 0x8141)
             mapOf(
                 "deviceId" to d.deviceId,
                 "vendorId" to d.vendorId,
@@ -166,6 +184,7 @@ class MainActivity : FlutterFragmentActivity() {
                 "productName" to (d.productName ?: ""),
                 "manufacturerName" to (d.manufacturerName ?: ""),
                 "hasPermission" to manager.hasPermission(d),
+                "usbJtag" to jtag,
             )
         }
     }
@@ -200,10 +219,14 @@ class MainActivity : FlutterFragmentActivity() {
 
     private fun flashEsp(
         deviceId: Int,
-        firmwarePath: String,
+        firmwarePath: String?,
         chipName: String,
         offset: Int,
         baud: Int,
+        eraseAll: Boolean,
+        skipAutoReset: Boolean,
+        syncOnly: Boolean,
+        hardResetAfter: Boolean,
         result: MethodChannel.Result,
     ) {
         io.execute {
@@ -222,8 +245,8 @@ class MainActivity : FlutterFragmentActivity() {
                 mainHandler.post { result.error("open_failed", "Could not open USB device", null) }
                 return@execute
             }
-            val file = File(firmwarePath)
-            if (!file.isFile) {
+            val file = if (syncOnly) null else File(firmwarePath!!)
+            if (!syncOnly && (file == null || !file.isFile)) {
                 connection.close()
                 mainHandler.post { result.error("no_file", "Firmware not found: $firmwarePath", null) }
                 return@execute
@@ -237,12 +260,34 @@ class MainActivity : FlutterFragmentActivity() {
                 EspFlasher(
                     usbManager = manager,
                     onLog = { msg -> emit("log", msg) },
-                    onProgress = { p -> emit("progress", p) },
+                    onProgress = { written, total ->
+                        emit(
+                            "progress",
+                            mapOf(
+                                "progress" to if (total > 0) written.toDouble() / total.toDouble() else 0.0,
+                                "written" to written,
+                                "total" to total,
+                            ),
+                        )
+                    },
                 )
             activeFlasher = flasher
             val flashResult =
                 try {
-                    flasher.flash(device, connection, file, chip, offset, baud)
+                    flasher.flash(
+                        device,
+                        connection,
+                        file,
+                        EspFlasher.Options(
+                            chip = chip,
+                            flashOffset = offset,
+                            baud = baud,
+                            eraseAll = eraseAll,
+                            skipAutoReset = skipAutoReset,
+                            syncOnly = syncOnly,
+                            hardResetAfter = hardResetAfter,
+                        ),
+                    )
                 } finally {
                     activeFlasher = null
                     try {
@@ -267,7 +312,16 @@ class MainActivity : FlutterFragmentActivity() {
                 R36sInstaller(
                     context = this,
                     onLog = { msg -> emit("log", msg) },
-                    onProgress = { p -> emit("progress", p) },
+                    onProgress = { p ->
+                        emit(
+                            "progress",
+                            mapOf(
+                                "progress" to p,
+                                "written" to 0L,
+                                "total" to 0L,
+                            ),
+                        )
+                    },
                 )
             val installResult =
                 try {

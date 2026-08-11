@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'flasher_bridge.dart';
 
@@ -55,6 +57,8 @@ class FlasherColors {
 
 enum FlashTarget { r36s, cyd, tdeck }
 
+enum AddressMode { fullImage, appOnly, custom }
+
 class FlasherHomePage extends StatefulWidget {
   const FlasherHomePage({super.key});
 
@@ -69,11 +73,26 @@ class _FlasherHomePageState extends State<FlasherHomePage>
   UsbDeviceInfo? _selected;
   bool _busy = false;
   double _progress = 0;
+  int _written = 0;
+  int _total = 0;
   final _logs = <String>[];
   String? _status;
   late final AnimationController _pulse;
   StreamSubscription<String>? _logSub;
-  StreamSubscription<double>? _progressSub;
+  StreamSubscription<ProgressInfo>? _progressSub;
+
+  // ESP options
+  AddressMode _addressMode = AddressMode.fullImage;
+  final _customOffsetCtrl = TextEditingController(text: '0x0');
+  String _chip = 'esp32s3';
+  int _baud = 115200;
+  bool _eraseAll = false;
+  bool _hardResetAfter = true;
+  bool _skipAutoReset = false;
+
+  String? _lastSdTreeUri;
+
+  static const _baudOptions = [115200, 230400, 460800, 921600];
 
   @override
   void initState() {
@@ -86,12 +105,17 @@ class _FlasherHomePageState extends State<FlasherHomePage>
     _logSub = FlasherBridge.instance.logs.listen((line) {
       setState(() {
         _logs.add(line);
-        if (_logs.length > 80) _logs.removeAt(0);
+        if (_logs.length > 120) _logs.removeAt(0);
       });
     });
     _progressSub = FlasherBridge.instance.progress.listen((p) {
-      setState(() => _progress = p.clamp(0.0, 1.0));
+      setState(() {
+        _progress = p.progress.clamp(0.0, 1.0);
+        _written = p.written;
+        _total = p.total;
+      });
     });
+    _loadPrefs();
     _refreshUsb();
   }
 
@@ -100,7 +124,80 @@ class _FlasherHomePageState extends State<FlasherHomePage>
     _pulse.dispose();
     _logSub?.cancel();
     _progressSub?.cancel();
+    _customOffsetCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _lastSdTreeUri = prefs.getString('r36s_tree_uri');
+      final t = prefs.getString('last_target');
+      if (t == 'cyd') _target = FlashTarget.cyd;
+      if (t == 'tdeck') _target = FlashTarget.tdeck;
+      if (t == 'r36s') _target = FlashTarget.r36s;
+      if (_target == FlashTarget.cyd || _target == FlashTarget.tdeck) {
+        _applyTargetDefaults(_target!, loadSaved: true, prefs: prefs);
+      }
+    });
+  }
+
+  Future<void> _savePrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = _target?.name;
+    if (key == null) return;
+    await prefs.setString('last_target', key);
+    if (_target == FlashTarget.r36s) {
+      if (_lastSdTreeUri != null) {
+        await prefs.setString('r36s_tree_uri', _lastSdTreeUri!);
+      }
+      return;
+    }
+    await prefs.setString('${key}_addressMode', _addressMode.name);
+    await prefs.setString('${key}_customOffset', _customOffsetCtrl.text);
+    await prefs.setString('${key}_chip', _chip);
+    await prefs.setInt('${key}_baud', _baud);
+    await prefs.setBool('${key}_eraseAll', _eraseAll);
+    await prefs.setBool('${key}_hardReset', _hardResetAfter);
+  }
+
+  void _applyTargetDefaults(
+    FlashTarget t, {
+    bool loadSaved = false,
+    SharedPreferences? prefs,
+  }) {
+    if (t == FlashTarget.r36s) return;
+    final key = t.name;
+    if (loadSaved && prefs != null) {
+      final mode = prefs.getString('${key}_addressMode');
+      _addressMode = AddressMode.values.firstWhere(
+        (m) => m.name == mode,
+        orElse: () => AddressMode.fullImage,
+      );
+      _customOffsetCtrl.text =
+          prefs.getString('${key}_customOffset') ?? '0x0';
+      _chip = prefs.getString('${key}_chip') ??
+          (t == FlashTarget.tdeck ? 'esp32s3' : 'esp32');
+      _baud = prefs.getInt('${key}_baud') ?? 115200;
+      _eraseAll = prefs.getBool('${key}_eraseAll') ?? false;
+      _hardResetAfter = prefs.getBool('${key}_hardReset') ?? true;
+      return;
+    }
+    _chip = t == FlashTarget.tdeck ? 'esp32s3' : 'esp32';
+    _addressMode = AddressMode.fullImage;
+    _customOffsetCtrl.text = '0x0';
+    _baud = 115200;
+    _eraseAll = false;
+    _skipAutoReset = false;
+  }
+
+  Future<void> _selectTarget(FlashTarget t) async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _target = t;
+      _applyTargetDefaults(t, loadSaved: true, prefs: prefs);
+    });
+    await prefs.setString('last_target', t.name);
   }
 
   Future<void> _refreshUsb() async {
@@ -114,6 +211,9 @@ class _FlasherHomePageState extends State<FlasherHomePage>
               .firstOrNull;
         }
       });
+      for (final d in list) {
+        _append('USB ${d.label}');
+      }
     } catch (e) {
       _append('USB scan failed: $e');
     }
@@ -122,16 +222,190 @@ class _FlasherHomePageState extends State<FlasherHomePage>
   void _append(String line) {
     setState(() {
       _logs.add(line);
-      if (_logs.length > 80) _logs.removeAt(0);
+      if (_logs.length > 120) _logs.removeAt(0);
     });
   }
 
-  Future<void> _run() async {
+  int get _resolvedOffset {
+    switch (_addressMode) {
+      case AddressMode.fullImage:
+        return 0x0;
+      case AddressMode.appOnly:
+        return 0x10000;
+      case AddressMode.custom:
+        final raw = _customOffsetCtrl.text.trim().toLowerCase();
+        return int.tryParse(
+              raw.startsWith('0x') ? raw.substring(2) : raw,
+              radix: raw.startsWith('0x') ? 16 : 10,
+            ) ??
+            0x0;
+    }
+  }
+
+  String get _downloadInstructions {
+    switch (_target) {
+      case FlashTarget.tdeck:
+        return 'T-Deck (ESP32-S3 USB-JTAG)\n\n'
+            '1. Plug USB-OTG into the phone and the T-Deck.\n'
+            '2. Hold the trackball CENTER button (BOOT / GPIO0).\n'
+            '3. Power on or press RST while still holding.\n'
+            '4. Keep holding 2–3 seconds until the screen stays black.\n'
+            '5. Release BOOT, then tap CONTINUE FLASH.\n\n'
+            'Android often cannot auto-reset USB-JTAG — manual entry is normal.';
+      case FlashTarget.cyd:
+        return 'CYD ESP32-2432S028\n\n'
+            '1. Plug USB-OTG into the phone and the CYD.\n'
+            '2. Hold BOOT.\n'
+            '3. Press & release RESET.\n'
+            '4. Release BOOT.\n'
+            '5. Tap CONTINUE FLASH.\n\n'
+            'If auto-reset works you can skip the buttons — we still try DTR/RTS first.';
+      default:
+        return '';
+    }
+  }
+
+  Future<_DownloadModeChoice?> _showDownloadModeSheet() async {
+    return showModalBottomSheet<_DownloadModeChoice>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: FlasherColors.panel,
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'DOWNLOAD MODE',
+                  style: GoogleFonts.orbitron(
+                    color: FlasherColors.amber,
+                    letterSpacing: 3,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  _downloadInstructions,
+                  style: GoogleFonts.shareTechMono(
+                    color: FlasherColors.phosphor.withValues(alpha: 0.9),
+                    fontSize: 13,
+                    height: 1.45,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                FilledButton(
+                  onPressed: () =>
+                      Navigator.pop(ctx, _DownloadModeChoice.auto),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: FlasherColors.phosphor,
+                    foregroundColor: FlasherColors.voidBlack,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: const RoundedRectangleBorder(),
+                  ),
+                  child: Text(
+                    'CONTINUE FLASH (TRY AUTO-RESET)',
+                    style: GoogleFonts.shareTechMono(
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton(
+                  onPressed: () =>
+                      Navigator.pop(ctx, _DownloadModeChoice.manualReady),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: FlasherColors.amber,
+                    side: const BorderSide(color: FlasherColors.amber),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: const RoundedRectangleBorder(),
+                  ),
+                  child: Text(
+                    'I ALREADY PUT DEVICE IN DOWNLOAD MODE — SKIP',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.shareTechMono(
+                      fontWeight: FontWeight.w700,
+                      height: 1.3,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(
+                    'CANCEL',
+                    style: GoogleFonts.shareTechMono(color: FlasherColors.dim),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showManualFailSheet() async {
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: FlasherColors.panel,
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'SYNC FAILED',
+                  style: GoogleFonts.orbitron(
+                    color: FlasherColors.danger,
+                    letterSpacing: 2,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'ROM never answered cmd 0x08.\n\n$_downloadInstructions\n\n'
+                  'Then tap FLASH again and choose “I already put the device in download mode”.',
+                  style: GoogleFonts.shareTechMono(
+                    color: FlasherColors.phosphor,
+                    fontSize: 13,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: FlasherColors.amber,
+                    foregroundColor: FlasherColors.voidBlack,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: const RoundedRectangleBorder(),
+                  ),
+                  child: Text('GOT IT', style: GoogleFonts.shareTechMono()),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _run({bool testOnly = false}) async {
     final target = _target;
     if (target == null || _busy) return;
     setState(() {
       _busy = true;
       _progress = 0;
+      _written = 0;
+      _total = 0;
       _status = null;
       _logs.clear();
     });
@@ -140,16 +414,15 @@ class _FlasherHomePageState extends State<FlasherHomePage>
         case FlashTarget.r36s:
           await _runR36s();
         case FlashTarget.cyd:
-          await _runEsp(
-            asset: 'assets/firmware/polybius-cyd.bin',
-            fileName: 'polybius-cyd.bin',
-            chip: 'esp32',
-          );
         case FlashTarget.tdeck:
           await _runEsp(
-            asset: 'assets/firmware/polybius-tdeck.bin',
-            fileName: 'polybius-tdeck.bin',
-            chip: 'esp32s3',
+            asset: target == FlashTarget.cyd
+                ? 'assets/firmware/polybius-cyd.bin'
+                : 'assets/firmware/polybius-tdeck.bin',
+            fileName: target == FlashTarget.cyd
+                ? 'polybius-cyd.bin'
+                : 'polybius-tdeck.bin',
+            testOnly: testOnly,
           );
       }
     } catch (e) {
@@ -157,21 +430,59 @@ class _FlasherHomePageState extends State<FlasherHomePage>
       _append('ERROR $e');
     } finally {
       if (mounted) setState(() => _busy = false);
+      await _savePrefs();
     }
   }
 
   Future<void> _runR36s() async {
-    _append('Materializing R36S Port zip…');
+    _append('Select the SD card roms/ or roms/ports/ folder…');
+    if (_lastSdTreeUri != null) {
+      _append('Last folder remembered — picker will open (re-select if needed).');
+    }
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: FlasherColors.panel,
+        title: Text(
+          'R36S SD FOLDER',
+          style: GoogleFonts.orbitron(color: FlasherColors.amber, fontSize: 14),
+        ),
+        content: Text(
+          'Select the roms or roms/ports folder on the SD card '
+          '(ArkOS / JELOS / PortMaster).\n\n'
+          'Example paths: /roms/ports or /roms2/ports',
+          style: GoogleFonts.shareTechMono(
+            color: FlasherColors.phosphor,
+            fontSize: 13,
+            height: 1.4,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('OPEN PICKER', style: GoogleFonts.shareTechMono()),
+          ),
+        ],
+      ),
+    );
+
     final zip = await FlasherBridge.instance.materializeAsset(
       'assets/r36s/polybius-r36s-port.zip',
       'polybius-r36s-port.zip',
     );
-    _append('Pick the SD card roms/ or roms/ports/ folder…');
     final tree = await FlasherBridge.instance.pickSdTree();
     if (tree == null) {
-      setState(() => _status = 'Cancelled — no SD folder selected');
+      setState(
+        () => _status =
+            'No SD folder selected — open the picker and choose roms/ or roms/ports/',
+      );
+      _append('Cancelled folder picker.');
       return;
     }
+    _lastSdTreeUri = tree;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('r36s_tree_uri', tree);
     _append('Writing PortMaster layout…');
     final result = await FlasherBridge.instance.installR36s(
       zipPath: zip,
@@ -181,18 +492,14 @@ class _FlasherHomePageState extends State<FlasherHomePage>
     _append(result.ok ? 'OK ${result.message}' : 'FAIL ${result.message}');
   }
 
-  Future<void> _runEsp({
-    required String asset,
-    required String fileName,
-    required String chip,
-  }) async {
+  Future<UsbDeviceInfo?> _ensureDevice() async {
     await _refreshUsb();
     if (_devices.isEmpty) {
       setState(
         () => _status =
             'No USB serial device — use a USB-OTG cable and plug in the board',
       );
-      return;
+      return null;
     }
     var device = _selected ?? _devices.first;
     if (!device.hasPermission) {
@@ -201,7 +508,7 @@ class _FlasherHomePageState extends State<FlasherHomePage>
           await FlasherBridge.instance.requestUsbPermission(device.deviceId);
       if (!ok) {
         setState(() => _status = 'USB permission denied');
-        return;
+        return null;
       }
       await _refreshUsb();
       device = _devices
@@ -209,19 +516,59 @@ class _FlasherHomePageState extends State<FlasherHomePage>
               .firstOrNull ??
           device;
     }
+    return device;
+  }
 
-    _append('Preparing $fileName ($chip)…');
-    final path = await FlasherBridge.instance.materializeAsset(asset, fileName);
+  Future<void> _runEsp({
+    required String asset,
+    required String fileName,
+    required bool testOnly,
+  }) async {
+    final choice = await _showDownloadModeSheet();
+    if (choice == null) {
+      setState(() => _status = 'Cancelled');
+      return;
+    }
+    _skipAutoReset = choice == _DownloadModeChoice.manualReady;
+
+    final device = await _ensureDevice();
+    if (device == null) return;
+
+    _append(device.label);
+    final offset = _resolvedOffset;
     _append(
-      'If sync fails: hold BOOT, tap RESET, keep BOOT until sync succeeds.',
+      testOnly
+          ? 'Test connection only — chip=$_chip baud=$_baud'
+          : 'Flash $fileName · chip=$_chip · offset=0x${offset.toRadixString(16)} · baud=$_baud'
+              '${_eraseAll ? ' · erase-all' : ''}',
     );
+
+    String? path;
+    if (!testOnly) {
+      path = await FlasherBridge.instance.materializeAsset(asset, fileName);
+      _append('Cached firmware: $path');
+    }
+
     final result = await FlasherBridge.instance.flashEsp(
       deviceId: device.deviceId,
       firmwarePath: path,
-      chip: chip,
+      chip: _chip,
+      offset: offset,
+      baud: _baud,
+      eraseAll: _eraseAll && !testOnly,
+      skipAutoReset: _skipAutoReset,
+      syncOnly: testOnly,
+      hardResetAfter: _hardResetAfter && !testOnly,
     );
+
     setState(() => _status = result.message);
     _append(result.ok ? 'OK ${result.message}' : 'FAIL ${result.message}');
+
+    if (!result.ok &&
+        result.message.toLowerCase().contains('sync failed') &&
+        mounted) {
+      await _showManualFailSheet();
+    }
   }
 
   @override
@@ -244,7 +591,7 @@ class _FlasherHomePageState extends State<FlasherHomePage>
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       _HeroHeader(pulse: _pulse),
-                      const SizedBox(height: 28),
+                      const SizedBox(height: 20),
                       Expanded(
                         child: wide
                             ? Row(
@@ -253,7 +600,7 @@ class _FlasherHomePageState extends State<FlasherHomePage>
                                   Expanded(
                                     flex: 5,
                                     child: SingleChildScrollView(
-                                      child: _buildTargets(),
+                                      child: _buildControls(),
                                     ),
                                   ),
                                   const SizedBox(width: 28),
@@ -262,10 +609,10 @@ class _FlasherHomePageState extends State<FlasherHomePage>
                               )
                             : ListView(
                                 children: [
-                                  _buildTargets(),
+                                  _buildControls(),
                                   const SizedBox(height: 24),
                                   SizedBox(
-                                    height: 360,
+                                    height: 380,
                                     child: _buildConsole(),
                                   ),
                                 ],
@@ -282,7 +629,8 @@ class _FlasherHomePageState extends State<FlasherHomePage>
     );
   }
 
-  Widget _buildTargets() {
+  Widget _buildControls() {
+    final esp = _target == FlashTarget.cyd || _target == FlashTarget.tdeck;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -298,29 +646,28 @@ class _FlasherHomePageState extends State<FlasherHomePage>
         _TargetTile(
           selected: _target == FlashTarget.r36s,
           title: 'R36S',
-          subtitle:
-              'Install Port zip into SD roms/ports (ArkOS / JELOS / PortMaster)',
+          subtitle: 'Install Port zip into SD roms/ports (ArkOS / JELOS)',
           enabled: !_busy,
-          onTap: () => setState(() => _target = FlashTarget.r36s),
+          onTap: () => _selectTarget(FlashTarget.r36s),
         ),
         const SizedBox(height: 10),
         _TargetTile(
           selected: _target == FlashTarget.cyd,
           title: 'CYD ESP32-2432S028',
-          subtitle: 'USB serial flash · polybius-cyd.bin @ 0x10000 · chip esp32',
+          subtitle: 'USB flash · polybius-cyd.bin · default full image @ 0x0',
           enabled: !_busy,
-          onTap: () => setState(() => _target = FlashTarget.cyd),
+          onTap: () => _selectTarget(FlashTarget.cyd),
         ),
         const SizedBox(height: 10),
         _TargetTile(
           selected: _target == FlashTarget.tdeck,
           title: 'LilyGO T-Deck',
           subtitle:
-              'USB serial flash · polybius-tdeck.bin @ 0x10000 · chip esp32s3',
+              'USB-JTAG flash · polybius-tdeck.bin · default full image @ 0x0',
           enabled: !_busy,
-          onTap: () => setState(() => _target = FlashTarget.tdeck),
+          onTap: () => _selectTarget(FlashTarget.tdeck),
         ),
-        if (_target == FlashTarget.cyd || _target == FlashTarget.tdeck) ...[
+        if (esp) ...[
           const SizedBox(height: 16),
           _UsbPicker(
             devices: _devices,
@@ -329,15 +676,17 @@ class _FlasherHomePageState extends State<FlasherHomePage>
             onRefresh: _refreshUsb,
             onSelect: (d) => setState(() => _selected = d),
           ),
+          const SizedBox(height: 16),
+          _buildEspOptions(),
         ],
         const SizedBox(height: 20),
         FilledButton(
-          onPressed: (_target != null && !_busy) ? _run : null,
+          onPressed: (_target != null && !_busy) ? () => _run() : null,
           style: FilledButton.styleFrom(
             backgroundColor: FlasherColors.phosphor,
             foregroundColor: FlasherColors.voidBlack,
             disabledBackgroundColor: FlasherColors.dim.withValues(alpha: 0.3),
-            padding: const EdgeInsets.symmetric(vertical: 16),
+            minimumSize: const Size.fromHeight(52),
             shape: const RoundedRectangleBorder(),
           ),
           child: Text(
@@ -349,6 +698,22 @@ class _FlasherHomePageState extends State<FlasherHomePage>
             ),
           ),
         ),
+        if (esp) ...[
+          const SizedBox(height: 10),
+          OutlinedButton(
+            onPressed: _busy ? null : () => _run(testOnly: true),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: FlasherColors.amber,
+              side: const BorderSide(color: FlasherColors.amber),
+              minimumSize: const Size.fromHeight(48),
+              shape: const RoundedRectangleBorder(),
+            ),
+            child: Text(
+              'TEST CONNECTION ONLY',
+              style: GoogleFonts.shareTechMono(letterSpacing: 1),
+            ),
+          ),
+        ],
         if (_busy) ...[
           const SizedBox(height: 8),
           TextButton(
@@ -363,11 +728,156 @@ class _FlasherHomePageState extends State<FlasherHomePage>
     );
   }
 
+  Widget _buildEspOptions() {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border.all(color: FlasherColors.phosphor.withValues(alpha: 0.25)),
+        color: FlasherColors.panel.withValues(alpha: 0.55),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'FLASH OPTIONS',
+              style: GoogleFonts.shareTechMono(
+                color: FlasherColors.amber,
+                letterSpacing: 2,
+                fontSize: 11,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text('BINARY TYPE', style: _labelStyle()),
+            RadioGroup<AddressMode>(
+              groupValue: _addressMode,
+              onChanged: (v) {
+                if (_busy || v == null) return;
+                setState(() => _addressMode = v);
+              },
+              child: Column(
+                children: [
+                  _radio(AddressMode.fullImage, 'Full image @ 0x0 (recommended)'),
+                  _radio(AddressMode.appOnly, 'Application only @ 0x10000'),
+                  _radio(AddressMode.custom, 'Custom address'),
+                ],
+              ),
+            ),
+            if (_addressMode == AddressMode.custom)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: TextField(
+                  controller: _customOffsetCtrl,
+                  enabled: !_busy,
+                  style: GoogleFonts.shareTechMono(color: FlasherColors.phosphor),
+                  decoration: InputDecoration(
+                    hintText: '0x0',
+                    hintStyle: GoogleFonts.shareTechMono(color: FlasherColors.dim),
+                    isDense: true,
+                    border: const OutlineInputBorder(),
+                  ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9a-fxA-FX]')),
+                  ],
+                ),
+              ),
+            Text('CHIP', style: _labelStyle()),
+            DropdownButtonFormField<String>(
+              key: ValueKey('chip-$_chip'),
+              initialValue: _chip,
+              dropdownColor: FlasherColors.panel,
+              decoration: const InputDecoration(
+                isDense: true,
+                border: OutlineInputBorder(),
+              ),
+              items: const [
+                DropdownMenuItem(value: 'esp32', child: Text('esp32')),
+                DropdownMenuItem(value: 'esp32s3', child: Text('esp32s3')),
+              ],
+              onChanged: _busy
+                  ? null
+                  : (v) {
+                      if (v != null) setState(() => _chip = v);
+                    },
+            ),
+            const SizedBox(height: 10),
+            Text('BAUD', style: _labelStyle()),
+            DropdownButtonFormField<int>(
+              key: ValueKey('baud-$_baud'),
+              initialValue: _baud,
+              dropdownColor: FlasherColors.panel,
+              decoration: const InputDecoration(
+                isDense: true,
+                border: OutlineInputBorder(),
+              ),
+              items: [
+                for (final b in _baudOptions)
+                  DropdownMenuItem(value: b, child: Text('$b')),
+              ],
+              onChanged: _busy
+                  ? null
+                  : (v) {
+                      if (v != null) setState(() => _baud = v);
+                    },
+            ),
+            const SizedBox(height: 8),
+            CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              value: _eraseAll,
+              activeColor: FlasherColors.phosphor,
+              title: Text(
+                'Erase entire flash before writing',
+                style: GoogleFonts.shareTechMono(fontSize: 12),
+              ),
+              onChanged: _busy
+                  ? null
+                  : (v) => setState(() => _eraseAll = v ?? false),
+            ),
+            CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              value: _hardResetAfter,
+              activeColor: FlasherColors.phosphor,
+              title: Text(
+                'Hard reset after successful flash',
+                style: GoogleFonts.shareTechMono(fontSize: 12),
+              ),
+              onChanged: _busy
+                  ? null
+                  : (v) => setState(() => _hardResetAfter = v ?? true),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  TextStyle _labelStyle() => GoogleFonts.shareTechMono(
+        color: FlasherColors.dim,
+        fontSize: 11,
+        letterSpacing: 1,
+      );
+
+  Widget _radio(AddressMode mode, String label) {
+    return RadioListTile<AddressMode>(
+      dense: true,
+      contentPadding: EdgeInsets.zero,
+      value: mode,
+      activeColor: FlasherColors.phosphor,
+      title: Text(label, style: GoogleFonts.shareTechMono(fontSize: 12)),
+    );
+  }
+
   Widget _buildConsole() {
+    final bytesLabel = _total > 0
+        ? '${_formatBytes(_written)} / ${_formatBytes(_total)}'
+        : '${(_progress * 100).clamp(0, 100).toStringAsFixed(0)}%';
     return DecoratedBox(
       decoration: BoxDecoration(
         color: FlasherColors.panel.withValues(alpha: 0.92),
-        border: Border.all(color: FlasherColors.phosphor.withValues(alpha: 0.35)),
+        border:
+            Border.all(color: FlasherColors.phosphor.withValues(alpha: 0.35)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -386,7 +896,7 @@ class _FlasherHomePageState extends State<FlasherHomePage>
                 ),
                 const Spacer(),
                 Text(
-                  '${(_progress * 100).clamp(0, 100).toStringAsFixed(0)}%',
+                  bytesLabel,
                   style: GoogleFonts.shareTechMono(
                     color: FlasherColors.phosphor,
                     fontSize: 12,
@@ -400,7 +910,7 @@ class _FlasherHomePageState extends State<FlasherHomePage>
             child: ClipRect(
               child: LinearProgressIndicator(
                 value: _busy || _progress > 0 ? _progress : 0,
-                minHeight: 3,
+                minHeight: 4,
                 backgroundColor: FlasherColors.grid,
                 color: FlasherColors.phosphor,
               ),
@@ -412,8 +922,8 @@ class _FlasherHomePageState extends State<FlasherHomePage>
               child: Text(
                 _status!,
                 style: GoogleFonts.shareTechMono(
-                  color: _status!.startsWith('FAIL') ||
-                          _status!.startsWith('Failed')
+                  color: _status!.toLowerCase().contains('fail') ||
+                          _status!.toLowerCase().startsWith('failed')
                       ? FlasherColors.danger
                       : FlasherColors.amber,
                   fontSize: 13,
@@ -442,7 +952,15 @@ class _FlasherHomePageState extends State<FlasherHomePage>
       ),
     );
   }
+
+  String _formatBytes(int n) {
+    if (n < 1024) return '${n}B';
+    if (n < 1024 * 1024) return '${(n / 1024).toStringAsFixed(1)}KB';
+    return '${(n / (1024 * 1024)).toStringAsFixed(2)}MB';
+  }
 }
+
+enum _DownloadModeChoice { auto, manualReady }
 
 class _HeroHeader extends StatelessWidget {
   const _HeroHeader({required this.pulse});
@@ -460,7 +978,7 @@ class _HeroHeader extends StatelessWidget {
             Text(
               'PØLYBÎŪS',
               style: GoogleFonts.orbitron(
-                fontSize: 40,
+                fontSize: 36,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 6,
                 color: FlasherColors.phosphor,
@@ -472,24 +990,21 @@ class _HeroHeader extends StatelessWidget {
                 ],
               ),
             ),
-            Transform.translate(
-              offset: const Offset(2, -4),
-              child: Text(
-                'FLASHER',
-                style: GoogleFonts.orbitron(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 10,
-                  color: FlasherColors.amber,
-                ),
+            Text(
+              'FLASHER',
+              style: GoogleFonts.orbitron(
+                fontSize: 20,
+                fontWeight: FontWeight.w500,
+                letterSpacing: 10,
+                color: FlasherColors.amber,
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             Text(
-              'Flash firmware to R36S SD · CYD · LilyGO T-Deck from this phone.',
+              'R36S SD · CYD · LilyGO T-Deck — robust download-mode entry.',
               style: GoogleFonts.shareTechMono(
                 color: FlasherColors.dim,
-                fontSize: 13,
+                fontSize: 12,
                 height: 1.4,
               ),
             ),
@@ -537,17 +1052,6 @@ class _GridPainter extends CustomPainter {
     for (double y = 0; y < size.height; y += step) {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
     }
-    final wash = Paint()
-      ..shader = RadialGradient(
-        colors: [
-          FlasherColors.phosphor.withValues(alpha: 0.08),
-          Colors.transparent,
-        ],
-      ).createShader(Rect.fromCircle(
-        center: Offset(size.width * 0.2, size.height * 0.15),
-        radius: size.shortestSide * 0.7,
-      ));
-    canvas.drawRect(Offset.zero & size, wash);
   }
 
   @override
@@ -593,7 +1097,7 @@ class _TargetTileState extends State<_TargetTile> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 160),
         transform: Matrix4.translationValues(0, _pressed ? 1.5 : 0, 0),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
           color: widget.selected
               ? FlasherColors.phosphor.withValues(alpha: 0.08)
@@ -693,14 +1197,14 @@ class _UsbPicker extends StatelessWidget {
             return InkWell(
               onTap: busy ? null : () => onSelect(d),
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
+                padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Row(
                   children: [
                     Icon(
                       isSel
                           ? Icons.radio_button_checked
                           : Icons.radio_button_off,
-                      size: 16,
+                      size: 18,
                       color: FlasherColors.phosphor,
                     ),
                     const SizedBox(width: 8),
