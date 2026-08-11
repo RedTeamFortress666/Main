@@ -261,6 +261,10 @@ class FlasherBridge {
     return _methods.invokeMethod<String>('pickSdTree');
   }
 
+  Future<String?> pickApk() async {
+    return _methods.invokeMethod<String>('pickApk');
+  }
+
   Future<NativeResult> installR36s({
     required String zipPath,
     required String treeUri,

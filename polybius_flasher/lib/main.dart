@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -844,15 +843,9 @@ class _FlasherHomePageState extends State<FlasherHomePage>
   }
 
   Future<void> _pickLocalApk() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: const ['apk'],
-      withData: false,
-    );
-    if (result == null || result.files.isEmpty) return;
-    final path = result.files.single.path;
+    final path = await FlasherBridge.instance.pickApk();
     if (path == null) {
-      _append('Could not read picked APK path');
+      _append('APK picker cancelled');
       return;
     }
     setState(() {

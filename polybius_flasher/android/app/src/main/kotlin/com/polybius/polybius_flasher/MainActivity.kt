@@ -17,6 +17,7 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
+import java.io.IOException
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -30,6 +31,7 @@ class MainActivity : FlutterFragmentActivity() {
     private var eventSink: EventChannel.EventSink? = null
     private var pendingUsbResult: MethodChannel.Result? = null
     private var pendingTreeResult: MethodChannel.Result? = null
+    private var pendingApkResult: MethodChannel.Result? = null
     private var activeFlasher: EspFlasher? = null
     private val adbCancel = AtomicBoolean(false)
 
@@ -49,6 +51,31 @@ class MainActivity : FlutterFragmentActivity() {
             } catch (_: SecurityException) {
             }
             result?.success(uri.toString())
+        }
+
+    private val apkPicker =
+        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            val result = pendingApkResult
+            pendingApkResult = null
+            if (uri == null) {
+                result?.success(null)
+                return@registerForActivityResult
+            }
+            io.execute {
+                try {
+                    val name = uri.lastPathSegment?.substringAfterLast('/') ?: "picked.apk"
+                    val safeName = name.replace(Regex("[^A-Za-z0-9._-]"), "_")
+                    val out = File(cacheDir, "picked_$safeName")
+                    contentResolver.openInputStream(uri)?.use { input ->
+                        out.outputStream().use { output -> input.copyTo(output) }
+                    } ?: throw IOException("Cannot open picked APK")
+                    mainHandler.post { result?.success(out.absolutePath) }
+                } catch (e: Exception) {
+                    mainHandler.post {
+                        result?.error("pick_failed", e.message ?: e.toString(), null)
+                    }
+                }
+            }
         }
 
     private val usbReceiver =
@@ -142,6 +169,10 @@ class MainActivity : FlutterFragmentActivity() {
                     "pickSdTree" -> {
                         pendingTreeResult = result
                         treePicker.launch(null)
+                    }
+                    "pickApk" -> {
+                        pendingApkResult = result
+                        apkPicker.launch(arrayOf("application/vnd.android.package-archive", "application/octet-stream", "*/*"))
                     }
                     "installR36s" -> {
                         val zipPath = call.argument<String>("zipPath")

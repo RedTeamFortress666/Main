@@ -15,7 +15,6 @@ dependencies:
   path: ^1.9.1
   shared_preferences: ^2.5.5
   http: ^1.2.2
-  file_picker: ^8.1.7
 
 dev_dependencies:
   flutter_test:
