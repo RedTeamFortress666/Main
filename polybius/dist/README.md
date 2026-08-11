@@ -2,7 +2,8 @@
 
 ## PØLYBĪUS V1 STABLE (recommended)
 
-Two Android forks + iOS web portables. See [`../docs/V1_STABLE.md`](../docs/V1_STABLE.md).
+Two Android forks + iOS web portables. See [`../docs/V1_STABLE.md`](../docs/V1_STABLE.md)
+and iOS QR pack [`operators/V1_STABLE_IOS.md`](./operators/V1_STABLE_IOS.md).
 
 | Build | File |
 | --- | --- |

@@ -6,24 +6,25 @@ cards, an active Bluetooth link on CONNECT, and a redesigned Reticulum relay.
 
 ## Downloads
 
-Raw GitHub links (branch `cursor/v1-stable-logins-ios-b952`):
+Raw GitHub links (branch `cursor/hq-v1-ios-downloads-f476`):
 
 ### Android
 
 | Artifact | URL |
 | --- | --- |
-| **PØLYBĪUS Portal — EMOJINIGMA HQ** (dev/admin, triple tier) | https://github.com/RedTeamFortress666/Main/raw/cursor/v1-stable-logins-ios-b952/polybius/dist/polybius-v1-stable-hq-android-arm64.apk |
-| **PØLYBĪUS V1 (USER STABLE)** (operator/agent terminal) | https://github.com/RedTeamFortress666/Main/raw/cursor/v1-stable-logins-ios-b952/polybius/dist/polybius-v1-stable-user-android-arm64.apk |
-| **DARTH CHERRY** (night red-light veil companion) | https://github.com/RedTeamFortress666/Main/raw/cursor/v1-stable-logins-ios-b952/polybius/dist/darth-cherry-1.0.2-android-arm64.apk |
+| **PØLYBĪUS Portal — EMOJINIGMA HQ** (dev/admin, triple tier) | https://github.com/RedTeamFortress666/Main/raw/cursor/hq-v1-ios-downloads-f476/polybius/dist/polybius-v1-stable-hq-android-arm64.apk |
+| **PØLYBĪUS V1 (USER STABLE)** (operator/agent terminal) | https://github.com/RedTeamFortress666/Main/raw/cursor/hq-v1-ios-downloads-f476/polybius/dist/polybius-v1-stable-user-android-arm64.apk |
+| **DARTH CHERRY** (night red-light veil companion) | https://github.com/RedTeamFortress666/Main/raw/cursor/hq-v1-ios-downloads-f476/polybius/dist/darth-cherry-1.0.2-android-arm64.apk |
 
 ### iOS (Safari web portable — Add to Home Screen)
 
 Serve the unzipped folder over **https://** (not `file://`), then Safari → Share → Add to Home Screen.
+QR cards: [`dist/operators/V1_STABLE_IOS.md`](../dist/operators/V1_STABLE_IOS.md).
 
 | Artifact | URL |
 | --- | --- |
-| **Portal — EMOJINIGMA HQ** | https://github.com/RedTeamFortress666/Main/raw/cursor/v1-stable-logins-ios-b952/polybius/dist/polybius-v1-stable-hq-web-portable.zip |
-| **V1 USER STABLE** | https://github.com/RedTeamFortress666/Main/raw/cursor/v1-stable-logins-ios-b952/polybius/dist/polybius-v1-stable-user-web-portable.zip |
+| **Portal — EMOJINIGMA HQ** | https://github.com/RedTeamFortress666/Main/raw/cursor/hq-v1-ios-downloads-f476/polybius/dist/polybius-v1-stable-hq-web-portable.zip |
+| **V1 USER STABLE** | https://github.com/RedTeamFortress666/Main/raw/cursor/hq-v1-ios-downloads-f476/polybius/dist/polybius-v1-stable-user-web-portable.zip |
 
 ### iOS (unsigned native IPA — sideload via AltStore / Sideloadly)
 
@@ -31,8 +32,8 @@ Produced by CI on `macos-latest`; unsigned — sign with your Apple ID.
 
 | Artifact | URL |
 | --- | --- |
-| **Portal — EMOJINIGMA HQ** | https://github.com/RedTeamFortress666/Main/raw/cursor/v1-stable-logins-ios-b952/polybius/dist/polybius-v1-stable-hq-ios-unsigned.ipa |
-| **V1 USER STABLE** | https://github.com/RedTeamFortress666/Main/raw/cursor/v1-stable-logins-ios-b952/polybius/dist/polybius-v1-stable-user-ios-unsigned.ipa |
+| **Portal — EMOJINIGMA HQ** | https://github.com/RedTeamFortress666/Main/raw/cursor/hq-v1-ios-downloads-f476/polybius/dist/polybius-v1-stable-hq-ios-unsigned.ipa |
+| **V1 USER STABLE** | https://github.com/RedTeamFortress666/Main/raw/cursor/hq-v1-ios-downloads-f476/polybius/dist/polybius-v1-stable-user-ios-unsigned.ipa |
 
 Build locally:
 

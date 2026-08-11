@@ -259,8 +259,24 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<bool> verifyPin(String pin) async {
     final user = state.user;
     if (user == null) return false;
-    if (_isLockedOut) return false;
-    if (!EncryptionService.verifyPin(pin, user.pinHash)) {
+    if (_isLockedOut) {
+      state = AuthState(
+        user: user,
+        needsPin: true,
+        error: 'TOO MANY ATTEMPTS — TRY AGAIN LATER',
+      );
+      return false;
+    }
+    final normalized = pin.replaceAll(RegExp(r'\D'), '');
+    if (normalized.length != 6) {
+      state = AuthState(
+        user: user,
+        needsPin: true,
+        error: 'ENTER 6-DIGIT PIN',
+      );
+      return false;
+    }
+    if (!EncryptionService.verifyPin(normalized, user.pinHash)) {
       _recordFailure();
       await _storage.logAudit('PIN_FAIL', user.username);
       return false;
@@ -269,7 +285,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await _storage.logAudit('PIN_OK', user.username);
     var cleared = user.copyWith(requiresPin: false);
     if (EncryptionService.isLegacyHash(user.pinHash)) {
-      cleared = cleared.copyWith(pinHash: EncryptionService.hashPin(pin));
+      cleared =
+          cleared.copyWith(pinHash: EncryptionService.hashPin(normalized));
     }
     await _storage.saveAccount(cleared);
     state = AuthState(user: cleared);
