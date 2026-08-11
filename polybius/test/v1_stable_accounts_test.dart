@@ -1,0 +1,61 @@
+import 'dart:io';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:polybius/core/constants/app_constants.dart';
+import 'package:polybius/core/constants/operator_identities.dart';
+import 'package:polybius/core/crypto/encryption_service.dart';
+import 'package:polybius/core/providers/app_providers.dart';
+import 'package:polybius/core/storage/polybius_secret_store.dart';
+import 'package:polybius/core/storage/storage_service.dart';
+
+class _MemStore implements PolybiusSecretStore {
+  final _data = <String, String>{};
+  @override
+  Future<String?> read(String key) async => _data[key];
+  @override
+  Future<void> write(String key, String value) async => _data[key] = value;
+}
+
+void main() {
+  late Directory tempDir;
+  late StorageService storage;
+  late AuthNotifier auth;
+
+  setUp(() async {
+    tempDir = await Directory.systemTemp.createTemp('polybius_v1');
+    final enc = EncryptionService(_MemStore());
+    await enc.init();
+    storage = StorageService(enc);
+    await storage.init(hivePath: tempDir.path);
+    auth = AuthNotifier(storage);
+  });
+
+  tearDown(() async {
+    await Hive.close();
+    if (tempDir.existsSync()) await tempDir.delete(recursive: true);
+  });
+
+  test('DEVELOPER account is stricken and cannot log in', () async {
+    expect(await storage.getAccount('DEVELOPER'), isNull);
+    final ok = await auth.login('DEVELOPER', 'developer');
+    expect(ok, isFalse);
+    expect(auth.state.error, contains('STRICKEN'));
+  });
+
+  test('operator identity cards exclude DEVELOPER', () {
+    final names =
+        OperatorIdentities.unique.map((o) => o.username.toUpperCase()).toSet();
+    expect(names.contains('DEVELOPER'), isFalse);
+    expect(names.contains('KASP3R'), isTrue);
+    expect(names.contains('REDTEAM01'), isTrue);
+    expect(OperatorIdentities.byUsername('KASP3R')?.inviteOrFileCode,
+        AppConstants.opKasperInviteCode);
+  });
+
+  test('RedTeam01 still bootstraps', () async {
+    final admin = await storage.getAccount(AppConstants.adminUsername);
+    expect(admin, isNotNull);
+    expect(admin!.tier.name, 'admin');
+  });
+}

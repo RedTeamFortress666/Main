@@ -1,5 +1,19 @@
 # Downloadable BETA builds
 
+## PØLYBĪUS V1 STABLE (recommended)
+
+Two Android forks + iOS web portables. See [`../docs/V1_STABLE.md`](../docs/V1_STABLE.md).
+
+| Build | File |
+| --- | --- |
+| **Portal — EMOJINIGMA HQ** (dev/admin) | `polybius-v1-stable-hq-android-arm64.apk` |
+| **V1 USER STABLE** (operators/agents) | `polybius-v1-stable-user-android-arm64.apk` |
+| iOS Portal (Safari PWA) | `polybius-v1-stable-hq-web-portable.zip` |
+| iOS User Stable (Safari PWA) | `polybius-v1-stable-user-web-portable.zip` |
+| **DARTH CHERRY** companion | `darth-cherry-1.0.2-android-arm64.apk` |
+
+## Legacy beta.2 (single binary)
+
 `polybius-1.0.0-beta.2-android-arm64.apk` — Android **arm64-v8a** release APK
 (**beta.2**, includes DARTH CHERRY cipher eyeball / fade / matrix modes). Debug-signed
 for BETA side-loading. Mirrored as the beta.1 filenames below for older links.

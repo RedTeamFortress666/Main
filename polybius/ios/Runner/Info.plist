@@ -70,6 +70,10 @@
 	     terminates the app if this string is missing when the camera opens. -->
 	<key>NSCameraUsageDescription</key>
 	<string>PØLYBĪUS uses the camera only to scan pool-sync QR codes.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>PØLYBĪUS uses Bluetooth to exchange ciphertext with nearby operators.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>PØLYBĪUS uses Bluetooth to exchange ciphertext with nearby operators.</string>
 	<!-- The Reticulum relay connects to a companion bridge on your local network
 	     (a desktop running polybius_bridge.py). iOS 14+ prompts for local network
 	     access; this string explains why. -->
