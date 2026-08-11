@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/models.dart';
+import '../services/apk_installer.dart';
 import '../services/auth_service.dart';
 import '../services/vault_service.dart';
 import '../theme/noir_theme.dart';
@@ -137,6 +138,9 @@ class _PlannerTabState extends State<PlannerTab> {
       await _vault.unlockVaultForDay(widget.session.username, _selected);
       unlocked = true;
       HapticFeedback.heavyImpact();
+      if (_vault.isMechaHDay(_selected)) {
+        await _auth.ensureMechaHDevPortal(widget.session.username);
+      }
     }
 
     if (!mounted) return;
@@ -234,9 +238,7 @@ class _PlannerTabState extends State<PlannerTab> {
           maxLines: 5,
           style: const TextStyle(color: NoirTheme.mist),
           decoration: InputDecoration(
-            hintText: _vault.isUnlockDay(_selected)
-                ? '5 November — hold SAVE NOTE with the riddle…'
-                : 'Note for $dayKey',
+            hintText: _vault.unlockHintFor(_selected),
             hintStyle: TextStyle(color: NoirTheme.mist.withValues(alpha: 0.35)),
             filled: true,
             fillColor: NoirTheme.panel,
@@ -309,7 +311,8 @@ class _PlannerTabState extends State<PlannerTab> {
             ),
         ] else
           Text(
-            'VAULT SEALED — select 5 November, enter the Gunpowder Plot riddle, hold SAVE NOTE until OPEN.',
+            'VAULT SEALED — rituals: 5 Nov (Gunpowder Plot) or 20 Apr '
+            '(Happy Birthday MechaH! I grok thee). Hold SAVE NOTE until OPEN.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: NoirTheme.mist.withValues(alpha: 0.45),
                 ),
@@ -358,6 +361,37 @@ class _PlannerTabState extends State<PlannerTab> {
                   style: const TextStyle(
                     color: NoirTheme.cyan,
                     fontSize: 11,
+                  ),
+                ),
+              ],
+              if (e.assetApk != null) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton(
+                    onPressed: () async {
+                      try {
+                        await ApkInstaller.installAsset(e.assetApk!);
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Install prompt launched'),
+                          ),
+                        );
+                      } catch (err) {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Install failed: $err')),
+                        );
+                      }
+                    },
+                    style: TextButton.styleFrom(
+                      foregroundColor: NoirTheme.peace,
+                    ),
+                    child: const Text(
+                      'INSTALL EMBEDDED APK',
+                      style: TextStyle(letterSpacing: 1.5, fontWeight: FontWeight.w700),
+                    ),
                   ),
                 ),
               ],

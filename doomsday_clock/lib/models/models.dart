@@ -78,6 +78,7 @@ class VaultEntry {
     required this.title,
     required this.detail,
     this.apkHint,
+    this.assetApk,
     this.concealable = false,
     this.concealed = false,
   });
@@ -86,6 +87,9 @@ class VaultEntry {
   final String title;
   final String detail;
   final String? apkHint;
+
+  /// Optional Flutter asset path for an embedded APK (offline install).
+  final String? assetApk;
 
   /// When true, operator may hide this slot (extra privacy for PORTAL APK).
   final bool concealable;
@@ -98,6 +102,7 @@ class VaultEntry {
         'title': title,
         'detail': detail,
         'apkHint': apkHint,
+        'assetApk': assetApk,
         'concealable': concealable,
         'concealed': concealed,
       };
@@ -107,6 +112,7 @@ class VaultEntry {
         title: j['title'] as String,
         detail: j['detail'] as String,
         apkHint: j['apkHint'] as String?,
+        assetApk: j['assetApk'] as String?,
         concealable: j['concealable'] as bool? ?? false,
         concealed: j['concealed'] as bool? ?? false,
       );
@@ -115,6 +121,7 @@ class VaultEntry {
     String? title,
     String? detail,
     String? apkHint,
+    String? assetApk,
     bool? concealable,
     bool? concealed,
   }) =>
@@ -123,6 +130,7 @@ class VaultEntry {
         title: title ?? this.title,
         detail: detail ?? this.detail,
         apkHint: apkHint ?? this.apkHint,
+        assetApk: assetApk ?? this.assetApk,
         concealable: concealable ?? this.concealable,
         concealed: concealed ?? this.concealed,
       );

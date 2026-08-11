@@ -6,6 +6,14 @@ Future<void> bleRequestPermissionsImpl() async {}
 
 Future<bool> bleEnsureOnImpl() async => false;
 
+Future<void> bleStartAdvertisingImpl({
+  required String localName,
+  required void Function(String deviceId, String name) onCentralConnected,
+  required void Function(String deviceId, String payload) onWrite,
+}) async {}
+
+Future<void> bleStopAdvertisingImpl() async {}
+
 Future<void> bleStartScanImpl({
   required void Function(List<BtPeer> peers) onPeers,
   Duration timeout = const Duration(seconds: 14),

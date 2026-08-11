@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'polybius_operators.dart';
 import '../models/models.dart';
+import 'vault_service.dart';
 
 class AuthSession {
   AuthSession({required this.username, required this.displayName, required this.tier});
@@ -33,6 +34,40 @@ class AuthService {
       'https://github.com/RedTeamFortress666/Main/raw/cursor/pool-pin-bt-ui-d8fa/polybius/dist/polybius-v1-stable-hq-android-arm64.apk';
   static const darthCherryApkUrl =
       'https://github.com/RedTeamFortress666/Main/raw/cursor/pool-pin-bt-ui-d8fa/polybius/dist/darth-cherry-1.0.2-android-arm64.apk';
+  static const devPortalApkUrl =
+      'https://github.com/RedTeamFortress666/Main/raw/cursor/pool-pin-bt-ui-d8fa/polybius/dist/polybius-portal-dev-mechah-android-arm64.apk';
+
+  /// Inject MechaH Dev Portal slot after 20 April ritual (idempotent).
+  Future<List<VaultEntry>> ensureMechaHDevPortal(String username) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = 'vault_entries_${username.toUpperCase()}';
+    final raw = prefs.getString(key);
+    final list = raw == null
+        ? <VaultEntry>[]
+        : (jsonDecode(raw) as List<dynamic>)
+            .map((e) => VaultEntry.fromJson(Map<String, dynamic>.from(e as Map)))
+            .toList();
+    if (list.any((e) => e.id == 'portal-dev-mechah')) {
+      return list;
+    }
+    list.add(
+      VaultEntry(
+        id: 'portal-dev-mechah',
+        title: 'PØLYBÎŪS PORTAL · DEV · MECHAH',
+        detail:
+            'Happy Birthday MechaH! I grok thee — embedded Dev Portal ready to install.',
+        apkHint: devPortalApkUrl,
+        assetApk: VaultService.assetDevPortalApk,
+        concealable: true,
+        concealed: false,
+      ),
+    );
+    await prefs.setString(
+      key,
+      jsonEncode(list.map((e) => e.toJson()).toList()),
+    );
+    return list;
+  }
 
   Future<AuthSession?> currentSession() async {
     final prefs = await SharedPreferences.getInstance();

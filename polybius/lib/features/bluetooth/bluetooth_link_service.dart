@@ -125,9 +125,44 @@ class BluetoothLinkNotifier extends StateNotifier<BluetoothLinkState> {
     state = state.copyWith(
       enabled: true,
       localName: named,
-      status: 'Scanning for operators…',
-      advertising: true,
+      status: 'Broadcasting + scanning for operators…',
+      advertising: false,
     );
+
+    try {
+      await bleStartAdvertisingImpl(
+        localName: named,
+        onCentralConnected: (deviceId, peerName) {
+          final peers = [
+            for (final p in state.peers)
+              p.id == deviceId ? p.copyWith(connected: true, name: peerName) : p,
+          ];
+          if (!peers.any((p) => p.id == deviceId)) {
+            peers.add(BtPeer(id: deviceId, name: peerName, connected: true));
+          }
+          state = state.copyWith(
+            peers: peers,
+            advertising: true,
+            status: 'Peer linked (GATT) — $peerName',
+          );
+        },
+        onWrite: (deviceId, payload) {
+          final peer = state.peers.cast<BtPeer?>().firstWhere(
+                (p) => p?.id == deviceId,
+                orElse: () => null,
+              ) ??
+              BtPeer(id: deviceId, name: 'POLYBIUS-PEER', connected: true);
+          _onInbound(peer, payload);
+        },
+      );
+      state = state.copyWith(advertising: true);
+    } catch (e) {
+      state = state.copyWith(
+        advertising: false,
+        status: 'Advertise failed ($e) — scan-only mode',
+      );
+    }
+
     await startScan();
   }
 
@@ -423,6 +458,9 @@ class BluetoothLinkNotifier extends StateNotifier<BluetoothLinkState> {
   }
 
   Future<void> stop() async {
+    try {
+      await bleStopAdvertisingImpl();
+    } catch (_) {}
     await bleDisconnectAllImpl();
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:polybius/core/constants/app_flavor.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 import 'package:polybius/features/bluetooth/bluetooth_link_service.dart';
@@ -127,6 +128,7 @@ class _BluetoothMessagingPanelState
     final bt = ref.watch(bluetoothLinkProvider);
     final operatorName =
         auth.user?.displayName ?? auth.user?.username ?? 'OPERATOR';
+    final flavorTag = AppFlavor.isHq ? 'P' : 'U';
     final peer = _peer(bt);
 
     return Column(
@@ -139,7 +141,7 @@ class _BluetoothMessagingPanelState
           onToggle: (v) {
             ref.read(bluetoothLinkProvider.notifier).setEnabled(
                   v,
-                  operatorName: operatorName,
+                  operatorName: '$flavorTag-$operatorName',
                 );
           },
         ),
@@ -147,7 +149,7 @@ class _BluetoothMessagingPanelState
           const Padding(
             padding: EdgeInsets.only(top: 10),
             child: Text(
-              'Enable the link to scan POLYBIUS-* peers across HQ and user builds.',
+              'Enable to advertise + scan. PORTAL and V.1 find each other over the shared Polybius BLE service.',
               style: TextStyle(color: Colors.white38, fontSize: 11),
             ),
           ),

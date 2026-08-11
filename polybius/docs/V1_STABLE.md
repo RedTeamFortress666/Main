@@ -74,14 +74,17 @@ CONNECT → **RETICULUM RELAY**
 
 ## Bluetooth
 
-CONNECT → **BLUETOOTH LINK** toggle scans for nearby `POLYBIUS-*` devices across
-HQ and user builds. The panel is a neo-noir cyberpunk messaging surface:
+CONNECT → **BLUETOOTH LINK** advertises a shared Polybius GATT service and scans
+for peers on both **PORTAL (HQ)** and **V.1 (USER)** builds. Phones find each
+other over the common service UUID (plus `POLYBIUS` name / manufacturer marker).
 
-- Peer rail + ciphertext composer
+- Peer rail + ciphertext composer (`PB1|` envelopes)
 - Message bubbles with **DECRYPT VIA CURRENT ROTOR**
-- **SHARE ROTOR / POOL** — sends the current pool-sync token; both devices show
-  a 6-digit onscreen code and must tap **CONFIRM CODE** before the receiver
-  applies the pool
+- **SHARE ROTOR / POOL** — mutual 6-digit confirm before applying a pool
+- Dual-role stack: `ble_peripheral` (GATT server) + `flutter_blue_plus` (central)
+
+If sync/advertise fails: enable Bluetooth + nearby permissions; keep both apps
+in the foreground with the link toggled on.
 
 ## Pool vault (leak prevention)
 

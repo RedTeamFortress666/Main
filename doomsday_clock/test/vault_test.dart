@@ -37,6 +37,26 @@ void main() {
     );
   });
 
+  test('20 April unlocks with MechaH birthday line', () {
+    final v = VaultService();
+    final apr20 = DateTime(2026, 4, 20);
+    final apr19 = DateTime(2026, 4, 19);
+
+    expect(v.isMechaHDay(apr20), isTrue);
+    expect(v.isUnlockDay(apr20), isTrue);
+    expect(v.isUnlockDay(apr19), isFalse);
+
+    expect(v.matchesRitual(VaultService.mechaHBirthday, apr20), isTrue);
+    expect(
+      v.matchesRitual('happy birthday mechah i grok thee', apr20),
+      isTrue,
+    );
+    expect(v.matchesRitual(VaultService.mechaHBirthday, apr19), isFalse);
+    expect(v.matchesRitual('wrong', apr20), isFalse);
+    expect(v.matchesRitual(VaultService.mechaHBirthday, DateTime(2026, 11, 5)),
+        isFalse);
+  });
+
   test('privileged operator auth accepts Art3mas and rejects bad pin', () {
     final ok = authenticatePolybiusAdmin(
       username: 'Art3mas',
