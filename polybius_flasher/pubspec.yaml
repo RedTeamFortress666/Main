@@ -1,7 +1,7 @@
 name: polybius_flasher
 description: PØLYBÎŪS Android flasher — R36S SD prepare/format, CYD, ESP32-32E, T-Deck, Android OTG ADB
 publish_to: 'none'
-version: 1.4.1+6
+version: 1.5.0+7
 
 environment:
   sdk: ^3.12.2
@@ -15,6 +15,7 @@ dependencies:
   path: ^1.9.1
   shared_preferences: ^2.5.5
   http: ^1.2.2
+  crypto: ^3.0.6
 
 dev_dependencies:
   flutter_test:

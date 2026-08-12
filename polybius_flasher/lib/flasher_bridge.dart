@@ -1,10 +1,13 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:polybius_flasher/asset_integrity.dart';
+import 'package:polybius_flasher/flasher_event.dart';
 
 class UsbDeviceInfo {
   UsbDeviceInfo({
@@ -17,7 +20,9 @@ class UsbDeviceInfo {
     required this.hasPermission,
     this.usbJtag = false,
     this.isAdb = false,
+    this.hasMtpOrStorage = false,
     this.serial = '',
+    this.hint = '',
   });
 
   final int deviceId;
@@ -29,7 +34,9 @@ class UsbDeviceInfo {
   final bool hasPermission;
   final bool usbJtag;
   final bool isAdb;
+  final bool hasMtpOrStorage;
   final String serial;
+  final String hint;
 
   factory UsbDeviceInfo.fromMap(Map<dynamic, dynamic> m) {
     return UsbDeviceInfo(
@@ -42,7 +49,9 @@ class UsbDeviceInfo {
       hasPermission: m['hasPermission'] as bool? ?? false,
       usbJtag: m['usbJtag'] as bool? ?? false,
       isAdb: m['hasAdbInterface'] as bool? ?? m['isAdb'] as bool? ?? false,
+      hasMtpOrStorage: m['hasMtpOrStorage'] as bool? ?? false,
       serial: (m['serial'] as String?) ?? '',
+      hint: (m['hint'] as String?) ?? '',
     );
   }
 
@@ -53,35 +62,86 @@ class UsbDeviceInfo {
             ? manufacturerName
             : deviceName.isNotEmpty
                 ? deviceName
-                : 'ADB device';
+                : 'USB device';
+    final ser = serial.trim().isNotEmpty ? ' · sn $serial' : '';
     final jtag = usbJtag ? ' · USB-JTAG' : '';
     final adb = isAdb ? ' · ADB' : '';
-    return '$name  (VID 0x${vendorId.toRadixString(16)} PID 0x${productId.toRadixString(16)}$jtag$adb)';
+    final mtp = hasMtpOrStorage && !isAdb ? ' · MTP' : '';
+    return '$name$ser  (VID 0x${vendorId.toRadixString(16)} '
+        'PID 0x${productId.toRadixString(16)}$jtag$adb$mtp)';
   }
 }
 
 class NativeResult {
-  NativeResult({required this.ok, required this.message});
+  NativeResult({
+    required this.ok,
+    required this.message,
+    this.errorCode = '',
+    this.pmOutput = '',
+    this.detail = '',
+    this.portsPath = '',
+    this.verified = false,
+  });
   final bool ok;
   final String message;
+  final String errorCode;
+  final String pmOutput;
+  final String detail;
+  final String portsPath;
+  final bool verified;
 
   factory NativeResult.fromMap(Map<dynamic, dynamic> m) {
     return NativeResult(
       ok: m['ok'] as bool? ?? false,
       message: (m['message'] as String?) ?? '',
+      errorCode: (m['errorCode'] as String?) ?? '',
+      pmOutput: (m['pmOutput'] as String?) ?? '',
+      detail: (m['detail'] as String?) ?? '',
+      portsPath: (m['portsPath'] as String?) ?? '',
+      verified: m['verified'] as bool? ?? false,
     );
   }
 }
 
-class ProgressInfo {
-  ProgressInfo({
-    required this.progress,
-    this.written = 0,
-    this.total = 0,
+class BatteryStatus {
+  BatteryStatus({
+    required this.percent,
+    required this.charging,
+    required this.low,
+    required this.warning,
   });
-  final double progress;
-  final int written;
-  final int total;
+  final int percent;
+  final bool charging;
+  final bool low;
+  final String warning;
+
+  factory BatteryStatus.fromMap(Map<dynamic, dynamic> m) {
+    return BatteryStatus(
+      percent: m['percent'] as int? ?? -1,
+      charging: m['charging'] as bool? ?? false,
+      low: m['low'] as bool? ?? false,
+      warning: (m['warning'] as String?) ?? '',
+    );
+  }
+}
+
+class R36PathCandidate {
+  R36PathCandidate({
+    required this.label,
+    required this.hint,
+    required this.exists,
+  });
+  final String label;
+  final String hint;
+  final bool exists;
+
+  factory R36PathCandidate.fromMap(Map<dynamic, dynamic> m) {
+    return R36PathCandidate(
+      label: (m['label'] as String?) ?? '',
+      hint: (m['hint'] as String?) ?? '',
+      exists: m['exists'] as bool? ?? false,
+    );
+  }
 }
 
 /// Catalog entry for APKs installable over OTG ADB.
@@ -93,6 +153,7 @@ class ApkCatalogItem {
     required this.url,
     this.subtitle = '',
     this.assetPath,
+    this.version = '',
   });
 
   final String id;
@@ -100,9 +161,8 @@ class ApkCatalogItem {
   final String fileName;
   final String url;
   final String subtitle;
-
-  /// Optional bundled asset (offline). Prefer over [url] when present.
   final String? assetPath;
+  final String version;
 
   bool get isBundled => assetPath != null && assetPath!.isNotEmpty;
 }
@@ -114,37 +174,38 @@ class FlasherBridge {
   static const _methods = MethodChannel('com.polybius.flasher/native');
   static const _events = EventChannel('com.polybius.flasher/events');
 
-  /// Raw GitHub URLs for dist APKs on the shipping branch.
   static const distBase =
       'https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flasher-latest-e16f/polybius/dist';
 
-  /// Core suite shipped inside the flasher APK (offline OTG send).
   static const coreSuiteIds = ['portal_hq', 'v1_user', 'darth_cherry'];
 
-  static const apkCatalog = <ApkCatalogItem>[
+  static final apkCatalog = <ApkCatalogItem>[
     ApkCatalogItem(
       id: 'portal_hq',
       title: 'PØLYBÎŪS PORTAL',
-      subtitle: 'Bundled · Dev Admin / triple tier',
-      fileName: 'polybius-v1-stable-hq-android-arm64.apk',
-      url: '$distBase/polybius-v1-stable-hq-android-arm64.apk',
-      assetPath: 'assets/apks/polybius-v1-stable-hq-android-arm64.apk',
+      subtitle: 'Bundled · ${AssetIntegrity.portalApk.version} · Dev Admin',
+      fileName: AssetIntegrity.portalApk.fileName,
+      url: '$distBase/${AssetIntegrity.portalApk.fileName}',
+      assetPath: AssetIntegrity.portalApk.assetPath,
+      version: AssetIntegrity.portalApk.version,
     ),
     ApkCatalogItem(
       id: 'v1_user',
       title: 'PØLYBÎŪS V.1',
-      subtitle: 'Bundled · ENCRYPT / DECRYPT / SYNC / CONNECT',
-      fileName: 'polybius-v1-stable-user-android-arm64.apk',
-      url: '$distBase/polybius-v1-stable-user-android-arm64.apk',
-      assetPath: 'assets/apks/polybius-v1-stable-user-android-arm64.apk',
+      subtitle: 'Bundled · ${AssetIntegrity.userApk.version}',
+      fileName: AssetIntegrity.userApk.fileName,
+      url: '$distBase/${AssetIntegrity.userApk.fileName}',
+      assetPath: AssetIntegrity.userApk.assetPath,
+      version: AssetIntegrity.userApk.version,
     ),
     ApkCatalogItem(
       id: 'darth_cherry',
       title: 'DARTH CHERRY',
-      subtitle: 'Bundled · 1.0.2 dimmer / temptress',
-      fileName: 'darth-cherry-1.0.2-android-arm64.apk',
-      url: '$distBase/darth-cherry-1.0.2-android-arm64.apk',
-      assetPath: 'assets/apks/darth-cherry-1.0.2-android-arm64.apk',
+      subtitle: 'Bundled · ${AssetIntegrity.darthApk.version}',
+      fileName: AssetIntegrity.darthApk.fileName,
+      url: '$distBase/${AssetIntegrity.darthApk.fileName}',
+      assetPath: AssetIntegrity.darthApk.assetPath,
+      version: AssetIntegrity.darthApk.version,
     ),
     ApkCatalogItem(
       id: 'doomsday',
@@ -152,6 +213,7 @@ class FlasherBridge {
       subtitle: '2.1.0 · MechaH portal unlock',
       fileName: 'doomsday-clock-2.1.0-android-arm64.apk',
       url: '$distBase/doomsday-clock-2.1.0-android-arm64.apk',
+      version: '2.1.0',
     ),
     ApkCatalogItem(
       id: 'dev_portal',
@@ -166,6 +228,7 @@ class FlasherBridge {
       subtitle: '1.0.0',
       fileName: 'red-veil-1.0.0-android-arm64.apk',
       url: '$distBase/red-veil-1.0.0-android-arm64.apk',
+      version: '1.0.0',
     ),
   ];
 
@@ -173,34 +236,39 @@ class FlasherBridge {
       apkCatalog.where((a) => coreSuiteIds.contains(a.id)).toList();
 
   StreamSubscription<dynamic>? _sub;
-  final _logController = StreamController<String>.broadcast();
-  final _progressController = StreamController<ProgressInfo>.broadcast();
+  final _eventController = StreamController<FlasherEvent>.broadcast();
+  final List<FlasherEvent> _eventLog = [];
 
-  Stream<String> get logs => _logController.stream;
-  Stream<ProgressInfo> get progress => _progressController.stream;
+  Stream<FlasherEvent> get events => _eventController.stream;
+  List<FlasherEvent> get eventLog => List.unmodifiable(_eventLog);
+
+  /// Legacy adapters used by older UI bits.
+  Stream<String> get logs => events
+      .where((e) => e.message.isNotEmpty)
+      .map((e) => e.toLogLine());
+
+  Stream<ProgressInfo> get progress => events
+      .where((e) => e.percent != null)
+      .map((e) => ProgressInfo(progress: e.percent!, written: 0, total: 0));
 
   void ensureListening() {
-    _sub ??= _events.receiveBroadcastStream().listen((event) {
-      if (event is! Map) return;
-      final type = event['type'];
-      final value = event['value'];
-      if (type == 'log' && value is String) {
-        _logController.add(value);
-      } else if (type == 'progress') {
-        if (value is num) {
-          _progressController.add(ProgressInfo(progress: value.toDouble()));
-        } else if (value is Map) {
-          _progressController.add(
-            ProgressInfo(
-              progress: (value['progress'] as num?)?.toDouble() ?? 0,
-              written: (value['written'] as num?)?.toInt() ?? 0,
-              total: (value['total'] as num?)?.toInt() ?? 0,
-            ),
-          );
-        }
+    _sub ??= _events.receiveBroadcastStream().listen((raw) {
+      if (raw is! Map) return;
+      final event = FlasherEvent.fromMap(raw);
+      _eventLog.add(event);
+      if (_eventLog.length > 500) {
+        _eventLog.removeRange(0, _eventLog.length - 500);
       }
+      _eventController.add(event);
     });
   }
+
+  String dumpEventLog() {
+    if (_eventLog.isEmpty) return '(no events yet)';
+    return _eventLog.map((e) => e.toLogLine()).join('\n');
+  }
+
+  void clearEventLog() => _eventLog.clear();
 
   Future<List<UsbDeviceInfo>> listUsbDevices() async {
     final raw = await _methods.invokeMethod<List<dynamic>>('listUsbDevices');
@@ -213,24 +281,37 @@ class FlasherBridge {
   Future<List<UsbDeviceInfo>> listAdbUsbDevices() async {
     final raw =
         await _methods.invokeMethod<List<dynamic>>('listAdbUsbDevices');
+    return (raw ?? []).whereType<Map>().map((m) {
+      final info = UsbDeviceInfo.fromMap(m);
+      return UsbDeviceInfo(
+        deviceId: info.deviceId,
+        vendorId: info.vendorId,
+        productId: info.productId,
+        deviceName: info.deviceName,
+        productName: info.productName,
+        manufacturerName: info.manufacturerName,
+        hasPermission: info.hasPermission,
+        usbJtag: info.usbJtag,
+        isAdb: true,
+        serial: info.serial,
+        hint: info.hint,
+      );
+    }).toList();
+  }
+
+  Future<List<UsbDeviceInfo>> listUsbInventory() async {
+    final raw =
+        await _methods.invokeMethod<List<dynamic>>('listUsbInventory');
     return (raw ?? [])
         .whereType<Map>()
-        .map((m) {
-          final info = UsbDeviceInfo.fromMap(m);
-          return UsbDeviceInfo(
-            deviceId: info.deviceId,
-            vendorId: info.vendorId,
-            productId: info.productId,
-            deviceName: info.deviceName,
-            productName: info.productName,
-            manufacturerName: info.manufacturerName,
-            hasPermission: info.hasPermission,
-            usbJtag: info.usbJtag,
-            isAdb: true,
-            serial: info.serial,
-          );
-        })
+        .map((m) => UsbDeviceInfo.fromMap(m))
         .toList();
+  }
+
+  Future<BatteryStatus> getBatteryStatus() async {
+    final raw =
+        await _methods.invokeMethod<Map<dynamic, dynamic>>('getBatteryStatus');
+    return BatteryStatus.fromMap(raw ?? {});
   }
 
   Future<bool> requestUsbPermission(int deviceId) async {
@@ -251,6 +332,9 @@ class FlasherBridge {
     bool skipAutoReset = false,
     bool syncOnly = false,
     bool hardResetAfter = true,
+    int? flashSizeHint,
+    int serialMonitorMs = 0,
+    String target = 'esp',
   }) async {
     ensureListening();
     final raw = await _methods.invokeMethod<Map<dynamic, dynamic>>(
@@ -265,6 +349,9 @@ class FlasherBridge {
         'skipAutoReset': skipAutoReset,
         'syncOnly': syncOnly,
         'hardResetAfter': hardResetAfter,
+        'flashSizeHint': ?flashSizeHint,
+        'serialMonitorMs': serialMonitorMs,
+        'target': target,
       },
     );
     return NativeResult.fromMap(raw ?? {});
@@ -280,19 +367,36 @@ class FlasherBridge {
     return _methods.invokeMethod<String>('pickApk');
   }
 
+  Future<List<R36PathCandidate>> detectR36Paths(String treeUri) async {
+    final raw = await _methods.invokeMethod<List<dynamic>>(
+      'detectR36Paths',
+      {'treeUri': treeUri},
+    );
+    return (raw ?? [])
+        .whereType<Map>()
+        .map(R36PathCandidate.fromMap)
+        .toList();
+  }
+
   Future<NativeResult> installR36s({
     required String zipPath,
     required String treeUri,
+    String mode = 'direct',
+    String? preferredHint,
   }) async {
     ensureListening();
     final raw = await _methods.invokeMethod<Map<dynamic, dynamic>>(
       'installR36s',
-      {'zipPath': zipPath, 'treeUri': treeUri},
+      {
+        'zipPath': zipPath,
+        'treeUri': treeUri,
+        'mode': mode,
+        'preferredHint': ?preferredHint,
+      },
     );
     return NativeResult.fromMap(raw ?? {});
   }
 
-  /// Format/prepare SD layout (FAT-compatible write probe + PortMaster/ESP dirs).
   Future<NativeResult> prepareSd({
     required String treeUri,
     String layout = 'r36s_ports',
@@ -312,6 +416,15 @@ class FlasherBridge {
     return NativeResult.fromMap(raw ?? {});
   }
 
+  Future<NativeResult> probeSdWrite(String treeUri) async {
+    ensureListening();
+    final raw = await _methods.invokeMethod<Map<dynamic, dynamic>>(
+      'probeSdWrite',
+      {'treeUri': treeUri},
+    );
+    return NativeResult.fromMap(raw ?? {});
+  }
+
   Future<NativeResult> openSystemSdFormat() async {
     final raw = await _methods.invokeMethod<Map<dynamic, dynamic>>(
       'openSystemSdFormat',
@@ -327,11 +440,18 @@ class FlasherBridge {
   Future<NativeResult> installApkAdbUsb({
     required int deviceId,
     required String apkPath,
+    bool forceDowngrade = false,
+    bool forceUser0 = false,
   }) async {
     ensureListening();
     final raw = await _methods.invokeMethod<Map<dynamic, dynamic>>(
       'installApkAdbUsb',
-      {'deviceId': deviceId, 'apkPath': apkPath},
+      {
+        'deviceId': deviceId,
+        'apkPath': apkPath,
+        'forceDowngrade': forceDowngrade,
+        'forceUser0': forceUser0,
+      },
     );
     return NativeResult.fromMap(raw ?? {});
   }
@@ -340,33 +460,65 @@ class FlasherBridge {
     required String host,
     required int port,
     required String apkPath,
+    bool forceDowngrade = false,
+    bool forceUser0 = false,
   }) async {
     ensureListening();
     final raw = await _methods.invokeMethod<Map<dynamic, dynamic>>(
       'installApkAdbTcp',
-      {'host': host, 'port': port, 'apkPath': apkPath},
+      {
+        'host': host,
+        'port': port,
+        'apkPath': apkPath,
+        'forceDowngrade': forceDowngrade,
+        'forceUser0': forceUser0,
+      },
     );
     return NativeResult.fromMap(raw ?? {});
   }
 
-  Future<String> materializeAsset(String assetPath, String fileName) async {
+  /// Materialize a bundled asset and verify SHA-256. Fails early on mismatch.
+  Future<String> materializeAsset(
+    String assetPath,
+    String fileName, {
+    String? expectedSha256,
+  }) async {
+    final bundled = AssetIntegrity.byAssetPath(assetPath) ??
+        AssetIntegrity.byFileName(fileName);
+    final expect = (expectedSha256 ?? bundled?.sha256)?.toLowerCase();
+
     final dir = await getApplicationDocumentsDirectory();
     final out = File(p.join(dir.path, fileName));
-    if (await out.exists() && await out.length() > 0) {
+
+    Future<String> writeFresh() async {
       final data = await rootBundle.load(assetPath);
-      if (await out.length() == data.lengthInBytes) {
-        return out.path;
+      final bytes =
+          data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+      if (expect != null) {
+        final digest = sha256.convert(bytes).toString();
+        if (digest != expect) {
+          throw StateError(
+            'SHA-256 mismatch for $fileName\nexpected $expect\nactual   $digest',
+          );
+        }
       }
+      await out.writeAsBytes(bytes, flush: true);
+      return out.path;
     }
-    final data = await rootBundle.load(assetPath);
-    await out.writeAsBytes(
-      data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
-      flush: true,
-    );
-    return out.path;
+
+    if (await out.exists() && await out.length() > 0) {
+      if (expect != null) {
+        final digest = (await sha256.bind(out.openRead()).first).toString();
+        if (digest == expect) return out.path;
+        await out.delete();
+        return writeFresh();
+      }
+      final data = await rootBundle.load(assetPath);
+      if (await out.length() == data.lengthInBytes) return out.path;
+    }
+    return writeFresh();
   }
 
-  /// Resolve catalog APK: bundled asset → cache → HTTP download.
   Future<String> resolveApk(
     ApkCatalogItem item, {
     void Function(double progress, int received, int total)? onProgress,
@@ -381,7 +533,6 @@ class FlasherBridge {
     return downloadApk(item, onProgress: onProgress);
   }
 
-  /// Download (or reuse cached) catalog APK into app documents.
   Future<String> downloadApk(
     ApkCatalogItem item, {
     void Function(double progress, int received, int total)? onProgress,
@@ -430,4 +581,15 @@ class FlasherBridge {
       client.close();
     }
   }
+}
+
+class ProgressInfo {
+  ProgressInfo({
+    required this.progress,
+    this.written = 0,
+    this.total = 0,
+  });
+  final double progress;
+  final int written;
+  final int total;
 }

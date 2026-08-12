@@ -1312,6 +1312,7 @@ class _FlasherHomePageState extends State<FlasherHomePage>
               title: 'Baud',
               child: DropdownButtonFormField<int>(
                 initialValue: _baud,
+                isExpanded: true,
                 decoration: const InputDecoration(border: OutlineInputBorder()),
                 items: _baudOptions
                     .map(
@@ -1334,12 +1335,13 @@ class _FlasherHomePageState extends State<FlasherHomePage>
               title: 'Serial monitor',
               child: DropdownButtonFormField<int>(
                 initialValue: _serialMonitorMs,
+                isExpanded: true,
                 decoration: const InputDecoration(border: OutlineInputBorder()),
                 items: const [
-                  DropdownMenuItem(value: 0, child: Text('0 ms / off')),
+                  DropdownMenuItem(value: 0, child: Text('Off')),
                   DropdownMenuItem(
                     value: 1500,
-                    child: Text('Capture Bruce/Launcher 1500 ms'),
+                    child: Text('1500 ms capture'),
                   ),
                 ],
                 onChanged: _busy
@@ -2149,14 +2151,17 @@ class _Panel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: FlasherColors.panel.withValues(alpha: 0.86),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: FlasherColors.grid),
+    return Material(
+      color: FlasherColors.panel.withValues(alpha: 0.86),
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: FlasherColors.grid),
+        ),
+        child: child,
       ),
-      child: child,
     );
   }
 }
@@ -2187,8 +2192,8 @@ class _ChoiceBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 280,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: 160, maxWidth: 320),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -2214,30 +2219,33 @@ class _ApkCatalogList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.22),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: FlasherColors.grid),
-      ),
-      child: Column(
-        children: FlasherBridge.apkCatalog.map((item) {
-          return CheckboxListTile(
-            value: selectedIds.contains(item.id),
-            onChanged: enabled
-                ? (value) => onChanged(item, value ?? false)
-                : null,
-            title: Text(item.title),
-            subtitle: Text(
-              [
-                item.subtitle,
-                if (item.version.isNotEmpty) item.version,
-                item.isBundled ? 'bundled' : 'download',
-                item.fileName,
-              ].where((part) => part.trim().isNotEmpty).join(' · '),
-            ),
-          );
-        }).toList(),
+    return Material(
+      color: Colors.black.withValues(alpha: 0.22),
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: FlasherColors.grid),
+        ),
+        child: Column(
+          children: FlasherBridge.apkCatalog.map((item) {
+            return CheckboxListTile(
+              value: selectedIds.contains(item.id),
+              onChanged: enabled
+                  ? (value) => onChanged(item, value ?? false)
+                  : null,
+              title: Text(item.title),
+              subtitle: Text(
+                [
+                  item.subtitle,
+                  if (item.version.isNotEmpty) item.version,
+                  item.isBundled ? 'bundled' : 'download',
+                  item.fileName,
+                ].where((part) => part.trim().isNotEmpty).join(' · '),
+              ),
+            );
+          }).toList(),
+        ),
       ),
     );
   }

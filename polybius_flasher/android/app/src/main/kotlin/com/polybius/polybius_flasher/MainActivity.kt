@@ -8,6 +8,7 @@ import android.content.IntentFilter
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.net.Uri
+import android.os.BatteryManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -27,13 +28,14 @@ class MainActivity : FlutterFragmentActivity() {
 
     private val mainHandler = Handler(Looper.getMainLooper())
     private val io = Executors.newSingleThreadExecutor()
+    private val emitter = FlasherEmitter(mainHandler)
 
-    private var eventSink: EventChannel.EventSink? = null
     private var pendingUsbResult: MethodChannel.Result? = null
     private var pendingTreeResult: MethodChannel.Result? = null
     private var pendingApkResult: MethodChannel.Result? = null
     private var activeFlasher: EspFlasher? = null
     private val adbCancel = AtomicBoolean(false)
+    private val r36Cancel = AtomicBoolean(false)
 
     private val treePicker =
         registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
@@ -81,23 +83,40 @@ class MainActivity : FlutterFragmentActivity() {
     private val usbReceiver =
         object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
-                if (intent?.action != ACTION_USB_PERMISSION) return
-                val device =
-                    if (Build.VERSION.SDK_INT >= 33) {
-                        intent.getParcelableExtra(UsbManager.EXTRA_DEVICE, UsbDevice::class.java)
-                    } else {
-                        @Suppress("DEPRECATION")
-                        intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)
+                when (intent?.action) {
+                    ACTION_USB_PERMISSION -> {
+                        val device =
+                            if (Build.VERSION.SDK_INT >= 33) {
+                                intent.getParcelableExtra(UsbManager.EXTRA_DEVICE, UsbDevice::class.java)
+                            } else {
+                                @Suppress("DEPRECATION")
+                                intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)
+                            }
+                        val granted = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)
+                        val result = pendingUsbResult
+                        pendingUsbResult = null
+                        emitter.log(
+                            if (granted) "USB permission granted" else "USB permission denied",
+                            stage = "usb_permission",
+                            level = if (granted) "info" else "warn",
+                        )
+                        result?.success(
+                            mapOf(
+                                "granted" to granted,
+                                "deviceId" to (device?.deviceId ?: -1),
+                            ),
+                        )
                     }
-                val granted = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)
-                val result = pendingUsbResult
-                pendingUsbResult = null
-                result?.success(
-                    mapOf(
-                        "granted" to granted,
-                        "deviceId" to (device?.deviceId ?: -1),
-                    ),
-                )
+                    UsbManager.ACTION_USB_DEVICE_ATTACHED,
+                    UsbManager.ACTION_USB_DEVICE_DETACHED,
+                    -> {
+                        emitter.log(
+                            "USB topology changed (${intent.action})",
+                            stage = "usb_hotplug",
+                            level = "info",
+                        )
+                    }
+                }
             }
         }
 
@@ -108,11 +127,11 @@ class MainActivity : FlutterFragmentActivity() {
             .setStreamHandler(
                 object : EventChannel.StreamHandler {
                     override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
-                        eventSink = events
+                        emitter.sink = events
                     }
 
                     override fun onCancel(arguments: Any?) {
-                        eventSink = null
+                        emitter.sink = null
                     }
                 },
             )
@@ -121,6 +140,9 @@ class MainActivity : FlutterFragmentActivity() {
             .setMethodCallHandler { call, result ->
                 when (call.method) {
                     "listUsbDevices" -> result.success(listUsbDevices())
+                    "listAdbUsbDevices" -> result.success(listAdbUsbDevices())
+                    "listUsbInventory" -> result.success(listUsbInventory())
+                    "getBatteryStatus" -> result.success(batteryStatus())
                     "requestUsbPermission" -> {
                         val deviceId = call.argument<Int>("deviceId")
                         if (deviceId == null) {
@@ -139,6 +161,9 @@ class MainActivity : FlutterFragmentActivity() {
                         val skipAutoReset = call.argument<Boolean>("skipAutoReset") ?: false
                         val syncOnly = call.argument<Boolean>("syncOnly") ?: false
                         val hardResetAfter = call.argument<Boolean>("hardResetAfter") ?: true
+                        val flashSizeHint = call.argument<Int>("flashSizeHint")
+                        val serialMonitorMs = call.argument<Int>("serialMonitorMs") ?: 0
+                        val target = call.argument<String>("target") ?: "esp"
                         if (deviceId == null) {
                             result.error("bad_args", "deviceId required", null)
                             return@setMethodCallHandler
@@ -157,13 +182,18 @@ class MainActivity : FlutterFragmentActivity() {
                             skipAutoReset = skipAutoReset,
                             syncOnly = syncOnly,
                             hardResetAfter = hardResetAfter,
+                            flashSizeHint = flashSizeHint,
+                            serialMonitorMs = serialMonitorMs,
+                            target = target,
                             result = result,
                         )
                     }
                     "cancelFlash" -> {
                         activeFlasher?.cancel()
                         adbCancel.set(true)
+                        r36Cancel.set(true)
                         AdbOtgInstaller.cancelActive()
+                        emitter.log("Cancel requested", stage = "cancel", level = "warn")
                         result.success(true)
                     }
                     "pickSdTree" -> {
@@ -172,36 +202,44 @@ class MainActivity : FlutterFragmentActivity() {
                     }
                     "pickApk" -> {
                         pendingApkResult = result
-                        apkPicker.launch(arrayOf("application/vnd.android.package-archive", "application/octet-stream", "*/*"))
+                        apkPicker.launch(
+                            arrayOf(
+                                "application/vnd.android.package-archive",
+                                "application/octet-stream",
+                                "*/*",
+                            ),
+                        )
+                    }
+                    "detectR36Paths" -> {
+                        val treeUri = call.argument<String>("treeUri")
+                        if (treeUri.isNullOrBlank()) {
+                            result.error("bad_args", "treeUri required", null)
+                            return@setMethodCallHandler
+                        }
+                        io.execute {
+                            val installer =
+                                R36sInstaller(this, onLog = {}, onProgress = { _, _ -> })
+                            val list =
+                                installer.detectCandidates(Uri.parse(treeUri)).map { c ->
+                                    mapOf(
+                                        "label" to c.label,
+                                        "hint" to c.relativeHint,
+                                        "exists" to (c.document != null),
+                                    )
+                                }
+                            mainHandler.post { result.success(list) }
+                        }
                     }
                     "installR36s" -> {
                         val zipPath = call.argument<String>("zipPath")
                         val treeUri = call.argument<String>("treeUri")
+                        val mode = call.argument<String>("mode") ?: "direct"
+                        val preferredHint = call.argument<String>("preferredHint")
                         if (zipPath.isNullOrBlank() || treeUri.isNullOrBlank()) {
                             result.error("bad_args", "zipPath and treeUri required", null)
                             return@setMethodCallHandler
                         }
-                        installR36s(zipPath, treeUri, result)
-                    }
-                    "listAdbUsbDevices" -> result.success(listAdbUsbDevices())
-                    "installApkAdbUsb" -> {
-                        val deviceId = call.argument<Int>("deviceId")
-                        val apkPath = call.argument<String>("apkPath")
-                        if (deviceId == null || apkPath.isNullOrBlank()) {
-                            result.error("bad_args", "deviceId and apkPath required", null)
-                            return@setMethodCallHandler
-                        }
-                        installApkAdbUsb(deviceId, apkPath, result)
-                    }
-                    "installApkAdbTcp" -> {
-                        val host = call.argument<String>("host") ?: "127.0.0.1"
-                        val port = call.argument<Int>("port") ?: 5555
-                        val apkPath = call.argument<String>("apkPath")
-                        if (apkPath.isNullOrBlank()) {
-                            result.error("bad_args", "apkPath required", null)
-                            return@setMethodCallHandler
-                        }
-                        installApkAdbTcp(host, port, apkPath, result)
+                        installR36s(zipPath, treeUri, mode, preferredHint, result)
                     }
                     "prepareSd" -> {
                         val treeUri = call.argument<String>("treeUri")
@@ -215,13 +253,62 @@ class MainActivity : FlutterFragmentActivity() {
                         prepareSd(treeUri, layout, logicalFormat, wipePrevious, result)
                     }
                     "openSystemSdFormat" -> {
-                        val prep = SdCardPreparer(this, onLog = { emit("log", it) }, onProgress = {})
+                        val prep =
+                            SdCardPreparer(this, onLog = { emitter.log(it, stage = "sd") }, onProgress = {})
                         val r = prep.openSystemFormatSettings()
                         result.success(mapOf("ok" to r.ok, "message" to r.message))
                     }
                     "listStorageVolumes" -> {
                         val prep = SdCardPreparer(this, onLog = {}, onProgress = {})
                         result.success(prep.describeVolumes())
+                    }
+                    "probeSdWrite" -> {
+                        val treeUri = call.argument<String>("treeUri")
+                        if (treeUri.isNullOrBlank()) {
+                            result.error("bad_args", "treeUri required", null)
+                            return@setMethodCallHandler
+                        }
+                        io.execute {
+                            val prep =
+                                SdCardPreparer(
+                                    this,
+                                    onLog = { emitter.log(it, stage = "sd_probe", target = "r36s") },
+                                    onProgress = {},
+                                )
+                            val r =
+                                prep.prepare(
+                                    treeUri = Uri.parse(treeUri),
+                                    layout = SdCardPreparer.Layout.R36S_PORTS,
+                                    logicalFormat = false,
+                                    wipePreviousPolybius = false,
+                                )
+                            mainHandler.post {
+                                result.success(mapOf("ok" to r.ok, "message" to r.message))
+                            }
+                        }
+                    }
+                    "installApkAdbUsb" -> {
+                        val deviceId = call.argument<Int>("deviceId")
+                        val apkPath = call.argument<String>("apkPath")
+                        val forceDowngrade = call.argument<Boolean>("forceDowngrade") ?: false
+                        val forceUser0 = call.argument<Boolean>("forceUser0") ?: false
+                        if (deviceId == null || apkPath.isNullOrBlank()) {
+                            result.error("bad_args", "deviceId and apkPath required", null)
+                            return@setMethodCallHandler
+                        }
+                        installApkAdbUsb(deviceId, apkPath, forceDowngrade, forceUser0, result)
+                    }
+                    "installApkAdbTcp" -> {
+                        val host = call.argument<String>("host") ?: "127.0.0.1"
+                        val port = call.argument<Int>("port") ?: 5555
+                        val apkPath = call.argument<String>("apkPath")
+                        val forceDowngrade = call.argument<Boolean>("forceDowngrade") ?: false
+                        val forceUser0 = call.argument<Boolean>("forceUser0") ?: false
+                        if (apkPath.isNullOrBlank()) {
+                            result.error("bad_args", "apkPath required", null)
+                            return@setMethodCallHandler
+                        }
+                        installApkAdbTcp(host, port, apkPath, forceDowngrade, forceUser0, result)
                     }
                     else -> result.notImplemented()
                 }
@@ -230,7 +317,12 @@ class MainActivity : FlutterFragmentActivity() {
 
     override fun onStart() {
         super.onStart()
-        val filter = IntentFilter(ACTION_USB_PERMISSION)
+        val filter =
+            IntentFilter().apply {
+                addAction(ACTION_USB_PERMISSION)
+                addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED)
+                addAction(UsbManager.ACTION_USB_DEVICE_DETACHED)
+            }
         if (Build.VERSION.SDK_INT >= 33) {
             registerReceiver(usbReceiver, filter, RECEIVER_NOT_EXPORTED)
         } else {
@@ -244,6 +336,28 @@ class MainActivity : FlutterFragmentActivity() {
         } catch (_: Exception) {
         }
         super.onStop()
+    }
+
+    private fun batteryStatus(): Map<String, Any?> {
+        val bm = getSystemService(BATTERY_SERVICE) as BatteryManager
+        val pct = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+        val charging =
+            bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_STATUS).let { s ->
+                s == BatteryManager.BATTERY_STATUS_CHARGING ||
+                    s == BatteryManager.BATTERY_STATUS_FULL
+            }
+        val low = pct in 1..20
+        return mapOf(
+            "percent" to pct,
+            "charging" to charging,
+            "low" to low,
+            "warning" to
+                if (low && !charging) {
+                    "Battery ~$pct%. OTG draws power — use a short data cable or a powered hub."
+                } else {
+                    "Use a short data-capable OTG cable. A powered hub helps if the board disconnects."
+                },
+        )
     }
 
     private fun listUsbDevices(): List<Map<String, Any?>> {
@@ -260,6 +374,44 @@ class MainActivity : FlutterFragmentActivity() {
                 "manufacturerName" to (d.manufacturerName ?: ""),
                 "hasPermission" to manager.hasPermission(d),
                 "usbJtag" to jtag,
+                "serial" to
+                    try {
+                        d.serialNumber ?: ""
+                    } catch (_: SecurityException) {
+                        ""
+                    },
+            )
+        }
+    }
+
+    private fun listAdbUsbDevices(): List<Map<String, Any?>> {
+        return AdbOtgInstaller.listAdbDevices(this).map { d ->
+            mapOf(
+                "deviceId" to d.deviceId,
+                "vendorId" to d.vendorId,
+                "productId" to d.productId,
+                "productName" to (d.productName ?: ""),
+                "manufacturerName" to (d.manufacturerName ?: ""),
+                "serial" to (d.serial ?: ""),
+                "hasAdbInterface" to d.hasAdbInterface,
+                "hasPermission" to d.hasPermission,
+            )
+        }
+    }
+
+    private fun listUsbInventory(): List<Map<String, Any?>> {
+        return AdbOtgInstaller.listUsbInventory(this).map { d ->
+            mapOf(
+                "deviceId" to d.deviceId,
+                "vendorId" to d.vendorId,
+                "productId" to d.productId,
+                "productName" to (d.productName ?: ""),
+                "manufacturerName" to (d.manufacturerName ?: ""),
+                "serial" to (d.serial ?: ""),
+                "hasAdbInterface" to d.hasAdbInterface,
+                "hasMtpOrStorage" to d.hasMtpOrStorage,
+                "hasPermission" to d.hasPermission,
+                "hint" to d.hint,
             )
         }
     }
@@ -268,7 +420,7 @@ class MainActivity : FlutterFragmentActivity() {
         val manager = getSystemService(USB_SERVICE) as UsbManager
         val device = manager.deviceList.values.firstOrNull { it.deviceId == deviceId }
         if (device == null) {
-            result.error("no_device", "USB device $deviceId not found", null)
+            result.error("no_device", "USB device $deviceId not found — replug and re-scan", null)
             return
         }
         if (manager.hasPermission(device)) {
@@ -302,17 +454,26 @@ class MainActivity : FlutterFragmentActivity() {
         skipAutoReset: Boolean,
         syncOnly: Boolean,
         hardResetAfter: Boolean,
+        flashSizeHint: Int?,
+        serialMonitorMs: Int,
+        target: String,
         result: MethodChannel.Result,
     ) {
+        emitter.currentTarget = target
         io.execute {
             val manager = getSystemService(USB_SERVICE) as UsbManager
+            // Re-resolve live device — never reuse a stale handle after replug.
             val device = manager.deviceList.values.firstOrNull { it.deviceId == deviceId }
             if (device == null) {
-                mainHandler.post { result.error("no_device", "USB device not found", null) }
+                mainHandler.post {
+                    result.error("no_device", "USB device not found — replug OTG and re-scan", null)
+                }
                 return@execute
             }
             if (!manager.hasPermission(device)) {
-                mainHandler.post { result.error("no_permission", "USB permission denied", null) }
+                mainHandler.post {
+                    result.error("no_permission", "USB permission denied — re-request permission", null)
+                }
                 return@execute
             }
             val connection = manager.openDevice(device)
@@ -331,19 +492,21 @@ class MainActivity : FlutterFragmentActivity() {
                     "esp32s3", "esp32-s3", "s3" -> EspFlasher.Chip.ESP32_S3
                     else -> EspFlasher.Chip.ESP32
                 }
+            emitter.emit(
+                stage = if (syncOnly) "esp_sync" else "esp_flash",
+                message = if (syncOnly) "Testing connection…" else "Flashing…",
+                percent = 0.01,
+                target = target,
+            )
             val flasher =
                 EspFlasher(
                     usbManager = manager,
-                    onLog = { msg -> emit("log", msg) },
+                    onLog = { msg ->
+                        emitter.log(msg, stage = if (syncOnly) "esp_sync" else "esp_flash", target = target)
+                    },
                     onProgress = { written, total ->
-                        emit(
-                            "progress",
-                            mapOf(
-                                "progress" to if (total > 0) written.toDouble() / total.toDouble() else 0.0,
-                                "written" to written,
-                                "total" to total,
-                            ),
-                        )
+                        val p = if (total > 0) written.toDouble() / total.toDouble() else 0.0
+                        emitter.progress(p, "Wrote $written / $total", stage = "esp_flash")
                     },
                 )
             activeFlasher = flasher
@@ -361,6 +524,8 @@ class MainActivity : FlutterFragmentActivity() {
                             skipAutoReset = skipAutoReset,
                             syncOnly = syncOnly,
                             hardResetAfter = hardResetAfter,
+                            flashSizeHint = flashSizeHint,
+                            serialMonitorMs = serialMonitorMs,
                         ),
                     )
                 } finally {
@@ -370,6 +535,14 @@ class MainActivity : FlutterFragmentActivity() {
                     } catch (_: Exception) {
                     }
                 }
+            emitter.emit(
+                stage = if (syncOnly) "esp_sync" else "esp_flash",
+                message = flashResult.message,
+                percent = if (flashResult.ok) 1.0 else null,
+                level = if (flashResult.ok) "success" else "error",
+                ok = flashResult.ok,
+                target = target,
+            )
             mainHandler.post {
                 result.success(
                     mapOf(
@@ -381,34 +554,58 @@ class MainActivity : FlutterFragmentActivity() {
         }
     }
 
-    private fun installR36s(zipPath: String, treeUri: String, result: MethodChannel.Result) {
+    private fun installR36s(
+        zipPath: String,
+        treeUri: String,
+        modeName: String,
+        preferredHint: String?,
+        result: MethodChannel.Result,
+    ) {
+        emitter.currentTarget = "r36s"
+        r36Cancel.set(false)
         io.execute {
+            val mode =
+                when (modeName.lowercase()) {
+                    "autoinstall", "auto" -> R36sInstaller.InstallMode.AUTOINSTALL
+                    else -> R36sInstaller.InstallMode.DIRECT
+                }
             val installer =
                 R36sInstaller(
                     context = this,
-                    onLog = { msg -> emit("log", msg) },
-                    onProgress = { p ->
-                        emit(
-                            "progress",
-                            mapOf(
-                                "progress" to p,
-                                "written" to 0L,
-                                "total" to 0L,
-                            ),
-                        )
+                    onLog = { msg -> emitter.log(msg, stage = "r36s_install", target = "r36s") },
+                    onProgress = { p, msg ->
+                        emitter.progress(p, msg, stage = "r36s_install")
                     },
+                    cancel = r36Cancel,
                 )
             val installResult =
                 try {
-                    installer.install(File(zipPath), Uri.parse(treeUri))
+                    installer.install(
+                        zipFile = File(zipPath),
+                        treeUri = Uri.parse(treeUri),
+                        mode = mode,
+                        preferredHint = preferredHint,
+                    )
                 } catch (e: Exception) {
                     R36sInstaller.Result(false, e.message ?: e.toString())
                 }
+            emitter.emit(
+                stage = "r36s_install",
+                message = installResult.message,
+                percent = if (installResult.ok) 1.0 else null,
+                level = if (installResult.ok) "success" else "error",
+                ok = installResult.ok,
+                detail = installResult.detail,
+                target = "r36s",
+            )
             mainHandler.post {
                 result.success(
                     mapOf(
                         "ok" to installResult.ok,
                         "message" to installResult.message,
+                        "portsPath" to installResult.portsPath,
+                        "verified" to installResult.verified,
+                        "detail" to installResult.detail,
                     ),
                 )
             }
@@ -422,6 +619,7 @@ class MainActivity : FlutterFragmentActivity() {
         wipePrevious: Boolean,
         result: MethodChannel.Result,
     ) {
+        emitter.currentTarget = "r36s"
         io.execute {
             val layout =
                 when (layoutName.lowercase()) {
@@ -431,16 +629,9 @@ class MainActivity : FlutterFragmentActivity() {
             val preparer =
                 SdCardPreparer(
                     context = this,
-                    onLog = { msg -> emit("log", msg) },
+                    onLog = { msg -> emitter.log(msg, stage = "sd_prepare", target = "r36s") },
                     onProgress = { p ->
-                        emit(
-                            "progress",
-                            mapOf(
-                                "progress" to p,
-                                "written" to 0L,
-                                "total" to 0L,
-                            ),
-                        )
+                        emitter.progress(p, "Preparing SD…", stage = "sd_prepare")
                     },
                 )
             val prepResult =
@@ -454,6 +645,14 @@ class MainActivity : FlutterFragmentActivity() {
                 } catch (e: Exception) {
                     SdCardPreparer.Result(false, e.message ?: e.toString())
                 }
+            emitter.emit(
+                stage = "sd_prepare",
+                message = prepResult.message,
+                percent = if (prepResult.ok) 1.0 else null,
+                level = if (prepResult.ok) "success" else "error",
+                ok = prepResult.ok,
+                target = "r36s",
+            )
             mainHandler.post {
                 result.success(
                     mapOf(
@@ -465,32 +664,28 @@ class MainActivity : FlutterFragmentActivity() {
         }
     }
 
-    private fun listAdbUsbDevices(): List<Map<String, Any?>> {
-        return AdbOtgInstaller.listAdbDevices(this).map { d ->
-            mapOf(
-                "deviceId" to d.deviceId,
-                "vendorId" to d.vendorId,
-                "productId" to d.productId,
-                "productName" to (d.productName ?: ""),
-                "manufacturerName" to (d.manufacturerName ?: ""),
-                "serial" to (d.serial ?: ""),
-                "hasAdbInterface" to d.hasAdbInterface,
-                "hasPermission" to d.hasPermission,
-            )
-        }
-    }
-
-    private fun installApkAdbUsb(deviceId: Int, apkPath: String, result: MethodChannel.Result) {
+    private fun installApkAdbUsb(
+        deviceId: Int,
+        apkPath: String,
+        forceDowngrade: Boolean,
+        forceUser0: Boolean,
+        result: MethodChannel.Result,
+    ) {
+        emitter.currentTarget = "androidOtg"
         io.execute {
             adbCancel.set(false)
             val device = AdbOtgInstaller.findDevice(this, deviceId)
             if (device == null) {
-                mainHandler.post { result.error("no_device", "ADB USB device not found", null) }
+                mainHandler.post {
+                    result.error("no_device", "ADB USB device not found — replug and re-scan", null)
+                }
                 return@execute
             }
             val manager = getSystemService(USB_SERVICE) as UsbManager
             if (!manager.hasPermission(device)) {
-                mainHandler.post { result.error("no_permission", "USB permission denied", null) }
+                mainHandler.post {
+                    result.error("no_permission", "USB permission denied — re-request permission", null)
+                }
                 return@execute
             }
             val apk = File(apkPath)
@@ -499,34 +694,55 @@ class MainActivity : FlutterFragmentActivity() {
                 return@execute
             }
             try {
-                val msg =
+                val outcome =
                     AdbOtgInstaller.installViaUsb(
                         context = this,
                         device = device,
                         apkFile = apk,
                         cancel = adbCancel,
                         onProgress = { p, log ->
-                            emit("log", log)
-                            emit(
-                                "progress",
-                                mapOf(
-                                    "progress" to p,
-                                    "written" to 0L,
-                                    "total" to 0L,
-                                ),
-                            )
+                            emitter.progress(p, log, stage = "adb_install")
+                            emitter.log(log, stage = "adb_install", target = "androidOtg")
                         },
+                        options =
+                            AdbOtgInstaller.InstallOptions(
+                                forceDowngrade = forceDowngrade,
+                                forceUser0 = forceUser0,
+                            ),
                     )
+                emitter.emit(
+                    stage = "adb_install",
+                    message = outcome.message,
+                    percent = if (outcome.ok) 1.0 else null,
+                    level = if (outcome.ok) "success" else "error",
+                    ok = outcome.ok,
+                    detail = outcome.errorCode,
+                    target = "androidOtg",
+                )
                 mainHandler.post {
-                    result.success(mapOf("ok" to true, "message" to msg))
+                    result.success(
+                        mapOf(
+                            "ok" to outcome.ok,
+                            "message" to outcome.message,
+                            "pmOutput" to outcome.pmOutput,
+                            "errorCode" to outcome.errorCode,
+                        ),
+                    )
                 }
             } catch (e: Exception) {
-                emit("log", "ADB install error: ${e.message}")
+                emitter.emit(
+                    stage = "adb_install",
+                    message = e.message ?: e.toString(),
+                    level = "error",
+                    ok = false,
+                    target = "androidOtg",
+                )
                 mainHandler.post {
                     result.success(
                         mapOf(
                             "ok" to false,
                             "message" to (e.message ?: e.toString()),
+                            "errorCode" to "EXCEPTION",
                         ),
                     )
                 }
@@ -538,8 +754,11 @@ class MainActivity : FlutterFragmentActivity() {
         host: String,
         port: Int,
         apkPath: String,
+        forceDowngrade: Boolean,
+        forceUser0: Boolean,
         result: MethodChannel.Result,
     ) {
+        emitter.currentTarget = "androidOtg"
         io.execute {
             adbCancel.set(false)
             val apk = File(apkPath)
@@ -548,7 +767,7 @@ class MainActivity : FlutterFragmentActivity() {
                 return@execute
             }
             try {
-                val msg =
+                val outcome =
                     AdbOtgInstaller.installViaTcp(
                         context = this,
                         host = host,
@@ -556,37 +775,52 @@ class MainActivity : FlutterFragmentActivity() {
                         apkFile = apk,
                         cancel = adbCancel,
                         onProgress = { p, log ->
-                            emit("log", log)
-                            emit(
-                                "progress",
-                                mapOf(
-                                    "progress" to p,
-                                    "written" to 0L,
-                                    "total" to 0L,
-                                ),
-                            )
+                            emitter.progress(p, log, stage = "adb_install")
+                            emitter.log(log, stage = "adb_install", target = "androidOtg")
                         },
+                        options =
+                            AdbOtgInstaller.InstallOptions(
+                                forceDowngrade = forceDowngrade,
+                                forceUser0 = forceUser0,
+                            ),
                     )
+                emitter.emit(
+                    stage = "adb_install",
+                    message = outcome.message,
+                    percent = if (outcome.ok) 1.0 else null,
+                    level = if (outcome.ok) "success" else "error",
+                    ok = outcome.ok,
+                    detail = outcome.errorCode,
+                    target = "androidOtg",
+                )
                 mainHandler.post {
-                    result.success(mapOf("ok" to true, "message" to msg))
+                    result.success(
+                        mapOf(
+                            "ok" to outcome.ok,
+                            "message" to outcome.message,
+                            "pmOutput" to outcome.pmOutput,
+                            "errorCode" to outcome.errorCode,
+                        ),
+                    )
                 }
             } catch (e: Exception) {
-                emit("log", "ADB TCP install error: ${e.message}")
+                emitter.emit(
+                    stage = "adb_install",
+                    message = e.message ?: e.toString(),
+                    level = "error",
+                    ok = false,
+                    target = "androidOtg",
+                )
                 mainHandler.post {
                     result.success(
                         mapOf(
                             "ok" to false,
                             "message" to (e.message ?: e.toString()),
+                            "errorCode" to "EXCEPTION",
                         ),
                     )
                 }
             }
-        }
-    }
-
-    private fun emit(type: String, value: Any?) {
-        mainHandler.post {
-            eventSink?.success(mapOf("type" to type, "value" to value))
         }
     }
 

@@ -4,13 +4,12 @@ Phone-side installer for shipping PØLYBĪUS onto handheld / MCU targets and oth
 
 | Target | What it does |
 | --- | --- |
-| **R36S** | Prepare/format SD (FAT32/exFAT) then unzip PortMaster port into `roms/ports/` |
-| **CYD ESP32-2432S028** | USB-OTG serial flash of `polybius-cyd.bin` |
-| **ESP32-32E 240×320 Resistive** | Same CYD firmware on classic ESP32 + 2.8″ resistive panels |
-| **LilyGO T-Deck** | USB-OTG serial flash of `polybius-tdeck.bin` (ESP32-S3 USB-JTAG) |
-| **Android (OTG ADB)** | Send bundled Portal + V.1 USER + Darth Cherry (or any catalog/local APK) over USB OTG / TCP ADB |
+| **R36S** | Path detect (`roms/ports`, `roms2/ports`, …) + Direct / Autoinstall + SD prepare |
+| **CYD / ESP32-32E** | Presets (classic / CYD2USB / 32E / generic) + manual BOOT/RESET wizard |
+| **LilyGO T-Deck** | Dedicated ESP32-S3 preset + trackball download-mode UX |
+| **Android (OTG ADB)** | Selective multi-APK over USB OTG / TCP with SHA-256 + pm error surfacing |
 
-Package id: `com.polybius.flasher` · Version **1.4.1**
+Package id: `com.polybius.flasher` · Version **1.5.0**
 
 ## Bundled APKs
 
@@ -36,6 +35,6 @@ flutter test
 flutter build apk --release --target-platform=android-arm64
 ```
 
-Dist: `polybius/dist/polybius-flasher-1.4.1-android-arm64.apk`
+Dist: `polybius/dist/polybius-flasher-1.5.0-android-arm64.apk`
 
 See [`../polybius/docs/FLASHER.md`](../polybius/docs/FLASHER.md).
