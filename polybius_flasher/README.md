@@ -10,7 +10,7 @@ Phone-side installer for shipping PØLYBĪUS onto handheld / MCU targets and oth
 | **LilyGO T-Deck** | USB-OTG serial flash of `polybius-tdeck.bin` (ESP32-S3 USB-JTAG) |
 | **Android (OTG ADB)** | Send bundled Portal + V.1 USER + Darth Cherry (or any catalog/local APK) over USB OTG / TCP ADB |
 
-Package id: `com.polybius.flasher` · Version **1.4.0**
+Package id: `com.polybius.flasher` · Version **1.4.1**
 
 ## Bundled APKs
 
@@ -36,6 +36,6 @@ flutter test
 flutter build apk --release --target-platform=android-arm64
 ```
 
-Dist: `polybius/dist/polybius-flasher-1.4.0-android-arm64.apk`
+Dist: `polybius/dist/polybius-flasher-1.4.1-android-arm64.apk`
 
 See [`../polybius/docs/FLASHER.md`](../polybius/docs/FLASHER.md).

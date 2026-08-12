@@ -44,7 +44,7 @@ void main() {
     expect(FlashTarget.androidOtg.firmwareAsset, isEmpty);
   });
 
-  test('core suite bundles Portal, V.1 USER, and Darth Cherry', () {
+  test('bundled catalog includes Portal, V.1 USER, and Darth Cherry', () {
     expect(FlasherBridge.coreSuiteIds, ['portal_hq', 'v1_user', 'darth_cherry']);
     final suite = FlasherBridge.coreSuite;
     expect(suite.length, 3);
@@ -71,7 +71,7 @@ void main() {
     expect(find.textContaining('SYSTEM FORMAT SETTINGS'), findsOneWidget);
   });
 
-  testWidgets('Android OTG shows core suite option', (tester) async {
+  testWidgets('Android OTG lets user multi-select catalog APKs', (tester) async {
     await tester.pumpWidget(const PolybiusFlasherApp());
     await tester.pump();
     await tester.scrollUntilVisible(
@@ -82,11 +82,14 @@ void main() {
     await tester.tap(find.text('ANDROID (OTG ADB)'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
-    expect(
-      find.textContaining('CORE SUITE — Portal + V.1 + Darth Cherry'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('SELECT APK(S) TO INSTALL'), findsOneWidget);
+    expect(find.textContaining('SELECT ALL BUNDLED'), findsOneWidget);
+    expect(find.textContaining('CLEAR ALL'), findsOneWidget);
     expect(find.textContaining('PØLYBÎŪS PORTAL'), findsOneWidget);
+    expect(find.textContaining('PØLYBÎŪS V.1'), findsOneWidget);
     expect(find.textContaining('DARTH CHERRY'), findsOneWidget);
+    expect(find.text('INSTALL APK'), findsOneWidget);
+    // Catalog entries are checkboxes (multi-select), not a forced all-three suite.
+    expect(find.byType(CheckboxListTile), findsWidgets);
   });
 }

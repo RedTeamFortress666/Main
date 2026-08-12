@@ -12,7 +12,7 @@ Phone-side installer for shipping PØLYBĪUS onto handheld / MCU targets — and
 
 - App source: [`../../polybius_flasher/`](../../polybius_flasher/)
 - Package id: `com.polybius.flasher`
-- Dist APK: [`../dist/polybius-flasher-1.4.0-android-arm64.apk`](../dist/polybius-flasher-1.4.0-android-arm64.apk)
+- Dist APK: [`../dist/polybius-flasher-1.4.1-android-arm64.apk`](../dist/polybius-flasher-1.4.1-android-arm64.apk)
 
 ## Bundled core suite (offline)
 
@@ -24,7 +24,9 @@ These ship inside the flasher APK under `assets/apks/`:
 | **PØLYBÎŪS V.1 USER** | `polybius-v1-stable-user-android-arm64.apk` |
 | **DARTH CHERRY 1.0.2** | `darth-cherry-1.0.2-android-arm64.apk` |
 
-Enable **CORE SUITE** on the Android OTG target to push all three in one run.
+Enable **SELECT ALL BUNDLED** (or check individual boxes) on the Android OTG
+target to choose Portal, V.1, and/or Darth Cherry — the flasher installs only
+what you select.
 
 ## Requirements
 
@@ -36,16 +38,16 @@ Enable **CORE SUITE** on the Android OTG target to push all three in one run.
 
 ## Operator flow
 
-1. Sideload `polybius-flasher-1.4.0-android-arm64.apk`.
+1. Sideload `polybius-flasher-1.4.1-android-arm64.apk`.
 2. Open **PØLYBÎŪS FLASHER**.
-3. Select target → **FLASH** / **INSTALL APK** / **SEND CORE SUITE**.
+3. Select target → **FLASH** / **INSTALL APK** / **INSTALL N APKS**.
 4. ESP: grant USB permission; follow on-screen BOOT/RESET instructions (or Skip if already in download mode).
 5. R36S:
    - Prefer **Prepare SD before flash** (default on).
    - Optional **Logical format** wipes the selected tree, then recreates `roms/ports`.
    - Use **SYSTEM FORMAT SETTINGS** if the card is NTFS/ext4 / unreadable — format as FAT32/exFAT, then return.
    - Pick the SD `roms` / `ports` tree; launch **Ports → Polybius** on the handheld.
-6. Android OTG: enable **CORE SUITE** (or pick a single catalog/local APK), connect the target over OTG, authorize debugging, tap **SEND CORE SUITE** / **INSTALL APK**. Optional: TCP ADB (`adb tcpip 5555`) instead of USB.
+6. Android OTG: check **one or more** catalog APKs (or pick a local `.apk`), connect the target over OTG, authorize debugging, tap **INSTALL APK**. Optional: TCP ADB (`adb tcpip 5555`) instead of USB.
 
 ## SD prepare / format notes
 
@@ -66,7 +68,7 @@ OS images for TF1 (ArkOS / ROCKNIX / Lineage) still need POLYBIUS PRESS / a PC `
 ## Android OTG notes
 
 - Uses embedded AdbLib (USB + TCP) — push to `/data/local/tmp/` then `pm install -r`.
-- Core suite APKs are **bundled** (no network needed). Other catalog entries download from `polybius/dist/` and cache under app documents.
+- Core suite APKs (**Portal / V.1 / Darth Cherry**) are **bundled** (no network needed). The operator selects which of them (or other catalog entries) to install — nothing is pushed unless checked. Other catalog entries download from `polybius/dist/` and cache under app documents.
 - First connection shows the target’s “Allow USB debugging?” dialog — accept it or the handshake hangs until cancelled.
 
 ## PC fallback

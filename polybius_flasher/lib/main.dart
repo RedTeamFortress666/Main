@@ -131,11 +131,10 @@ class _FlasherHomePageState extends State<FlasherHomePage>
   bool _logicalFormatSd = false;
   bool _wipePreviousPolybius = true;
 
-  // Android OTG ADB
-  ApkCatalogItem? _apkItem;
+  // Android OTG ADB — multi-select catalog APKs (one, some, or all)
+  final Set<String> _selectedApkIds = {};
   String? _localApkPath;
   bool _useTcpAdb = false;
-  bool _installCoreSuite = false;
   final _tcpHostCtrl = TextEditingController(text: '192.168.1.1');
   final _tcpPortCtrl = TextEditingController(text: '5555');
 
@@ -194,12 +193,16 @@ class _FlasherHomePageState extends State<FlasherHomePage>
       _logicalFormatSd = prefs.getBool('logical_format_sd') ?? false;
       _wipePreviousPolybius = prefs.getBool('wipe_previous_polybius') ?? true;
       if (_target == FlashTarget.androidOtg) {
-        final apkId = prefs.getString('android_apk_id');
-        _apkItem = FlasherBridge.apkCatalog
-            .where((a) => a.id == apkId)
-            .firstOrNull;
+        final ids = prefs.getStringList('android_apk_ids') ?? const <String>[];
+        _selectedApkIds
+          ..clear()
+          ..addAll(ids);
+        // Migrate legacy single-id prefs
+        final legacy = prefs.getString('android_apk_id');
+        if (_selectedApkIds.isEmpty && legacy != null) {
+          _selectedApkIds.add(legacy);
+        }
         _useTcpAdb = prefs.getBool('android_use_tcp') ?? false;
-        _installCoreSuite = prefs.getBool('android_core_suite') ?? false;
         _tcpHostCtrl.text = prefs.getString('android_tcp_host') ?? '192.168.1.1';
         _tcpPortCtrl.text = prefs.getString('android_tcp_port') ?? '5555';
       }
@@ -224,11 +227,8 @@ class _FlasherHomePageState extends State<FlasherHomePage>
       return;
     }
     if (_target == FlashTarget.androidOtg) {
-      if (_apkItem != null) {
-        await prefs.setString('android_apk_id', _apkItem!.id);
-      }
+      await prefs.setStringList('android_apk_ids', _selectedApkIds.toList());
       await prefs.setBool('android_use_tcp', _useTcpAdb);
-      await prefs.setBool('android_core_suite', _installCoreSuite);
       await prefs.setString('android_tcp_host', _tcpHostCtrl.text.trim());
       await prefs.setString('android_tcp_port', _tcpPortCtrl.text.trim());
       return;
@@ -817,11 +817,13 @@ class _FlasherHomePageState extends State<FlasherHomePage>
 
   Future<void> _runAndroidOtg() async {
     final localPath = _localApkPath;
-    final catalog = _apkItem;
-    if (!_installCoreSuite && localPath == null && catalog == null) {
+    final selected = FlasherBridge.apkCatalog
+        .where((a) => _selectedApkIds.contains(a.id))
+        .toList();
+    if (localPath == null && selected.isEmpty) {
       setState(
         () => _status =
-            'Pick a catalog APK, enable CORE SUITE, or choose a local .apk',
+            'Select one or more catalog APKs, or pick a local .apk file',
       );
       return;
     }
@@ -835,8 +837,10 @@ class _FlasherHomePageState extends State<FlasherHomePage>
     }
 
     final items = <({String label, Future<String> Function() resolve})>[];
-    if (_installCoreSuite) {
-      for (final item in FlasherBridge.coreSuite) {
+    if (localPath != null) {
+      items.add((label: 'LOCAL APK', resolve: () async => localPath));
+    } else {
+      for (final item in selected) {
         items.add((
           label: item.title,
           resolve: () => FlasherBridge.instance.resolveApk(
@@ -851,22 +855,6 @@ class _FlasherHomePageState extends State<FlasherHomePage>
           ),
         ));
       }
-    } else if (localPath != null) {
-      items.add((label: 'LOCAL APK', resolve: () async => localPath));
-    } else {
-      items.add((
-        label: catalog!.title,
-        resolve: () => FlasherBridge.instance.resolveApk(
-          catalog,
-          onProgress: (p, recv, total) {
-            setState(() {
-              _progress = p.clamp(0.0, 1.0);
-              _written = recv;
-              _total = total;
-            });
-          },
-        ),
-      ));
     }
 
     UsbDeviceInfo? device;
@@ -997,9 +985,16 @@ class _FlasherHomePageState extends State<FlasherHomePage>
     }
     setState(() {
       _localApkPath = path;
-      _apkItem = null;
+      _selectedApkIds.clear();
     });
     _append('Local APK selected: $path');
+  }
+
+  String get _androidInstallLabel {
+    if (_localApkPath != null) return 'INSTALL APK';
+    final n = _selectedApkIds.length;
+    if (n <= 1) return 'INSTALL APK';
+    return 'INSTALL $n APKS';
   }
 
   @override
@@ -1130,7 +1125,7 @@ class _FlasherHomePageState extends State<FlasherHomePage>
           selected: _target == FlashTarget.androidOtg,
           title: 'ANDROID (OTG ADB)',
           subtitle:
-              'Send Portal + V.1 + Darth Cherry (bundled) Android→Android over OTG',
+              'Install selected Portal / V.1 / Darth Cherry / catalog APKs via OTG ADB',
           enabled: !_busy,
           onTap: () async {
             await _selectTarget(FlashTarget.androidOtg);
@@ -1168,7 +1163,7 @@ class _FlasherHomePageState extends State<FlasherHomePage>
             _busy
                 ? 'WORKING…'
                 : android
-                    ? (_installCoreSuite ? 'SEND CORE SUITE' : 'INSTALL APK')
+                    ? _androidInstallLabel
                     : 'FLASH',
             style: GoogleFonts.shareTechMono(
               fontWeight: FontWeight.w700,
@@ -1322,11 +1317,16 @@ class _FlasherHomePageState extends State<FlasherHomePage>
   }
 
   Widget _buildAndroidOtgOptions() {
+    final bundledIds =
+        FlasherBridge.apkCatalog.where((a) => a.isBundled).map((a) => a.id);
+    final allBundledSelected =
+        bundledIds.every(_selectedApkIds.contains) && bundledIds.isNotEmpty;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'APK TO INSTALL',
+          'SELECT APK(S) TO INSTALL',
           style: GoogleFonts.shareTechMono(
             color: FlasherColors.amber,
             letterSpacing: 2,
@@ -1335,84 +1335,85 @@ class _FlasherHomePageState extends State<FlasherHomePage>
         ),
         const SizedBox(height: 8),
         Text(
-          'Portal, V.1 USER, and Darth Cherry ship bundled for offline OTG send. '
-          'Pushes over ADB sync + pm install (USB OTG or TCP).',
+          'Check one app, several, or all. Portal / V.1 / Darth Cherry are '
+          'bundled offline; others download once then cache. '
+          'Install uses ADB sync + pm install over USB OTG or TCP.',
           style: GoogleFonts.shareTechMono(
             color: FlasherColors.dim,
             fontSize: 11,
             height: 1.35,
           ),
         ),
-        CheckboxListTile(
-          contentPadding: EdgeInsets.zero,
-          dense: true,
-          value: _installCoreSuite,
-          activeColor: FlasherColors.phosphor,
-          title: Text(
-            'CORE SUITE — Portal + V.1 + Darth Cherry (bundled)',
-            style: GoogleFonts.shareTechMono(fontSize: 12),
-          ),
-          onChanged: _busy
-              ? null
-              : (v) => setState(() {
-                    _installCoreSuite = v ?? false;
-                    if (_installCoreSuite) {
-                      _localApkPath = null;
-                    }
-                  }),
-        ),
-        const SizedBox(height: 10),
-        for (final item in FlasherBridge.apkCatalog) ...[
-          InkWell(
-            onTap: _busy || _installCoreSuite
-                ? null
-                : () => setState(() {
-                      _apkItem = item;
-                      _localApkPath = null;
-                    }),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(
-                    !_installCoreSuite &&
-                            _apkItem?.id == item.id &&
-                            _localApkPath == null
-                        ? Icons.radio_button_checked
-                        : Icons.radio_button_off,
-                    size: 18,
-                    color: _installCoreSuite
-                        ? FlasherColors.dim
-                        : FlasherColors.phosphor,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item.isBundled
-                              ? '${item.title}  · OFFLINE'
-                              : item.title,
-                          style: GoogleFonts.orbitron(
-                            fontSize: 12,
-                            color: FlasherColors.phosphor,
-                          ),
-                        ),
-                        Text(
-                          item.subtitle,
-                          style: GoogleFonts.shareTechMono(
-                            fontSize: 10,
-                            color: FlasherColors.dim,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 4,
+          runSpacing: 0,
+          children: [
+            TextButton(
+              onPressed: _busy
+                  ? null
+                  : () => setState(() {
+                        _localApkPath = null;
+                        if (allBundledSelected) {
+                          _selectedApkIds.removeAll(bundledIds);
+                        } else {
+                          _selectedApkIds.addAll(bundledIds);
+                        }
+                      }),
+              child: Text(
+                allBundledSelected
+                    ? 'CLEAR BUNDLED'
+                    : 'SELECT ALL BUNDLED',
+                style: GoogleFonts.shareTechMono(
+                  color: FlasherColors.amber,
+                  fontSize: 11,
+                ),
               ),
             ),
+            TextButton(
+              onPressed: _busy || _selectedApkIds.isEmpty
+                  ? null
+                  : () => setState(() => _selectedApkIds.clear()),
+              child: Text(
+                'CLEAR ALL',
+                style: GoogleFonts.shareTechMono(
+                  color: FlasherColors.dim,
+                  fontSize: 11,
+                ),
+              ),
+            ),
+          ],
+        ),
+        for (final item in FlasherBridge.apkCatalog) ...[
+          CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            value: _localApkPath == null && _selectedApkIds.contains(item.id),
+            activeColor: FlasherColors.phosphor,
+            title: Text(
+              item.isBundled ? '${item.title}  · OFFLINE' : item.title,
+              style: GoogleFonts.orbitron(
+                fontSize: 12,
+                color: FlasherColors.phosphor,
+              ),
+            ),
+            subtitle: Text(
+              item.subtitle,
+              style: GoogleFonts.shareTechMono(
+                fontSize: 10,
+                color: FlasherColors.dim,
+              ),
+            ),
+            onChanged: _busy
+                ? null
+                : (v) => setState(() {
+                      _localApkPath = null;
+                      if (v == true) {
+                        _selectedApkIds.add(item.id);
+                      } else {
+                        _selectedApkIds.remove(item.id);
+                      }
+                    }),
           ),
         ],
         const SizedBox(height: 8),
@@ -1426,7 +1427,7 @@ class _FlasherHomePageState extends State<FlasherHomePage>
           ),
           child: Text(
             _localApkPath == null
-                ? 'PICK LOCAL .APK'
+                ? 'PICK LOCAL .APK (instead of catalog)'
                 : 'LOCAL: ${_localApkPath!.split('/').last}',
             textAlign: TextAlign.center,
             style: GoogleFonts.shareTechMono(fontSize: 12),
