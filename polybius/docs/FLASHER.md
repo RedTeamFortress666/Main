@@ -11,7 +11,8 @@ Phone-side installer for shipping PØLYBĪUS onto handheld / MCU targets — and
 
 - App source: [`../../polybius_flasher/`](../../polybius_flasher/)
 - Package id: `com.polybius.flasher`
-- Dist APK: [`../dist/polybius-flasher-1.5.0-android-arm64.apk`](../dist/polybius-flasher-1.5.0-android-arm64.apk)
+- Dist APK: [`../dist/polybius-flasher-1.5.1-android-arm64.apk`](../dist/polybius-flasher-1.5.1-android-arm64.apk)
+- Launcher icon: Fat Man–style bomb with stencil **GAME ØN**
 
 ## Hardening highlights
 

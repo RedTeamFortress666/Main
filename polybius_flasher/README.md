@@ -9,7 +9,7 @@ Phone-side installer for shipping PØLYBĪUS onto handheld / MCU targets and oth
 | **LilyGO T-Deck** | Dedicated ESP32-S3 preset + trackball download-mode UX |
 | **Android (OTG ADB)** | Selective multi-APK over USB OTG / TCP with SHA-256 + pm error surfacing |
 
-Package id: `com.polybius.flasher` · Version **1.5.0**
+Package id: `com.polybius.flasher` · Version **1.5.1**
 
 ## Bundled APKs
 
@@ -35,6 +35,6 @@ flutter test
 flutter build apk --release --target-platform=android-arm64
 ```
 
-Dist: `polybius/dist/polybius-flasher-1.5.0-android-arm64.apk`
+Dist: `polybius/dist/polybius-flasher-1.5.1-android-arm64.apk`
 
 See [`../polybius/docs/FLASHER.md`](../polybius/docs/FLASHER.md).
