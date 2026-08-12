@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'asset_integrity.dart';
@@ -91,7 +92,7 @@ extension FlashTargetX on FlashTarget {
   };
 
   String get title => switch (this) {
-    FlashTarget.r36s => 'R36S SD',
+    FlashTarget.r36s => 'R36S SD / USB',
     FlashTarget.cydClassic => 'CYD CLASSIC',
     FlashTarget.cyd2usb => 'CYD2USB',
     FlashTarget.esp32e => 'ESP32-32E',
@@ -101,7 +102,7 @@ extension FlashTargetX on FlashTarget {
   };
 
   String get subtitle => switch (this) {
-    FlashTarget.r36s => 'PortMaster zip + SD preparation',
+    FlashTarget.r36s => 'PortMaster zip · SD or USB stick',
     FlashTarget.androidOtg => 'ADB over USB-C OTG or TCP',
     _ => espPreset!.subtitle,
   };
@@ -143,6 +144,22 @@ extension R36InstallModeX on R36InstallMode {
     R36InstallMode.direct => 'Direct copy',
     R36InstallMode.autoinstall => 'Autoinstall',
   };
+}
+
+enum R36StorageDestination { sdCard, usbStick, both }
+
+extension R36StorageDestinationX on R36StorageDestination {
+  String get label => switch (this) {
+    R36StorageDestination.sdCard => 'Write to SD card (SAF)',
+    R36StorageDestination.usbStick => 'Write to USB stick',
+    R36StorageDestination.both => 'Both SD + USB stick',
+  };
+
+  bool get usesSd =>
+      this == R36StorageDestination.sdCard || this == R36StorageDestination.both;
+
+  bool get usesUsb =>
+      this == R36StorageDestination.usbStick || this == R36StorageDestination.both;
 }
 
 extension _FirstOrNullX<T> on Iterable<T> {
@@ -199,12 +216,17 @@ class _FlasherHomePageState extends State<FlasherHomePage>
   int _serialMonitorMs = 0;
 
   String? _lastSdTreeUri;
+  String? _lastUsbTreeUri;
   List<R36PathCandidate> _r36Candidates = const [];
   String? _selectedR36Hint;
   bool _prepareSdBeforeFlash = true;
   bool _wipePreviousPolybius = true;
   bool _logicalFormatSd = false;
   R36InstallMode _r36InstallMode = R36InstallMode.direct;
+  R36StorageDestination _r36StorageDestination = R36StorageDestination.sdCard;
+  bool _includeCustomRom = false;
+  String? _customRomPath;
+  bool _includeZipOnUsb = true;
 
   final Set<String> _selectedApkIds = {};
   String? _localApkPath;
@@ -255,12 +277,19 @@ class _FlasherHomePageState extends State<FlasherHomePage>
     setState(() {
       _target = _parseTarget(prefs.getString('last_target')) ?? _target;
       _lastSdTreeUri = prefs.getString('r36s_tree_uri');
+      _lastUsbTreeUri = prefs.getString('r36s_usb_tree_uri');
       _prepareSdBeforeFlash =
           prefs.getBool('prepare_sd_before_flash') ?? _prepareSdBeforeFlash;
       _wipePreviousPolybius =
           prefs.getBool('wipe_previous_polybius') ?? _wipePreviousPolybius;
       _logicalFormatSd = prefs.getBool('logical_format_sd') ?? _logicalFormatSd;
       _r36InstallMode = _parseR36Mode(prefs.getString('r36_install_mode'));
+      _r36StorageDestination = _parseR36Storage(
+        prefs.getString('r36_storage_destination'),
+      );
+      _includeCustomRom = prefs.getBool('r36_include_custom_rom') ?? false;
+      _customRomPath = prefs.getString('r36_custom_rom_path');
+      _includeZipOnUsb = prefs.getBool('r36_include_zip_on_usb') ?? true;
       _selectedApkIds
         ..clear()
         ..addAll(prefs.getStringList('android_apk_ids') ?? const <String>[]);
@@ -296,6 +325,13 @@ class _FlasherHomePageState extends State<FlasherHomePage>
     return R36InstallMode.direct;
   }
 
+  R36StorageDestination _parseR36Storage(String? value) {
+    for (final dest in R36StorageDestination.values) {
+      if (dest.name == value) return dest;
+    }
+    return R36StorageDestination.sdCard;
+  }
+
   void _applyEspDefaults(FlashTarget target, {SharedPreferences? prefs}) {
     final preset = target.espPreset;
     if (preset == null) return;
@@ -323,8 +359,19 @@ class _FlasherHomePageState extends State<FlasherHomePage>
     await prefs.setBool('wipe_previous_polybius', _wipePreviousPolybius);
     await prefs.setBool('logical_format_sd', _logicalFormatSd);
     await prefs.setString('r36_install_mode', _r36InstallMode.name);
+    await prefs.setString('r36_storage_destination', _r36StorageDestination.name);
+    await prefs.setBool('r36_include_custom_rom', _includeCustomRom);
+    await prefs.setBool('r36_include_zip_on_usb', _includeZipOnUsb);
+    if (_customRomPath != null) {
+      await prefs.setString('r36_custom_rom_path', _customRomPath!);
+    } else {
+      await prefs.remove('r36_custom_rom_path');
+    }
     if (_lastSdTreeUri != null) {
       await prefs.setString('r36s_tree_uri', _lastSdTreeUri!);
+    }
+    if (_lastUsbTreeUri != null) {
+      await prefs.setString('r36s_usb_tree_uri', _lastUsbTreeUri!);
     }
     await prefs.setStringList('android_apk_ids', _selectedApkIds.toList());
     if (_localApkPath != null) {
@@ -812,11 +859,56 @@ class _FlasherHomePageState extends State<FlasherHomePage>
     await _savePrefs();
   }
 
+  Future<void> _pickUsbTree() async {
+    final tree = await _bridge.pickSdTree();
+    if (tree == null || tree.isEmpty) return;
+    if (!mounted) return;
+    setState(() {
+      _lastUsbTreeUri = tree;
+      _status =
+          'USB stick selected. Tap WRITE TO USB STICK when ready (FAT32/exFAT).';
+    });
+    await _savePrefs();
+  }
+
   Future<String?> _ensureR36Tree({bool forcePick = false}) async {
     if (forcePick || _lastSdTreeUri == null) {
       await _pickR36Tree();
     }
     return _lastSdTreeUri;
+  }
+
+  Future<String?> _ensureUsbTree({bool forcePick = false}) async {
+    if (forcePick || _lastUsbTreeUri == null) {
+      await _pickUsbTree();
+    }
+    return _lastUsbTreeUri;
+  }
+
+  Future<String> _materializeR36Zip(OperationReport report) async {
+    final zipPath = await _bridge.materializeAsset(
+      AssetIntegrity.r36sZip.assetPath,
+      AssetIntegrity.r36sZip.fileName,
+      expectedSha256: AssetIntegrity.r36sZip.sha256,
+    );
+    report.add(
+      name: 'R36S zip SHA verified',
+      ok: true,
+      detail: AssetIntegrity.r36sZip.version,
+    );
+    return zipPath;
+  }
+
+  Future<void> _pickCustomRom() async {
+    final path = await _bridge.pickExtraFile();
+    if (path == null || path.isEmpty) return;
+    if (!mounted) return;
+    setState(() {
+      _customRomPath = path;
+      _includeCustomRom = true;
+      _status = 'Custom file selected: ${p.basename(path)}';
+    });
+    await _savePrefs();
   }
 
   Future<bool> _confirmR36WipeIfNeeded(String action) async {
@@ -862,7 +954,11 @@ class _FlasherHomePageState extends State<FlasherHomePage>
   }
 
   Future<void> _testR36Connection() async {
-    await _withBusy('Testing SD write access...', () async {
+    await _withBusy('Testing R36S write access...', () async {
+      if (_r36StorageDestination.usesUsb && !_r36StorageDestination.usesSd) {
+        await _testUsbConnection(forcePick: true);
+        return;
+      }
       final tree = await _ensureR36Tree(forcePick: true);
       if (tree == null) return;
       final report = OperationReport(
@@ -876,43 +972,119 @@ class _FlasherHomePageState extends State<FlasherHomePage>
         detail: _nativeDetail(result),
       );
       _setStatus(report.summary());
+      if (_r36StorageDestination.usesUsb) {
+        await _testUsbConnection(forcePick: false);
+      }
     });
   }
 
+  Future<void> _testUsbConnection({bool forcePick = false}) async {
+    final tree = await _ensureUsbTree(forcePick: forcePick);
+    if (tree == null) return;
+    final report = OperationReport(
+      target: 'r36s_usb',
+      title: 'R36S USB stick write test',
+    );
+    final result = await _bridge.probeUsbWrite(tree);
+    report.add(
+      name: 'Probe USB write',
+      ok: result.ok,
+      detail: _nativeDetail(result),
+    );
+    _setStatus(report.summary());
+  }
+
+  Future<void> _installR36Sd(OperationReport report) async {
+    final tree = await _ensureR36Tree();
+    if (tree == null) return;
+    if (_prepareSdBeforeFlash) {
+      final prep = await _prepareR36Sd(tree, report);
+      if (prep == null || !prep.ok) return;
+    }
+    final zipPath = await _materializeR36Zip(report);
+    final result = await _bridge.installR36s(
+      zipPath: zipPath,
+      treeUri: tree,
+      mode: _r36InstallMode.bridgeValue,
+      preferredHint: _selectedR36Hint,
+    );
+    final extra = [
+      _nativeDetail(result),
+      if (result.verified) 'verified',
+      if (result.portsPath.isNotEmpty) 'portsPath=${result.portsPath}',
+    ].where((part) => part.trim().isNotEmpty).join(' · ');
+    report.add(name: 'Install to SD', ok: result.ok, detail: extra);
+  }
+
+  Future<void> _writeR36Usb(OperationReport report) async {
+    final tree = await _ensureUsbTree();
+    if (tree == null) return;
+    final zipPath = await _materializeR36Zip(report);
+    final extraPath =
+        _includeCustomRom && _customRomPath != null && _customRomPath!.isNotEmpty
+        ? _customRomPath
+        : null;
+    final result = await _bridge.writeR36UsbStick(
+      zipPath: zipPath,
+      treeUri: tree,
+      extraFilePath: extraPath,
+      includeZipCopy: _includeZipOnUsb,
+    );
+    final extra = [
+      _nativeDetail(result),
+      if (result.verified) 'verified',
+      if (result.portsPath.isNotEmpty) 'package=${result.portsPath}',
+      if (extraPath != null) 'custom=${p.basename(extraPath)}',
+    ].where((part) => part.trim().isNotEmpty).join(' · ');
+    report.add(name: 'Write USB stick', ok: result.ok, detail: extra);
+  }
+
   Future<void> _installR36() async {
-    await _withBusy('Installing R36S package...', () async {
-      final tree = await _ensureR36Tree();
-      if (tree == null) return;
-      final report = OperationReport(target: 'r36s', title: 'R36S install');
-      if (_prepareSdBeforeFlash) {
-        final prep = await _prepareR36Sd(tree, report);
-        if (prep == null || !prep.ok) {
+    final dest = _r36StorageDestination;
+    final actionLabel = switch (dest) {
+      R36StorageDestination.sdCard => 'Installing R36S package to SD...',
+      R36StorageDestination.usbStick => 'Writing R36S package to USB stick...',
+      R36StorageDestination.both => 'Installing R36S to SD + USB stick...',
+    };
+    await _withBusy(actionLabel, () async {
+      final report = OperationReport(
+        target: dest.usesUsb ? 'r36s_usb' : 'r36s',
+        title: switch (dest) {
+          R36StorageDestination.sdCard => 'R36S SD install',
+          R36StorageDestination.usbStick => 'R36S USB stick write',
+          R36StorageDestination.both => 'R36S SD + USB stick',
+        },
+      );
+
+      if (dest.usesSd) {
+        if (!await _confirm(
+          title: 'CONFIRM SD INSTALL',
+          message:
+              'Install the bundled PortMaster payload onto the selected SD card tree?',
+          action: 'INSTALL TO SD',
+          destructive: true,
+        )) {
+          return;
+        }
+        await _installR36Sd(report);
+      }
+
+      if (dest.usesUsb) {
+        if (!await _confirm(
+          title: 'CONFIRM USB WRITE',
+          message:
+              'Write POLYBIUS_R36S_USB/ onto the selected USB stick?\n\n'
+              'Plug a FAT32/exFAT stick into this phone (OTG). '
+              'Existing POLYBIUS_R36S_USB/ folder will be replaced.',
+          action: 'WRITE TO USB STICK',
+          destructive: true,
+        )) {
           _setStatus(report.summary());
           return;
         }
+        await _writeR36Usb(report);
       }
-      final zipPath = await _bridge.materializeAsset(
-        AssetIntegrity.r36sZip.assetPath,
-        AssetIntegrity.r36sZip.fileName,
-        expectedSha256: AssetIntegrity.r36sZip.sha256,
-      );
-      report.add(
-        name: 'R36S zip SHA verified',
-        ok: true,
-        detail: AssetIntegrity.r36sZip.version,
-      );
-      final result = await _bridge.installR36s(
-        zipPath: zipPath,
-        treeUri: tree,
-        mode: _r36InstallMode.bridgeValue,
-        preferredHint: _selectedR36Hint,
-      );
-      final extra = [
-        _nativeDetail(result),
-        if (result.verified) 'verified',
-        if (result.portsPath.isNotEmpty) 'portsPath=${result.portsPath}',
-      ].where((part) => part.trim().isNotEmpty).join(' · ');
-      report.add(name: 'Install package', ok: result.ok, detail: extra);
+
       _setStatus(report.summary());
     });
   }
@@ -1464,128 +1636,261 @@ class _FlasherHomePageState extends State<FlasherHomePage>
   }
 
   Widget _buildR36Panel() {
+    final dest = _r36StorageDestination;
+    final primaryLabel = switch (dest) {
+      R36StorageDestination.sdCard => 'INSTALL R36S PORT',
+      R36StorageDestination.usbStick => 'WRITE TO USB STICK',
+      R36StorageDestination.both => 'INSTALL SD + WRITE USB',
+    };
+    final primaryAction = _installR36;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionTitle('R36S SD HARDENED INSTALL'),
+        _SectionTitle('R36S SD / USB INSTALL'),
         Text(
           'Bundle: ${AssetIntegrity.r36sZip.label} · ${AssetIntegrity.r36sZip.version}',
           style: const TextStyle(color: FlasherColors.cyan),
         ),
-        const SizedBox(height: 14),
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: [
-            OutlinedButton.icon(
-              onPressed: _busy ? null : _pickR36Tree,
-              icon: const Icon(Icons.folder_open),
-              label: const Text('PICK SD TREE'),
-            ),
-            FilledButton.icon(
-              onPressed: _busy ? null : _testR36Connection,
-              icon: const Icon(Icons.fact_check),
-              label: const Text('TEST CONNECTION'),
-            ),
-            FilledButton.icon(
-              onPressed: _busy ? null : _prepareR36Only,
-              icon: const Icon(Icons.sd_card_alert),
-              label: const Text('PREPARE SD ONLY'),
-            ),
-            OutlinedButton.icon(
-              onPressed: _busy ? null : _openSystemFormat,
-              icon: const Icon(Icons.settings),
-              label: const Text('SYSTEM FORMAT SETTINGS'),
-            ),
-          ],
-        ),
         const SizedBox(height: 12),
-        if (_lastSdTreeUri != null)
-          Text(
-            'Selected tree: $_lastSdTreeUri',
-            style: const TextStyle(color: FlasherColors.dim),
+        Text('Destination', style: GoogleFonts.orbitron(fontSize: 14)),
+        const SizedBox(height: 6),
+        ...R36StorageDestination.values.map(
+          (option) => _OptionRow<R36StorageDestination>(
+            value: option,
+            groupValue: dest,
+            title: Text(option.label),
+            subtitle: Text(
+              switch (option) {
+                R36StorageDestination.sdCard =>
+                  'SAF folder picker → unzip into roms/ports (existing flow)',
+                R36StorageDestination.usbStick =>
+                  'OTG USB stick → POLYBIUS_R36S_USB/ for R36S file manager copy',
+                R36StorageDestination.both =>
+                  'Prepare SD and USB stick in one run',
+              },
+            ),
+            onSelected: _busy
+                ? null
+                : (value) {
+                    setState(() => _r36StorageDestination = value);
+                    _savePrefs();
+                  },
           ),
-        const SizedBox(height: 10),
-        CheckboxListTile(
-          value: _prepareSdBeforeFlash,
-          onChanged: _busy
-              ? null
-              : (value) {
-                  setState(() => _prepareSdBeforeFlash = value ?? true);
-                  _savePrefs();
-                },
-          title: const Text('Prepare SD before install'),
-        ),
-        CheckboxListTile(
-          value: _wipePreviousPolybius,
-          onChanged: _busy
-              ? null
-              : (value) {
-                  setState(() => _wipePreviousPolybius = value ?? true);
-                  _savePrefs();
-                },
-          title: const Text('Wipe previous PØLYBÎŪS files'),
-        ),
-        CheckboxListTile(
-          value: _logicalFormatSd,
-          onChanged: _busy
-              ? null
-              : (value) {
-                  setState(() => _logicalFormatSd = value ?? false);
-                  _savePrefs();
-                },
-          title: const Text('Logical format selected tree'),
-          subtitle: const Text('Requires confirmation before write/prepare.'),
         ),
         const Divider(color: FlasherColors.grid),
-        Text('Install mode', style: GoogleFonts.orbitron(fontSize: 14)),
-        Wrap(
-          children: R36InstallMode.values
-              .map(
-                (mode) => SizedBox(
-                  width: 240,
-                  child: _OptionRow<R36InstallMode>(
-                    value: mode,
-                    groupValue: _r36InstallMode,
-                    title: Text(mode.label),
-                    onSelected: _busy
+        if (dest.usesSd) ...[
+          Text('SD card (SAF)', style: GoogleFonts.orbitron(fontSize: 14)),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              OutlinedButton.icon(
+                onPressed: _busy ? null : _pickR36Tree,
+                icon: const Icon(Icons.folder_open),
+                label: const Text('PICK SD TREE'),
+              ),
+              if (dest.usesSd && !dest.usesUsb)
+                FilledButton.icon(
+                  onPressed: _busy ? null : _testR36Connection,
+                  icon: const Icon(Icons.fact_check),
+                  label: const Text('TEST CONNECTION'),
+                ),
+              FilledButton.icon(
+                onPressed: _busy ? null : _prepareR36Only,
+                icon: const Icon(Icons.sd_card_alert),
+                label: const Text('PREPARE SD ONLY'),
+              ),
+              OutlinedButton.icon(
+                onPressed: _busy ? null : _openSystemFormat,
+                icon: const Icon(Icons.settings),
+                label: const Text('SYSTEM FORMAT SETTINGS'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (_lastSdTreeUri != null)
+            Text(
+              'SD tree: $_lastSdTreeUri',
+              style: const TextStyle(color: FlasherColors.dim),
+            ),
+          CheckboxListTile(
+            value: _prepareSdBeforeFlash,
+            onChanged: _busy
+                ? null
+                : (value) {
+                    setState(() => _prepareSdBeforeFlash = value ?? true);
+                    _savePrefs();
+                  },
+            title: const Text('Prepare SD before install'),
+          ),
+          CheckboxListTile(
+            value: _wipePreviousPolybius,
+            onChanged: _busy
+                ? null
+                : (value) {
+                    setState(() => _wipePreviousPolybius = value ?? true);
+                    _savePrefs();
+                  },
+            title: const Text('Wipe previous PØLYBÎŪS files'),
+          ),
+          CheckboxListTile(
+            value: _logicalFormatSd,
+            onChanged: _busy
+                ? null
+                : (value) {
+                    setState(() => _logicalFormatSd = value ?? false);
+                    _savePrefs();
+                  },
+            title: const Text('Logical format selected tree'),
+            subtitle: const Text('Requires confirmation before write/prepare.'),
+          ),
+          Text('Install mode', style: GoogleFonts.orbitron(fontSize: 14)),
+          Wrap(
+            children: R36InstallMode.values
+                .map(
+                  (mode) => SizedBox(
+                    width: 240,
+                    child: _OptionRow<R36InstallMode>(
+                      value: mode,
+                      groupValue: _r36InstallMode,
+                      title: Text(mode.label),
+                      onSelected: _busy
+                          ? null
+                          : (value) {
+                              setState(() => _r36InstallMode = value);
+                              _savePrefs();
+                            },
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+          if (_r36Candidates.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Detected path candidates',
+              style: GoogleFonts.orbitron(fontSize: 14),
+            ),
+            ..._r36Candidates.map(
+              (candidate) => _OptionRow<String>(
+                value: candidate.hint,
+                groupValue: _selectedR36Hint,
+                title: Text(candidate.label),
+                subtitle: Text(
+                  '${candidate.hint} · ${candidate.exists ? 'exists' : 'will create'}',
+                ),
+                onSelected: _busy
+                    ? null
+                    : (value) {
+                        setState(() => _selectedR36Hint = value);
+                      },
+              ),
+            ),
+          ],
+          const Divider(color: FlasherColors.grid),
+        ],
+        if (dest.usesUsb) ...[
+          Text('USB stick (OTG)', style: GoogleFonts.orbitron(fontSize: 14)),
+          const SizedBox(height: 6),
+          const Text(
+            'Plug a FAT32 or exFAT USB stick into this phone (OTG). '
+            'Then choose the stick root or a folder on it. '
+            'Use a short data cable or powered hub if needed.',
+            style: TextStyle(color: FlasherColors.amber),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              OutlinedButton.icon(
+                onPressed: _busy ? null : _pickUsbTree,
+                icon: const Icon(Icons.usb),
+                label: const Text('PICK USB STICK'),
+              ),
+              FilledButton.icon(
+                onPressed: _busy ? null : _testUsbConnection,
+                icon: const Icon(Icons.fact_check),
+                label: const Text('TEST USB WRITE'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (_lastUsbTreeUri != null)
+            Text(
+              'USB tree: $_lastUsbTreeUri',
+              style: const TextStyle(color: FlasherColors.dim),
+            ),
+          const SizedBox(height: 6),
+          const Text(
+            'Creates POLYBIUS_R36S_USB/ with README, ports/, zip copy, and '
+            'POLYBIUS_USB_READY.txt. Copy ports/ on the R36S via file manager.',
+            style: TextStyle(color: FlasherColors.dim),
+          ),
+          CheckboxListTile(
+            value: _includeZipOnUsb,
+            onChanged: _busy
+                ? null
+                : (value) {
+                    setState(() => _includeZipOnUsb = value ?? true);
+                    _savePrefs();
+                  },
+            title: const Text('Include polybius-r36s-port.zip on stick'),
+            subtitle: const Text('For manual unzip or PortMaster autoinstall.'),
+          ),
+          CheckboxListTile(
+            value: _includeCustomRom,
+            onChanged: _busy
+                ? null
+                : (value) {
+                    setState(() => _includeCustomRom = value ?? false);
+                    _savePrefs();
+                  },
+            title: const Text('Also include a custom file / ROM'),
+            subtitle: const Text('Copied into POLYBIUS_R36S_USB/custom/'),
+          ),
+          if (_includeCustomRom) ...[
+            Wrap(
+              spacing: 10,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: _busy ? null : _pickCustomRom,
+                  icon: const Icon(Icons.attach_file),
+                  label: const Text('PICK CUSTOM FILE'),
+                ),
+                if (_customRomPath != null)
+                  TextButton(
+                    onPressed: _busy
                         ? null
-                        : (value) {
-                            setState(() => _r36InstallMode = value);
+                        : () {
+                            setState(() => _customRomPath = null);
                             _savePrefs();
                           },
+                    child: const Text('CLEAR'),
                   ),
-                ),
-              )
-              .toList(),
-        ),
-        if (_r36Candidates.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          Text(
-            'Detected path candidates',
-            style: GoogleFonts.orbitron(fontSize: 14),
-          ),
-          ..._r36Candidates.map(
-            (candidate) => _OptionRow<String>(
-              value: candidate.hint,
-              groupValue: _selectedR36Hint,
-              title: Text(candidate.label),
-              subtitle: Text(
-                '${candidate.hint} · ${candidate.exists ? 'exists' : 'will create'}',
-              ),
-              onSelected: _busy
-                  ? null
-                  : (value) {
-                      setState(() => _selectedR36Hint = value);
-                    },
+              ],
             ),
-          ),
+            if (_customRomPath != null)
+              Text(
+                'Selected: ${p.basename(_customRomPath!)}',
+                style: const TextStyle(color: FlasherColors.cyan),
+              ),
+          ],
+          const Divider(color: FlasherColors.grid),
         ],
+        if (dest.usesSd && dest.usesUsb)
+          FilledButton.icon(
+            onPressed: _busy ? null : _testR36Connection,
+            icon: const Icon(Icons.fact_check),
+            label: const Text('TEST SD + USB'),
+          ),
         const SizedBox(height: 14),
         FilledButton.icon(
-          onPressed: _busy ? null : _installR36,
-          icon: const Icon(Icons.download_for_offline),
-          label: const Text('INSTALL R36S PORT'),
+          onPressed: _busy ? null : primaryAction,
+          icon: Icon(dest.usesUsb && !dest.usesSd ? Icons.usb : Icons.download_for_offline),
+          label: Text(primaryLabel),
         ),
       ],
     );

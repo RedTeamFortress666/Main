@@ -367,6 +367,10 @@ class FlasherBridge {
     return _methods.invokeMethod<String>('pickApk');
   }
 
+  Future<String?> pickExtraFile() async {
+    return _methods.invokeMethod<String>('pickExtraFile');
+  }
+
   Future<List<R36PathCandidate>> detectR36Paths(String treeUri) async {
     final raw = await _methods.invokeMethod<List<dynamic>>(
       'detectR36Paths',
@@ -393,6 +397,34 @@ class FlasherBridge {
         'mode': mode,
         'preferredHint': ?preferredHint,
       },
+    );
+    return NativeResult.fromMap(raw ?? {});
+  }
+
+  Future<NativeResult> writeR36UsbStick({
+    required String zipPath,
+    required String treeUri,
+    String? extraFilePath,
+    bool includeZipCopy = true,
+  }) async {
+    ensureListening();
+    final raw = await _methods.invokeMethod<Map<dynamic, dynamic>>(
+      'writeR36UsbStick',
+      {
+        'zipPath': zipPath,
+        'treeUri': treeUri,
+        'extraFilePath': ?extraFilePath,
+        'includeZipCopy': includeZipCopy,
+      },
+    );
+    return NativeResult.fromMap(raw ?? {});
+  }
+
+  Future<NativeResult> probeUsbWrite(String treeUri) async {
+    ensureListening();
+    final raw = await _methods.invokeMethod<Map<dynamic, dynamic>>(
+      'probeUsbWrite',
+      {'treeUri': treeUri},
     );
     return NativeResult.fromMap(raw ?? {});
   }

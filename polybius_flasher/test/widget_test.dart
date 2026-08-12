@@ -67,6 +67,15 @@ void main() {
     expect(report.allOk, isFalse);
   });
 
+  test('r36 storage destination flags cover sd and usb', () {
+    expect(R36StorageDestination.sdCard.usesSd, isTrue);
+    expect(R36StorageDestination.sdCard.usesUsb, isFalse);
+    expect(R36StorageDestination.usbStick.usesUsb, isTrue);
+    expect(R36StorageDestination.both.usesSd, isTrue);
+    expect(R36StorageDestination.both.usesUsb, isTrue);
+    expect(R36StorageDestination.usbStick.label, contains('USB stick'));
+  });
+
   test('tdeck manual boot steps mention trackball', () {
     expect(EspPreset.tdeck.manualBootSteps.toLowerCase(), contains('trackball'));
     expect(EspPreset.cydClassic.manualBootSteps.toLowerCase(), contains('boot'));
