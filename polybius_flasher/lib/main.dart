@@ -126,10 +126,16 @@ class _FlasherHomePageState extends State<FlasherHomePage>
   String? _lastSdTreeUri;
   bool _didAutoSuggest = false;
 
+  // R36S SD prepare / format
+  bool _prepareSdBeforeFlash = true;
+  bool _logicalFormatSd = false;
+  bool _wipePreviousPolybius = true;
+
   // Android OTG ADB
   ApkCatalogItem? _apkItem;
   String? _localApkPath;
   bool _useTcpAdb = false;
+  bool _installCoreSuite = false;
   final _tcpHostCtrl = TextEditingController(text: '192.168.1.1');
   final _tcpPortCtrl = TextEditingController(text: '5555');
 
@@ -184,12 +190,16 @@ class _FlasherHomePageState extends State<FlasherHomePage>
         'androidOtg' => FlashTarget.androidOtg,
         _ => null,
       };
+      _prepareSdBeforeFlash = prefs.getBool('prepare_sd_before_flash') ?? true;
+      _logicalFormatSd = prefs.getBool('logical_format_sd') ?? false;
+      _wipePreviousPolybius = prefs.getBool('wipe_previous_polybius') ?? true;
       if (_target == FlashTarget.androidOtg) {
         final apkId = prefs.getString('android_apk_id');
         _apkItem = FlasherBridge.apkCatalog
             .where((a) => a.id == apkId)
             .firstOrNull;
         _useTcpAdb = prefs.getBool('android_use_tcp') ?? false;
+        _installCoreSuite = prefs.getBool('android_core_suite') ?? false;
         _tcpHostCtrl.text = prefs.getString('android_tcp_host') ?? '192.168.1.1';
         _tcpPortCtrl.text = prefs.getString('android_tcp_port') ?? '5555';
       }
@@ -201,6 +211,9 @@ class _FlasherHomePageState extends State<FlasherHomePage>
 
   Future<void> _savePrefs() async {
     final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('prepare_sd_before_flash', _prepareSdBeforeFlash);
+    await prefs.setBool('logical_format_sd', _logicalFormatSd);
+    await prefs.setBool('wipe_previous_polybius', _wipePreviousPolybius);
     final key = _target?.name;
     if (key == null) return;
     await prefs.setString('last_target', key);
@@ -215,6 +228,7 @@ class _FlasherHomePageState extends State<FlasherHomePage>
         await prefs.setString('android_apk_id', _apkItem!.id);
       }
       await prefs.setBool('android_use_tcp', _useTcpAdb);
+      await prefs.setBool('android_core_suite', _installCoreSuite);
       await prefs.setString('android_tcp_host', _tcpHostCtrl.text.trim());
       await prefs.setString('android_tcp_port', _tcpPortCtrl.text.trim());
       return;
@@ -591,6 +605,8 @@ class _FlasherHomePageState extends State<FlasherHomePage>
         content: Text(
           'Select the roms or roms/ports folder on the SD card '
           '(ArkOS / JELOS / PortMaster).\n\n'
+          'Card must be FAT32 or exFAT. The flasher will prepare the layout '
+          'before writing the Port zip.\n\n'
           'Example paths: /roms/ports or /roms2/ports',
           style: GoogleFonts.shareTechMono(
             color: FlasherColors.phosphor,
@@ -623,6 +639,23 @@ class _FlasherHomePageState extends State<FlasherHomePage>
     _lastSdTreeUri = tree;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('r36s_tree_uri', tree);
+
+    if (_prepareSdBeforeFlash) {
+      _append('Preparing SD (write probe + PortMaster layout)…');
+      setState(() => _status = 'Preparing SD…');
+      final prep = await FlasherBridge.instance.prepareSd(
+        treeUri: tree,
+        layout: 'r36s_ports',
+        logicalFormat: _logicalFormatSd,
+        wipePrevious: _wipePreviousPolybius,
+      );
+      _append(prep.ok ? 'OK ${prep.message}' : 'FAIL ${prep.message}');
+      if (!prep.ok) {
+        setState(() => _status = prep.message);
+        return;
+      }
+    }
+
     _append('Writing PortMaster layout…');
     final result = await FlasherBridge.instance.installR36s(
       zipPath: zip,
@@ -630,6 +663,77 @@ class _FlasherHomePageState extends State<FlasherHomePage>
     );
     setState(() => _status = result.message);
     _append(result.ok ? 'OK ${result.message}' : 'FAIL ${result.message}');
+  }
+
+  Future<void> _runPrepareSdOnly({required bool logicalFormat}) async {
+    if (_busy) return;
+    setState(() {
+      _busy = true;
+      _progress = 0;
+      _status = null;
+      _logs.clear();
+    });
+    try {
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: FlasherColors.panel,
+          title: Text(
+            logicalFormat ? 'FORMAT SD LAYOUT' : 'PREPARE SD',
+            style: GoogleFonts.orbitron(
+              color: FlasherColors.amber,
+              fontSize: 14,
+            ),
+          ),
+          content: Text(
+            logicalFormat
+                ? 'This WIPEs the selected folder tree, then recreates '
+                    'roms/ports (R36S) or polybius/ (ESP assets).\n\n'
+                    'Filesystem must already be FAT32 or exFAT. For a full '
+                    'block format use SYSTEM FORMAT SETTINGS.'
+                : 'Probes FAT-compatible write access and creates the correct '
+                    'directory layout before flashing.',
+            style: GoogleFonts.shareTechMono(
+              color: FlasherColors.phosphor,
+              fontSize: 13,
+              height: 1.4,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('OPEN PICKER', style: GoogleFonts.shareTechMono()),
+            ),
+          ],
+        ),
+      );
+      final tree = await FlasherBridge.instance.pickSdTree();
+      if (tree == null) {
+        setState(() => _status = 'No SD folder selected');
+        return;
+      }
+      _lastSdTreeUri = tree;
+      final layout =
+          _target == FlashTarget.r36s || _target == null
+              ? 'r36s_ports'
+              : 'esp_assets';
+      _append('Preparing SD layout=$layout logicalFormat=$logicalFormat…');
+      final result = await FlasherBridge.instance.prepareSd(
+        treeUri: tree,
+        layout: layout,
+        logicalFormat: logicalFormat,
+        wipePrevious: true,
+      );
+      setState(() => _status = result.message);
+      _append(result.ok ? 'OK ${result.message}' : 'FAIL ${result.message}');
+    } catch (e) {
+      setState(() => _status = 'Failed: $e');
+      _append('ERROR $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+      await _savePrefs();
+    }
   }
 
   Future<UsbDeviceInfo?> _ensureDevice() async {
@@ -714,8 +818,11 @@ class _FlasherHomePageState extends State<FlasherHomePage>
   Future<void> _runAndroidOtg() async {
     final localPath = _localApkPath;
     final catalog = _apkItem;
-    if (localPath == null && catalog == null) {
-      setState(() => _status = 'Pick a catalog APK or a local .apk file');
+    if (!_installCoreSuite && localPath == null && catalog == null) {
+      setState(
+        () => _status =
+            'Pick a catalog APK, enable CORE SUITE, or choose a local .apk',
+      );
       return;
     }
 
@@ -727,51 +834,91 @@ class _FlasherHomePageState extends State<FlasherHomePage>
       }
     }
 
-    late final String apkPath;
-    if (localPath != null) {
-      apkPath = localPath;
-      _append('Using local APK: $apkPath');
+    final items = <({String label, Future<String> Function() resolve})>[];
+    if (_installCoreSuite) {
+      for (final item in FlasherBridge.coreSuite) {
+        items.add((
+          label: item.title,
+          resolve: () => FlasherBridge.instance.resolveApk(
+            item,
+            onProgress: (p, recv, total) {
+              setState(() {
+                _progress = p.clamp(0.0, 1.0);
+                _written = recv;
+                _total = total;
+              });
+            },
+          ),
+        ));
+      }
+    } else if (localPath != null) {
+      items.add((label: 'LOCAL APK', resolve: () async => localPath));
     } else {
-      _append('Downloading ${catalog!.fileName}…');
-      setState(() => _status = 'Downloading ${catalog.title}…');
-      apkPath = await FlasherBridge.instance.downloadApk(
-        catalog,
-        onProgress: (p, recv, total) {
-          setState(() {
-            _progress = p.clamp(0.0, 1.0);
-            _written = recv;
-            _total = total;
-          });
-        },
-      );
-      _append('Cached: $apkPath');
+      items.add((
+        label: catalog!.title,
+        resolve: () => FlasherBridge.instance.resolveApk(
+          catalog,
+          onProgress: (p, recv, total) {
+            setState(() {
+              _progress = p.clamp(0.0, 1.0);
+              _written = recv;
+              _total = total;
+            });
+          },
+        ),
+      ));
     }
 
-    if (_useTcpAdb) {
-      final host = _tcpHostCtrl.text.trim();
-      final port = int.tryParse(_tcpPortCtrl.text.trim()) ?? 5555;
-      _append('TCP ADB install → $host:$port');
-      setState(() => _status = 'Installing over TCP ADB…');
-      final result = await FlasherBridge.instance.installApkAdbTcp(
-        host: host,
-        port: port,
-        apkPath: apkPath,
-      );
-      setState(() => _status = result.message);
-      _append(result.ok ? 'OK ${result.message}' : 'FAIL ${result.message}');
-      return;
+    UsbDeviceInfo? device;
+    if (!_useTcpAdb) {
+      device = await _ensureAdbDevice();
+      if (device == null) return;
+      _append(device.label);
     }
 
-    final device = await _ensureAdbDevice();
-    if (device == null) return;
-    _append(device.label);
-    setState(() => _status = 'Installing over USB OTG ADB…');
-    final result = await FlasherBridge.instance.installApkAdbUsb(
-      deviceId: device.deviceId,
-      apkPath: apkPath,
+    final host = _tcpHostCtrl.text.trim();
+    final port = int.tryParse(_tcpPortCtrl.text.trim()) ?? 5555;
+    var okCount = 0;
+    for (var i = 0; i < items.length; i++) {
+      final entry = items[i];
+      _append('[${i + 1}/${items.length}] Resolving ${entry.label}…');
+      setState(() => _status = 'Preparing ${entry.label}…');
+      final apkPath = await entry.resolve();
+      _append('APK ready: $apkPath');
+
+      if (_useTcpAdb) {
+        _append('TCP ADB install → $host:$port (${entry.label})');
+        setState(() => _status = 'OTG/TCP installing ${entry.label}…');
+        final result = await FlasherBridge.instance.installApkAdbTcp(
+          host: host,
+          port: port,
+          apkPath: apkPath,
+        );
+        _append(result.ok ? 'OK ${result.message}' : 'FAIL ${result.message}');
+        if (!result.ok) {
+          setState(() => _status = result.message);
+          return;
+        }
+        okCount++;
+      } else {
+        setState(() => _status = 'OTG installing ${entry.label}…');
+        final result = await FlasherBridge.instance.installApkAdbUsb(
+          deviceId: device!.deviceId,
+          apkPath: apkPath,
+        );
+        _append(result.ok ? 'OK ${result.message}' : 'FAIL ${result.message}');
+        if (!result.ok) {
+          setState(() => _status = result.message);
+          return;
+        }
+        okCount++;
+      }
+    }
+    setState(
+      () => _status =
+          'Installed $okCount/${items.length} APK(s) over '
+          '${_useTcpAdb ? 'TCP ADB' : 'USB OTG ADB'}',
     );
-    setState(() => _status = result.message);
-    _append(result.ok ? 'OK ${result.message}' : 'FAIL ${result.message}');
   }
 
   Future<bool> _confirmAndroidOtg() async {
@@ -931,10 +1078,15 @@ class _FlasherHomePageState extends State<FlasherHomePage>
         _TargetTile(
           selected: _target == FlashTarget.r36s,
           title: 'R36S',
-          subtitle: 'Install Port zip into SD roms/ports (ArkOS / JELOS)',
+          subtitle:
+              'Prepare/format SD (FAT32/exFAT) then install Port into roms/ports',
           enabled: !_busy,
           onTap: () => _selectTarget(FlashTarget.r36s),
         ),
+        if (_target == FlashTarget.r36s) ...[
+          const SizedBox(height: 12),
+          _buildR36SdOptions(),
+        ],
         const SizedBox(height: 10),
         _TargetTile(
           selected: _target == FlashTarget.cyd,
@@ -978,7 +1130,7 @@ class _FlasherHomePageState extends State<FlasherHomePage>
           selected: _target == FlashTarget.androidOtg,
           title: 'ANDROID (OTG ADB)',
           subtitle:
-              'Install Portal / V.1 / Doomsday / etc onto another phone via USB',
+              'Send Portal + V.1 + Darth Cherry (bundled) Android→Android over OTG',
           enabled: !_busy,
           onTap: () async {
             await _selectTarget(FlashTarget.androidOtg);
@@ -1016,7 +1168,7 @@ class _FlasherHomePageState extends State<FlasherHomePage>
             _busy
                 ? 'WORKING…'
                 : android
-                    ? 'INSTALL APK'
+                    ? (_installCoreSuite ? 'SEND CORE SUITE' : 'INSTALL APK')
                     : 'FLASH',
             style: GoogleFonts.shareTechMono(
               fontWeight: FontWeight.w700,
@@ -1025,6 +1177,42 @@ class _FlasherHomePageState extends State<FlasherHomePage>
             ),
           ),
         ),
+        if (_target == FlashTarget.r36s) ...[
+          const SizedBox(height: 10),
+          OutlinedButton(
+            onPressed: _busy
+                ? null
+                : () => _runPrepareSdOnly(logicalFormat: _logicalFormatSd),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: FlasherColors.amber,
+              side: const BorderSide(color: FlasherColors.amber),
+              minimumSize: const Size.fromHeight(48),
+              shape: const RoundedRectangleBorder(),
+            ),
+            child: Text(
+              _logicalFormatSd ? 'FORMAT + PREPARE SD ONLY' : 'PREPARE SD ONLY',
+              style: GoogleFonts.shareTechMono(letterSpacing: 1),
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: _busy
+                ? null
+                : () async {
+                    final r =
+                        await FlasherBridge.instance.openSystemSdFormat();
+                    setState(() => _status = r.message);
+                    _append(r.message);
+                  },
+            child: Text(
+              'SYSTEM FORMAT SETTINGS (FAT32 / exFAT)',
+              style: GoogleFonts.shareTechMono(
+                color: FlasherColors.dim,
+                fontSize: 11,
+              ),
+            ),
+          ),
+        ],
         if (esp) ...[
           const SizedBox(height: 10),
           OutlinedButton(
@@ -1055,6 +1243,84 @@ class _FlasherHomePageState extends State<FlasherHomePage>
     );
   }
 
+  Widget _buildR36SdOptions() {
+    return Material(
+      color: FlasherColors.panel.withValues(alpha: 0.55),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: FlasherColors.phosphor.withValues(alpha: 0.25),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'SD PREPARE / FORMAT',
+                style: GoogleFonts.shareTechMono(
+                  color: FlasherColors.amber,
+                  letterSpacing: 2,
+                  fontSize: 11,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Card must be FAT32 or exFAT. Prepare verifies write access, '
+                'builds roms/ports, optionally wipes prior Polybius installs.',
+                style: GoogleFonts.shareTechMono(
+                  color: FlasherColors.dim,
+                  fontSize: 11,
+                  height: 1.35,
+                ),
+              ),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                value: _prepareSdBeforeFlash,
+                activeColor: FlasherColors.phosphor,
+                title: Text(
+                  'Prepare SD before flash (recommended)',
+                  style: GoogleFonts.shareTechMono(fontSize: 12),
+                ),
+                onChanged: _busy
+                    ? null
+                    : (v) => setState(() => _prepareSdBeforeFlash = v ?? true),
+              ),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                value: _wipePreviousPolybius,
+                activeColor: FlasherColors.phosphor,
+                title: Text(
+                  'Wipe previous Polybius port files',
+                  style: GoogleFonts.shareTechMono(fontSize: 12),
+                ),
+                onChanged: _busy
+                    ? null
+                    : (v) => setState(() => _wipePreviousPolybius = v ?? true),
+              ),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                value: _logicalFormatSd,
+                activeColor: FlasherColors.danger,
+                title: Text(
+                  'Logical format (wipe selected tree) before layout',
+                  style: GoogleFonts.shareTechMono(fontSize: 12),
+                ),
+                onChanged: _busy
+                    ? null
+                    : (v) => setState(() => _logicalFormatSd = v ?? false),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildAndroidOtgOptions() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1069,17 +1335,36 @@ class _FlasherHomePageState extends State<FlasherHomePage>
         ),
         const SizedBox(height: 8),
         Text(
-          'Downloads once into cache, then pushes over ADB sync + pm install.',
+          'Portal, V.1 USER, and Darth Cherry ship bundled for offline OTG send. '
+          'Pushes over ADB sync + pm install (USB OTG or TCP).',
           style: GoogleFonts.shareTechMono(
             color: FlasherColors.dim,
             fontSize: 11,
             height: 1.35,
           ),
         ),
+        CheckboxListTile(
+          contentPadding: EdgeInsets.zero,
+          dense: true,
+          value: _installCoreSuite,
+          activeColor: FlasherColors.phosphor,
+          title: Text(
+            'CORE SUITE — Portal + V.1 + Darth Cherry (bundled)',
+            style: GoogleFonts.shareTechMono(fontSize: 12),
+          ),
+          onChanged: _busy
+              ? null
+              : (v) => setState(() {
+                    _installCoreSuite = v ?? false;
+                    if (_installCoreSuite) {
+                      _localApkPath = null;
+                    }
+                  }),
+        ),
         const SizedBox(height: 10),
         for (final item in FlasherBridge.apkCatalog) ...[
           InkWell(
-            onTap: _busy
+            onTap: _busy || _installCoreSuite
                 ? null
                 : () => setState(() {
                       _apkItem = item;
@@ -1091,11 +1376,15 @@ class _FlasherHomePageState extends State<FlasherHomePage>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Icon(
-                    _apkItem?.id == item.id && _localApkPath == null
+                    !_installCoreSuite &&
+                            _apkItem?.id == item.id &&
+                            _localApkPath == null
                         ? Icons.radio_button_checked
                         : Icons.radio_button_off,
                     size: 18,
-                    color: FlasherColors.phosphor,
+                    color: _installCoreSuite
+                        ? FlasherColors.dim
+                        : FlasherColors.phosphor,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -1103,7 +1392,9 @@ class _FlasherHomePageState extends State<FlasherHomePage>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          item.title,
+                          item.isBundled
+                              ? '${item.title}  · OFFLINE'
+                              : item.title,
                           style: GoogleFonts.orbitron(
                             fontSize: 12,
                             color: FlasherColors.phosphor,
@@ -1477,7 +1768,7 @@ class _HeroHeader extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'R36S SD · CYD · T-Deck · Android OTG ADB — flash boards & install apps.',
+              'R36S SD prepare · CYD · T-Deck · Android OTG — Portal / V.1 / Darth Cherry.',
               style: GoogleFonts.shareTechMono(
                 color: FlasherColors.dim,
                 fontSize: 12,

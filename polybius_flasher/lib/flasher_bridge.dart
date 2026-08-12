@@ -92,6 +92,7 @@ class ApkCatalogItem {
     required this.fileName,
     required this.url,
     this.subtitle = '',
+    this.assetPath,
   });
 
   final String id;
@@ -99,6 +100,11 @@ class ApkCatalogItem {
   final String fileName;
   final String url;
   final String subtitle;
+
+  /// Optional bundled asset (offline). Prefer over [url] when present.
+  final String? assetPath;
+
+  bool get isBundled => assetPath != null && assetPath!.isNotEmpty;
 }
 
 class FlasherBridge {
@@ -110,22 +116,35 @@ class FlasherBridge {
 
   /// Raw GitHub URLs for dist APKs on the shipping branch.
   static const distBase =
-      'https://github.com/RedTeamFortress666/Main/raw/cursor/pool-pin-bt-ui-d8fa/polybius/dist';
+      'https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flasher-latest-e16f/polybius/dist';
+
+  /// Core suite shipped inside the flasher APK (offline OTG send).
+  static const coreSuiteIds = ['portal_hq', 'v1_user', 'darth_cherry'];
 
   static const apkCatalog = <ApkCatalogItem>[
     ApkCatalogItem(
       id: 'portal_hq',
       title: 'PØLYBÎŪS PORTAL',
-      subtitle: 'Dev Admin / triple tier',
+      subtitle: 'Bundled · Dev Admin / triple tier',
       fileName: 'polybius-v1-stable-hq-android-arm64.apk',
       url: '$distBase/polybius-v1-stable-hq-android-arm64.apk',
+      assetPath: 'assets/apks/polybius-v1-stable-hq-android-arm64.apk',
     ),
     ApkCatalogItem(
       id: 'v1_user',
       title: 'PØLYBÎŪS V.1',
-      subtitle: 'ENCRYPT / DECRYPT / SYNC / CONNECT',
+      subtitle: 'Bundled · ENCRYPT / DECRYPT / SYNC / CONNECT',
       fileName: 'polybius-v1-stable-user-android-arm64.apk',
       url: '$distBase/polybius-v1-stable-user-android-arm64.apk',
+      assetPath: 'assets/apks/polybius-v1-stable-user-android-arm64.apk',
+    ),
+    ApkCatalogItem(
+      id: 'darth_cherry',
+      title: 'DARTH CHERRY',
+      subtitle: 'Bundled · 1.0.2 dimmer / temptress',
+      fileName: 'darth-cherry-1.0.2-android-arm64.apk',
+      url: '$distBase/darth-cherry-1.0.2-android-arm64.apk',
+      assetPath: 'assets/apks/darth-cherry-1.0.2-android-arm64.apk',
     ),
     ApkCatalogItem(
       id: 'doomsday',
@@ -133,13 +152,6 @@ class FlasherBridge {
       subtitle: '2.1.0 · MechaH portal unlock',
       fileName: 'doomsday-clock-2.1.0-android-arm64.apk',
       url: '$distBase/doomsday-clock-2.1.0-android-arm64.apk',
-    ),
-    ApkCatalogItem(
-      id: 'darth_cherry',
-      title: 'DARTH CHERRY',
-      subtitle: 'Dimmer / temptress',
-      fileName: 'darth-cherry-1.0.2-android-arm64.apk',
-      url: '$distBase/darth-cherry-1.0.2-android-arm64.apk',
     ),
     ApkCatalogItem(
       id: 'dev_portal',
@@ -156,6 +168,9 @@ class FlasherBridge {
       url: '$distBase/red-veil-1.0.0-android-arm64.apk',
     ),
   ];
+
+  static List<ApkCatalogItem> get coreSuite =>
+      apkCatalog.where((a) => coreSuiteIds.contains(a.id)).toList();
 
   StreamSubscription<dynamic>? _sub;
   final _logController = StreamController<String>.broadcast();
@@ -277,6 +292,38 @@ class FlasherBridge {
     return NativeResult.fromMap(raw ?? {});
   }
 
+  /// Format/prepare SD layout (FAT-compatible write probe + PortMaster/ESP dirs).
+  Future<NativeResult> prepareSd({
+    required String treeUri,
+    String layout = 'r36s_ports',
+    bool logicalFormat = false,
+    bool wipePrevious = true,
+  }) async {
+    ensureListening();
+    final raw = await _methods.invokeMethod<Map<dynamic, dynamic>>(
+      'prepareSd',
+      {
+        'treeUri': treeUri,
+        'layout': layout,
+        'logicalFormat': logicalFormat,
+        'wipePrevious': wipePrevious,
+      },
+    );
+    return NativeResult.fromMap(raw ?? {});
+  }
+
+  Future<NativeResult> openSystemSdFormat() async {
+    final raw = await _methods.invokeMethod<Map<dynamic, dynamic>>(
+      'openSystemSdFormat',
+    );
+    return NativeResult.fromMap(raw ?? {});
+  }
+
+  Future<String> listStorageVolumes() async {
+    final raw = await _methods.invokeMethod<String>('listStorageVolumes');
+    return raw ?? '';
+  }
+
   Future<NativeResult> installApkAdbUsb({
     required int deviceId,
     required String apkPath,
@@ -317,6 +364,21 @@ class FlasherBridge {
       flush: true,
     );
     return out.path;
+  }
+
+  /// Resolve catalog APK: bundled asset → cache → HTTP download.
+  Future<String> resolveApk(
+    ApkCatalogItem item, {
+    void Function(double progress, int received, int total)? onProgress,
+  }) async {
+    if (item.isBundled) {
+      onProgress?.call(0.05, 0, 0);
+      final path = await materializeAsset(item.assetPath!, item.fileName);
+      final len = await File(path).length();
+      onProgress?.call(1.0, len, len);
+      return path;
+    }
+    return downloadApk(item, onProgress: onProgress);
   }
 
   /// Download (or reuse cached) catalog APK into app documents.

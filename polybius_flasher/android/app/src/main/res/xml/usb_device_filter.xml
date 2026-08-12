@@ -20,4 +20,7 @@
     <usb-device class="2" subclass="2" protocol="1" />
     <!-- Android ADB gadget (OTG phone-to-phone) -->
     <usb-device class="255" subclass="66" protocol="1" />
+    <!-- USB mass storage (OTG SD card readers) -->
+    <usb-device class="8" subclass="6" protocol="80" />
+    <usb-device class="8" />
 </resources>

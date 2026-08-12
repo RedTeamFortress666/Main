@@ -203,6 +203,26 @@ class MainActivity : FlutterFragmentActivity() {
                         }
                         installApkAdbTcp(host, port, apkPath, result)
                     }
+                    "prepareSd" -> {
+                        val treeUri = call.argument<String>("treeUri")
+                        val layout = call.argument<String>("layout") ?: "r36s_ports"
+                        val logicalFormat = call.argument<Boolean>("logicalFormat") ?: false
+                        val wipePrevious = call.argument<Boolean>("wipePrevious") ?: true
+                        if (treeUri.isNullOrBlank()) {
+                            result.error("bad_args", "treeUri required", null)
+                            return@setMethodCallHandler
+                        }
+                        prepareSd(treeUri, layout, logicalFormat, wipePrevious, result)
+                    }
+                    "openSystemSdFormat" -> {
+                        val prep = SdCardPreparer(this, onLog = { emit("log", it) }, onProgress = {})
+                        val r = prep.openSystemFormatSettings()
+                        result.success(mapOf("ok" to r.ok, "message" to r.message))
+                    }
+                    "listStorageVolumes" -> {
+                        val prep = SdCardPreparer(this, onLog = {}, onProgress = {})
+                        result.success(prep.describeVolumes())
+                    }
                     else -> result.notImplemented()
                 }
             }
@@ -389,6 +409,56 @@ class MainActivity : FlutterFragmentActivity() {
                     mapOf(
                         "ok" to installResult.ok,
                         "message" to installResult.message,
+                    ),
+                )
+            }
+        }
+    }
+
+    private fun prepareSd(
+        treeUri: String,
+        layoutName: String,
+        logicalFormat: Boolean,
+        wipePrevious: Boolean,
+        result: MethodChannel.Result,
+    ) {
+        io.execute {
+            val layout =
+                when (layoutName.lowercase()) {
+                    "esp_assets", "esp", "esp32" -> SdCardPreparer.Layout.ESP_ASSETS
+                    else -> SdCardPreparer.Layout.R36S_PORTS
+                }
+            val preparer =
+                SdCardPreparer(
+                    context = this,
+                    onLog = { msg -> emit("log", msg) },
+                    onProgress = { p ->
+                        emit(
+                            "progress",
+                            mapOf(
+                                "progress" to p,
+                                "written" to 0L,
+                                "total" to 0L,
+                            ),
+                        )
+                    },
+                )
+            val prepResult =
+                try {
+                    preparer.prepare(
+                        treeUri = Uri.parse(treeUri),
+                        layout = layout,
+                        logicalFormat = logicalFormat,
+                        wipePreviousPolybius = wipePrevious,
+                    )
+                } catch (e: Exception) {
+                    SdCardPreparer.Result(false, e.message ?: e.toString())
+                }
+            mainHandler.post {
+                result.success(
+                    mapOf(
+                        "ok" to prepResult.ok,
+                        "message" to prepResult.message,
                     ),
                 )
             }
