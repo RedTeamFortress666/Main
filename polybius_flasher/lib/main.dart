@@ -1293,15 +1293,13 @@ class _FlasherHomePageState extends State<FlasherHomePage>
               child: Column(
                 children: AddressMode.values
                     .map(
-                      (mode) => RadioListTile<AddressMode>(
+                      (mode) => _OptionRow<AddressMode>(
                         value: mode,
                         groupValue: _addressMode,
-                        dense: true,
                         title: Text(mode.label),
-                        onChanged: _busy
+                        onSelected: _busy
                             ? null
                             : (value) {
-                                if (value == null) return;
                                 setState(() => _addressMode = value);
                                 _savePrefs();
                               },
@@ -1313,7 +1311,7 @@ class _FlasherHomePageState extends State<FlasherHomePage>
             _ChoiceBox(
               title: 'Baud',
               child: DropdownButtonFormField<int>(
-                value: _baud,
+                initialValue: _baud,
                 decoration: const InputDecoration(border: OutlineInputBorder()),
                 items: _baudOptions
                     .map(
@@ -1335,7 +1333,7 @@ class _FlasherHomePageState extends State<FlasherHomePage>
             _ChoiceBox(
               title: 'Serial monitor',
               child: DropdownButtonFormField<int>(
-                value: _serialMonitorMs,
+                initialValue: _serialMonitorMs,
                 decoration: const InputDecoration(border: OutlineInputBorder()),
                 items: const [
                   DropdownMenuItem(value: 0, child: Text('0 ms / off')),
@@ -1544,14 +1542,13 @@ class _FlasherHomePageState extends State<FlasherHomePage>
               .map(
                 (mode) => SizedBox(
                   width: 240,
-                  child: RadioListTile<R36InstallMode>(
+                  child: _OptionRow<R36InstallMode>(
                     value: mode,
                     groupValue: _r36InstallMode,
                     title: Text(mode.label),
-                    onChanged: _busy
+                    onSelected: _busy
                         ? null
                         : (value) {
-                            if (value == null) return;
                             setState(() => _r36InstallMode = value);
                             _savePrefs();
                           },
@@ -1567,14 +1564,14 @@ class _FlasherHomePageState extends State<FlasherHomePage>
             style: GoogleFonts.orbitron(fontSize: 14),
           ),
           ..._r36Candidates.map(
-            (candidate) => RadioListTile<String>(
+            (candidate) => _OptionRow<String>(
               value: candidate.hint,
               groupValue: _selectedR36Hint,
               title: Text(candidate.label),
               subtitle: Text(
                 '${candidate.hint} · ${candidate.exists ? 'exists' : 'will create'}',
               ),
-              onChanged: _busy
+              onSelected: _busy
                   ? null
                   : (value) {
                       setState(() => _selectedR36Hint = value);
@@ -1989,6 +1986,70 @@ class _TargetTile extends StatelessWidget {
   }
 }
 
+class _OptionRow<T> extends StatelessWidget {
+  const _OptionRow({
+    required this.value,
+    required this.groupValue,
+    required this.title,
+    required this.onSelected,
+    this.subtitle,
+  });
+
+  final T value;
+  final T? groupValue;
+  final Widget title;
+  final Widget? subtitle;
+  final ValueChanged<T>? onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = value == groupValue;
+    final enabled = onSelected != null;
+    return InkWell(
+      onTap: enabled ? () => onSelected!(value) : null,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              selected ? Icons.radio_button_checked : Icons.radio_button_off,
+              color: enabled
+                  ? selected
+                        ? FlasherColors.phosphor
+                        : FlasherColors.dim
+                  : FlasherColors.dim.withValues(alpha: 0.45),
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  DefaultTextStyle.merge(
+                    style: TextStyle(
+                      color: enabled ? Colors.white : FlasherColors.dim,
+                    ),
+                    child: title,
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 3),
+                    DefaultTextStyle.merge(
+                      style: const TextStyle(color: FlasherColors.dim),
+                      child: subtitle!,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _UsbPicker extends StatelessWidget {
   const _UsbPicker({
     required this.devices,
@@ -2012,14 +2073,14 @@ class _UsbPicker extends StatelessWidget {
           final serial = device.serial.trim().isEmpty
               ? 'unknown serial'
               : device.serial;
-          return RadioListTile<int>(
+          return _OptionRow<int>(
             value: device.deviceId,
             groupValue: selectedDeviceId,
-            onChanged: (_) => onSelected(device),
             title: Text(device.label),
             subtitle: Text(
               'serial: $serial · permission: ${device.hasPermission ? 'granted' : 'request needed'}',
             ),
+            onSelected: (_) => onSelected(device),
           );
         },
       ),
