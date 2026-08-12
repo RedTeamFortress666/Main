@@ -153,9 +153,12 @@ extension _FirstOrNullX<T> on Iterable<T> {
 }
 
 class _InstallJob {
-  const _InstallJob.catalog(this.item) : localPath = null, title = item.title;
+  _InstallJob.catalog(ApkCatalogItem item)
+    : item = item,
+      localPath = null,
+      title = item.title;
 
-  const _InstallJob.local(this.localPath) : item = null, title = 'LOCAL APK';
+  _InstallJob.local(this.localPath) : item = null, title = 'LOCAL APK';
 
   final ApkCatalogItem? item;
   final String? localPath;
@@ -523,7 +526,7 @@ class _FlasherHomePageState extends State<FlasherHomePage>
             width: 520,
             child: _UsbPicker(
               devices: devices,
-              selectedDeviceId: selected?.deviceId,
+              selectedDeviceId: selected.deviceId,
               onSelected: (device) {
                 setLocalState(() {
                   selected = device;
@@ -1656,7 +1659,7 @@ class _FlasherHomePageState extends State<FlasherHomePage>
             ),
             OutlinedButton.icon(
               onPressed: _busy ? null : _pickLocalApk,
-              icon: const Icon(Icons.apk),
+              icon: const Icon(Icons.android),
               label: const Text('PICK LOCAL APK'),
             ),
           ],
