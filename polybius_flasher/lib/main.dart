@@ -1,11 +1,15 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'asset_integrity.dart';
+import 'board_presets.dart';
 import 'flasher_bridge.dart';
+import 'flasher_event.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,6 +21,9 @@ class PolybiusFlasherApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final mono = GoogleFonts.shareTechMonoTextTheme(
+      ThemeData(brightness: Brightness.dark).textTheme,
+    );
     final base = ThemeData(
       brightness: Brightness.dark,
       scaffoldBackgroundColor: FlasherColors.voidBlack,
@@ -24,9 +31,15 @@ class PolybiusFlasherApp extends StatelessWidget {
         primary: FlasherColors.phosphor,
         secondary: FlasherColors.amber,
         surface: FlasherColors.panel,
+        error: FlasherColors.danger,
       ),
-      textTheme: GoogleFonts.shareTechMonoTextTheme(
-        ThemeData(brightness: Brightness.dark).textTheme,
+      textTheme: mono.apply(
+        bodyColor: FlasherColors.phosphor,
+        displayColor: FlasherColors.phosphor,
+      ),
+      snackBarTheme: const SnackBarThemeData(
+        backgroundColor: FlasherColors.panelHot,
+        contentTextStyle: TextStyle(color: FlasherColors.phosphor),
       ),
       useMaterial3: true,
     );
@@ -34,12 +47,7 @@ class PolybiusFlasherApp extends StatelessWidget {
     return MaterialApp(
       title: 'PØLYBÎŪS FLASHER',
       debugShowCheckedModeBanner: false,
-      theme: base.copyWith(
-        textTheme: base.textTheme.apply(
-          bodyColor: FlasherColors.phosphor,
-          displayColor: FlasherColors.phosphor,
-        ),
-      ),
+      theme: base,
       home: const FlasherHomePage(),
     );
   }
@@ -48,49 +56,111 @@ class PolybiusFlasherApp extends StatelessWidget {
 class FlasherColors {
   static const voidBlack = Color(0xFF05070A);
   static const panel = Color(0xFF0C1218);
+  static const panelHot = Color(0xFF111C24);
   static const phosphor = Color(0xFF5CFF8A);
   static const amber = Color(0xFFFFB84D);
+  static const cyan = Color(0xFF40D9FF);
+  static const magenta = Color(0xFFFF4DFF);
   static const dim = Color(0xFF6B7C6E);
   static const danger = Color(0xFFFF4D6A);
   static const grid = Color(0x145CFF8A);
 }
 
-enum FlashTarget { r36s, cyd, esp32e, tdeck, androidOtg }
+enum FlashTarget {
+  r36s,
+  cydClassic,
+  cyd2usb,
+  esp32e,
+  esp32Generic,
+  tdeck,
+  androidOtg,
+}
 
 extension FlashTargetX on FlashTarget {
-  bool get isEsp =>
-      this == FlashTarget.cyd ||
-      this == FlashTarget.esp32e ||
-      this == FlashTarget.tdeck;
-
+  bool get isEsp => espPreset != null;
   bool get isAndroidOtg => this == FlashTarget.androidOtg;
+  bool get isR36s => this == FlashTarget.r36s;
 
-  String get defaultChip =>
-      this == FlashTarget.tdeck ? 'esp32s3' : 'esp32';
+  EspPreset? get espPreset => switch (this) {
+    FlashTarget.cydClassic => EspPreset.cydClassic,
+    FlashTarget.cyd2usb => EspPreset.cyd2usb,
+    FlashTarget.esp32e => EspPreset.esp32e,
+    FlashTarget.esp32Generic => EspPreset.esp32Generic,
+    FlashTarget.tdeck => EspPreset.tdeck,
+    FlashTarget.r36s || FlashTarget.androidOtg => null,
+  };
 
-  int get defaultBaud => switch (this) {
-        FlashTarget.esp32e => 460800,
-        FlashTarget.cyd => 115200,
-        FlashTarget.tdeck => 115200,
-        FlashTarget.r36s => 115200,
-        FlashTarget.androidOtg => 115200,
-      };
+  String get title => switch (this) {
+    FlashTarget.r36s => 'R36S SD',
+    FlashTarget.cydClassic => 'CYD CLASSIC',
+    FlashTarget.cyd2usb => 'CYD2USB',
+    FlashTarget.esp32e => 'ESP32-32E',
+    FlashTarget.esp32Generic => 'GENERIC ESP32',
+    FlashTarget.tdeck => 'T-DECK',
+    FlashTarget.androidOtg => 'ANDROID OTG',
+  };
 
-  String get firmwareAsset => switch (this) {
-        FlashTarget.cyd || FlashTarget.esp32e =>
-          'assets/firmware/polybius-cyd.bin',
-        FlashTarget.tdeck => 'assets/firmware/polybius-tdeck.bin',
-        FlashTarget.r36s || FlashTarget.androidOtg => '',
-      };
+  String get subtitle => switch (this) {
+    FlashTarget.r36s => 'PortMaster zip + SD preparation',
+    FlashTarget.androidOtg => 'ADB over USB-C OTG or TCP',
+    _ => espPreset!.subtitle,
+  };
 
-  String get firmwareFileName => switch (this) {
-        FlashTarget.cyd || FlashTarget.esp32e => 'polybius-cyd.bin',
-        FlashTarget.tdeck => 'polybius-tdeck.bin',
-        FlashTarget.r36s || FlashTarget.androidOtg => '',
-      };
+  String get defaultChip => espPreset?.chip ?? '';
+  int get defaultBaud => espPreset?.defaultBaud ?? 115200;
+  String get firmwareAsset => espPreset?.firmwareAsset ?? '';
+  String get firmwareFileName => espPreset?.firmwareFileName ?? '';
+
+  BundledAsset? get firmwareBundle => switch (espPreset) {
+    EspPreset.tdeck => AssetIntegrity.tdeckBin,
+    EspPreset.cydClassic ||
+    EspPreset.cyd2usb ||
+    EspPreset.esp32e ||
+    EspPreset.esp32Generic => AssetIntegrity.cydBin,
+    null => null,
+  };
 }
 
 enum AddressMode { fullImage, appOnly, custom }
+
+extension AddressModeX on AddressMode {
+  String get label => switch (this) {
+    AddressMode.fullImage => 'Full image @ 0x0',
+    AddressMode.appOnly => 'App only @ 0x10000',
+    AddressMode.custom => 'Custom offset',
+  };
+}
+
+enum R36InstallMode { direct, autoinstall }
+
+extension R36InstallModeX on R36InstallMode {
+  String get bridgeValue => switch (this) {
+    R36InstallMode.direct => 'direct',
+    R36InstallMode.autoinstall => 'autoinstall',
+  };
+
+  String get label => switch (this) {
+    R36InstallMode.direct => 'Direct copy',
+    R36InstallMode.autoinstall => 'Autoinstall',
+  };
+}
+
+extension _FirstOrNullX<T> on Iterable<T> {
+  T? get firstOrNull {
+    final iterator = this.iterator;
+    return iterator.moveNext() ? iterator.current : null;
+  }
+}
+
+class _InstallJob {
+  const _InstallJob.catalog(this.item) : localPath = null, title = item.title;
+
+  const _InstallJob.local(this.localPath) : item = null, title = 'LOCAL APK';
+
+  final ApkCatalogItem? item;
+  final String? localPath;
+  final String title;
+}
 
 class FlasherHomePage extends StatefulWidget {
   const FlasherHomePage({super.key});
@@ -101,42 +171,44 @@ class FlasherHomePage extends StatefulWidget {
 
 class _FlasherHomePageState extends State<FlasherHomePage>
     with SingleTickerProviderStateMixin {
-  FlashTarget? _target;
+  final _bridge = FlasherBridge.instance;
+  final _logs = <String>[];
+  final _customOffsetCtrl = TextEditingController(text: '0x0');
+  final _tcpHostCtrl = TextEditingController(text: '192.168.1.1');
+  final _tcpPortCtrl = TextEditingController(text: '5555');
+
+  late final AnimationController _pulse;
+  StreamSubscription<FlasherEvent>? _eventSub;
+
+  FlashTarget? _target = FlashTarget.cydClassic;
   List<UsbDeviceInfo> _devices = [];
+  List<UsbDeviceInfo> _usbInventory = [];
   UsbDeviceInfo? _selected;
   bool _busy = false;
   double _progress = 0;
-  int _written = 0;
-  int _total = 0;
-  final _logs = <String>[];
-  String? _status;
-  late final AnimationController _pulse;
-  StreamSubscription<String>? _logSub;
-  StreamSubscription<ProgressInfo>? _progressSub;
+  String _status = 'SELECT TARGET. VERIFY POWER. FLASH WITH INTENT.';
 
-  // ESP options
   AddressMode _addressMode = AddressMode.fullImage;
-  final _customOffsetCtrl = TextEditingController(text: '0x0');
-  String _chip = 'esp32s3';
   int _baud = 115200;
   bool _eraseAll = false;
   bool _hardResetAfter = true;
   bool _skipAutoReset = false;
+  int _serialMonitorMs = 0;
 
   String? _lastSdTreeUri;
-  bool _didAutoSuggest = false;
-
-  // R36S SD prepare / format
+  List<R36PathCandidate> _r36Candidates = const [];
+  String? _selectedR36Hint;
   bool _prepareSdBeforeFlash = true;
-  bool _logicalFormatSd = false;
   bool _wipePreviousPolybius = true;
+  bool _logicalFormatSd = false;
+  R36InstallMode _r36InstallMode = R36InstallMode.direct;
 
-  // Android OTG ADB — multi-select catalog APKs (one, some, or all)
   final Set<String> _selectedApkIds = {};
   String? _localApkPath;
+  bool _forceDowngrade = false;
+  bool _forceUser0 = true;
   bool _useTcpAdb = false;
-  final _tcpHostCtrl = TextEditingController(text: '192.168.1.1');
-  final _tcpPortCtrl = TextEditingController(text: '5555');
+  String _androidUsbMessage = 'Scan USB inventory before install.';
 
   static const _baudOptions = [115200, 230400, 460800, 921600];
 
@@ -147,29 +219,27 @@ class _FlasherHomePageState extends State<FlasherHomePage>
       vsync: this,
       duration: const Duration(milliseconds: 1800),
     )..repeat(reverse: true);
-    FlasherBridge.instance.ensureListening();
-    _logSub = FlasherBridge.instance.logs.listen((line) {
+    _bridge.ensureListening();
+    _eventSub = _bridge.events.listen((event) {
+      if (!mounted) return;
       setState(() {
-        _logs.add(line);
-        if (_logs.length > 120) _logs.removeAt(0);
-      });
-    });
-    _progressSub = FlasherBridge.instance.progress.listen((p) {
-      setState(() {
-        _progress = p.progress.clamp(0.0, 1.0);
-        _written = p.written;
-        _total = p.total;
+        _logs.add(event.toLogLine());
+        if (_logs.length > 200) {
+          _logs.removeRange(0, _logs.length - 200);
+        }
+        if (event.percent != null) {
+          _progress = event.percent!.clamp(0.0, 1.0);
+        }
       });
     });
     _loadPrefs();
-    _refreshUsb();
+    _refreshUsb(checkBattery: false, silent: true);
   }
 
   @override
   void dispose() {
+    _eventSub?.cancel();
     _pulse.dispose();
-    _logSub?.cancel();
-    _progressSub?.cancel();
     _customOffsetCtrl.dispose();
     _tcpHostCtrl.dispose();
     _tcpPortCtrl.dispose();
@@ -178,876 +248,970 @@ class _FlasherHomePageState extends State<FlasherHomePage>
 
   Future<void> _loadPrefs() async {
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     setState(() {
+      _target = _parseTarget(prefs.getString('last_target')) ?? _target;
       _lastSdTreeUri = prefs.getString('r36s_tree_uri');
-      final t = prefs.getString('last_target');
-      _target = switch (t) {
-        'cyd' => FlashTarget.cyd,
-        'esp32e' => FlashTarget.esp32e,
-        'tdeck' => FlashTarget.tdeck,
-        'r36s' => FlashTarget.r36s,
-        'androidOtg' => FlashTarget.androidOtg,
-        _ => null,
-      };
-      _prepareSdBeforeFlash = prefs.getBool('prepare_sd_before_flash') ?? true;
-      _logicalFormatSd = prefs.getBool('logical_format_sd') ?? false;
-      _wipePreviousPolybius = prefs.getBool('wipe_previous_polybius') ?? true;
-      if (_target == FlashTarget.androidOtg) {
-        final ids = prefs.getStringList('android_apk_ids') ?? const <String>[];
-        _selectedApkIds
-          ..clear()
-          ..addAll(ids);
-        // Migrate legacy single-id prefs
-        final legacy = prefs.getString('android_apk_id');
-        if (_selectedApkIds.isEmpty && legacy != null) {
-          _selectedApkIds.add(legacy);
-        }
-        _useTcpAdb = prefs.getBool('android_use_tcp') ?? false;
-        _tcpHostCtrl.text = prefs.getString('android_tcp_host') ?? '192.168.1.1';
-        _tcpPortCtrl.text = prefs.getString('android_tcp_port') ?? '5555';
+      _prepareSdBeforeFlash =
+          prefs.getBool('prepare_sd_before_flash') ?? _prepareSdBeforeFlash;
+      _wipePreviousPolybius =
+          prefs.getBool('wipe_previous_polybius') ?? _wipePreviousPolybius;
+      _logicalFormatSd = prefs.getBool('logical_format_sd') ?? _logicalFormatSd;
+      _r36InstallMode = _parseR36Mode(prefs.getString('r36_install_mode'));
+      _selectedApkIds
+        ..clear()
+        ..addAll(prefs.getStringList('android_apk_ids') ?? const <String>[]);
+      final legacyApk = prefs.getString('android_apk_id');
+      if (_selectedApkIds.isEmpty && legacyApk != null) {
+        _selectedApkIds.add(legacyApk);
       }
-      if (_target != null && _target!.isEsp) {
-        _applyTargetDefaults(_target!, loadSaved: true, prefs: prefs);
+      _localApkPath = prefs.getString('android_local_apk');
+      _forceDowngrade = prefs.getBool('android_force_downgrade') ?? false;
+      _forceUser0 = prefs.getBool('android_force_user0') ?? true;
+      _useTcpAdb = prefs.getBool('android_use_tcp') ?? false;
+      _tcpHostCtrl.text = prefs.getString('android_tcp_host') ?? '192.168.1.1';
+      _tcpPortCtrl.text = prefs.getString('android_tcp_port') ?? '5555';
+      if (_target?.isEsp ?? false) {
+        _applyEspDefaults(_target!, prefs: prefs);
       }
     });
+  }
+
+  FlashTarget? _parseTarget(String? value) {
+    if (value == null) return null;
+    if (value == 'cyd') return FlashTarget.cydClassic;
+    for (final target in FlashTarget.values) {
+      if (target.name == value) return target;
+    }
+    return null;
+  }
+
+  R36InstallMode _parseR36Mode(String? value) {
+    for (final mode in R36InstallMode.values) {
+      if (mode.name == value || mode.bridgeValue == value) return mode;
+    }
+    return R36InstallMode.direct;
+  }
+
+  void _applyEspDefaults(FlashTarget target, {SharedPreferences? prefs}) {
+    final preset = target.espPreset;
+    if (preset == null) return;
+    final key = target.name;
+    _addressMode = AddressMode.values.firstWhere(
+      (mode) => mode.name == prefs?.getString('${key}_address_mode'),
+      orElse: () => AddressMode.fullImage,
+    );
+    _customOffsetCtrl.text = prefs?.getString('${key}_custom_offset') ?? '0x0';
+    _baud = prefs?.getInt('${key}_baud') ?? preset.defaultBaud;
+    _eraseAll = prefs?.getBool('${key}_erase_all') ?? false;
+    _hardResetAfter = prefs?.getBool('${key}_hard_reset_after') ?? true;
+    _skipAutoReset =
+        prefs?.getBool('${key}_skip_auto_reset') ?? preset.preferSkipAutoReset;
+    _serialMonitorMs = prefs?.getInt('${key}_serial_monitor_ms') ?? 0;
   }
 
   Future<void> _savePrefs() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('prepare_sd_before_flash', _prepareSdBeforeFlash);
-    await prefs.setBool('logical_format_sd', _logicalFormatSd);
-    await prefs.setBool('wipe_previous_polybius', _wipePreviousPolybius);
-    final key = _target?.name;
-    if (key == null) return;
-    await prefs.setString('last_target', key);
-    if (_target == FlashTarget.r36s) {
-      if (_lastSdTreeUri != null) {
-        await prefs.setString('r36s_tree_uri', _lastSdTreeUri!);
-      }
-      return;
-    }
-    if (_target == FlashTarget.androidOtg) {
-      await prefs.setStringList('android_apk_ids', _selectedApkIds.toList());
-      await prefs.setBool('android_use_tcp', _useTcpAdb);
-      await prefs.setString('android_tcp_host', _tcpHostCtrl.text.trim());
-      await prefs.setString('android_tcp_port', _tcpPortCtrl.text.trim());
-      return;
-    }
-    await prefs.setString('${key}_addressMode', _addressMode.name);
-    await prefs.setString('${key}_customOffset', _customOffsetCtrl.text);
-    await prefs.setString('${key}_chip', _chip);
-    await prefs.setInt('${key}_baud', _baud);
-    await prefs.setBool('${key}_eraseAll', _eraseAll);
-    await prefs.setBool('${key}_hardReset', _hardResetAfter);
-  }
-
-  void _applyTargetDefaults(
-    FlashTarget t, {
-    bool loadSaved = false,
-    SharedPreferences? prefs,
-  }) {
-    if (t == FlashTarget.r36s || t == FlashTarget.androidOtg) return;
-    final key = t.name;
-    if (loadSaved && prefs != null) {
-      final mode = prefs.getString('${key}_addressMode');
-      _addressMode = AddressMode.values.firstWhere(
-        (m) => m.name == mode,
-        orElse: () => AddressMode.fullImage,
-      );
-      _customOffsetCtrl.text =
-          prefs.getString('${key}_customOffset') ?? '0x0';
-      _chip = prefs.getString('${key}_chip') ?? t.defaultChip;
-      _baud = prefs.getInt('${key}_baud') ?? t.defaultBaud;
-      _eraseAll = prefs.getBool('${key}_eraseAll') ?? false;
-      _hardResetAfter = prefs.getBool('${key}_hardReset') ?? true;
-      return;
-    }
-    _chip = t.defaultChip;
-    _addressMode = AddressMode.fullImage;
-    _customOffsetCtrl.text = '0x0';
-    _baud = t.defaultBaud;
-    _eraseAll = false;
-    _skipAutoReset = false;
-  }
-
-  Future<void> _selectTarget(FlashTarget t) async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _target = t;
-      _applyTargetDefaults(t, loadSaved: true, prefs: prefs);
-    });
-    await prefs.setString('last_target', t.name);
-  }
-
-  Future<void> _refreshUsb() async {
-    try {
-      if (_target == FlashTarget.androidOtg) {
-        final list = await FlasherBridge.instance.listAdbUsbDevices();
-        setState(() {
-          _devices = list;
-          if (_selected != null) {
-            _selected = list
-                .where((d) => d.deviceId == _selected!.deviceId)
-                .firstOrNull;
-          }
-        });
-        for (final d in list) {
-          _append('ADB ${d.label}');
-        }
-        return;
-      }
-      final list = await FlasherBridge.instance.listUsbDevices();
-      setState(() {
-        _devices = list;
-        if (_selected != null) {
-          _selected = list
-              .where((d) => d.deviceId == _selected!.deviceId)
-              .firstOrNull;
-        }
-      });
-      for (final d in list) {
-        _append('USB ${d.label}');
-      }
-      await _maybeSuggestEsp32e(list);
-    } catch (e) {
-      _append('USB scan failed: $e');
-    }
-  }
-
-  /// Classic ESP32 UART bridges (CP210x / CH340 / FTDI) — not Espressif USB-JTAG.
-  Future<void> _maybeSuggestEsp32e(List<UsbDeviceInfo> list) async {
-    if (_didAutoSuggest || _target != null || list.isEmpty || !mounted) return;
-    final classic = list.where((d) => !d.usbJtag).toList();
-    if (classic.isEmpty) return;
-    _didAutoSuggest = true;
-    final d = classic.first;
-    final go = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: FlasherColors.panel,
-        title: Text(
-          'CLASSIC ESP32 DETECTED?',
-          style: GoogleFonts.orbitron(color: FlasherColors.amber, fontSize: 13),
-        ),
-        content: Text(
-          'USB ${d.label}\n\n'
-          'This looks like a classic ESP32 UART bridge (not S3 USB-JTAG). '
-          'Use ESP32-32E 240×320 Resistive / CYD-compatible target?',
-          style: GoogleFonts.shareTechMono(
-            color: FlasherColors.phosphor,
-            fontSize: 12,
-            height: 1.4,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('NO', style: GoogleFonts.shareTechMono()),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              'YES — ESP32-32E',
-              style: GoogleFonts.shareTechMono(color: FlasherColors.phosphor),
-            ),
-          ),
-        ],
-      ),
-    );
-    if (go == true && mounted) {
-      await _selectTarget(FlashTarget.esp32e);
-      setState(() => _selected = d);
-    }
-  }
-
-  void _append(String line) {
-    setState(() {
-      _logs.add(line);
-      if (_logs.length > 120) _logs.removeAt(0);
-    });
-  }
-
-  int get _resolvedOffset {
-    switch (_addressMode) {
-      case AddressMode.fullImage:
-        return 0x0;
-      case AddressMode.appOnly:
-        return 0x10000;
-      case AddressMode.custom:
-        final raw = _customOffsetCtrl.text.trim().toLowerCase();
-        return int.tryParse(
-              raw.startsWith('0x') ? raw.substring(2) : raw,
-              radix: raw.startsWith('0x') ? 16 : 10,
-            ) ??
-            0x0;
-    }
-  }
-
-  String get _downloadInstructions {
-    switch (_target) {
-      case FlashTarget.tdeck:
-        return 'T-Deck (ESP32-S3 USB-JTAG)\n\n'
-            '1. Plug USB-OTG into the phone and the T-Deck.\n'
-            '2. Hold the trackball CENTER button (BOOT / GPIO0).\n'
-            '3. Power on or press RST while still holding.\n'
-            '4. Keep holding 2–3 seconds until the screen stays black.\n'
-            '5. Release BOOT, then tap CONTINUE FLASH.\n\n'
-            'Android often cannot auto-reset USB-JTAG — manual entry is normal.';
-      case FlashTarget.cyd:
-        return 'CYD ESP32-2432S028\n\n'
-            '1. Plug USB-OTG into the phone and the CYD.\n'
-            '2. Hold BOOT.\n'
-            '3. Press & release RESET.\n'
-            '4. Release BOOT.\n'
-            '5. Tap CONTINUE FLASH.\n\n'
-            'If auto-reset works you can skip the buttons — we still try DTR/RTS first.';
-      case FlashTarget.esp32e:
-        return 'ESP32-32E 240×320 Resistive\n\n'
-            '1. Plug USB-OTG into the phone and the board.\n'
-            '2. Hold BOOT.\n'
-            '3. Press and release RESET.\n'
-            '4. Release BOOT.\n'
-            '5. Keep holding BOOT until the flasher says “Syncing…”, '
-            'then release and tap CONTINUE FLASH.\n\n'
-            'Common “ESP32-32E + 2.8″ 240×320 resistive” boards are often '
-            'sold as CYD-compatible — same polybius-cyd.bin firmware.';
-      default:
-        return '';
-    }
-  }
-
-  Future<_DownloadModeChoice?> _showDownloadModeSheet() async {
-    return showModalBottomSheet<_DownloadModeChoice>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: FlasherColors.panel,
-      builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'DOWNLOAD MODE',
-                  style: GoogleFonts.orbitron(
-                    color: FlasherColors.amber,
-                    letterSpacing: 3,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  _downloadInstructions,
-                  style: GoogleFonts.shareTechMono(
-                    color: FlasherColors.phosphor.withValues(alpha: 0.9),
-                    fontSize: 13,
-                    height: 1.45,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                FilledButton(
-                  onPressed: () =>
-                      Navigator.pop(ctx, _DownloadModeChoice.auto),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: FlasherColors.phosphor,
-                    foregroundColor: FlasherColors.voidBlack,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: const RoundedRectangleBorder(),
-                  ),
-                  child: Text(
-                    'CONTINUE FLASH (TRY AUTO-RESET)',
-                    style: GoogleFonts.shareTechMono(
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                OutlinedButton(
-                  onPressed: () =>
-                      Navigator.pop(ctx, _DownloadModeChoice.manualReady),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: FlasherColors.amber,
-                    side: const BorderSide(color: FlasherColors.amber),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: const RoundedRectangleBorder(),
-                  ),
-                  child: Text(
-                    'I ALREADY PUT DEVICE IN DOWNLOAD MODE — SKIP',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.shareTechMono(
-                      fontWeight: FontWeight.w700,
-                      height: 1.3,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: Text(
-                    'CANCEL',
-                    style: GoogleFonts.shareTechMono(color: FlasherColors.dim),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> _showManualFailSheet() async {
-    if (!mounted) return;
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: FlasherColors.panel,
-      builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'SYNC FAILED',
-                  style: GoogleFonts.orbitron(
-                    color: FlasherColors.danger,
-                    letterSpacing: 2,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'ROM never answered cmd 0x08.\n\n$_downloadInstructions\n\n'
-                  'Then tap FLASH again and choose “I already put the device in download mode”.',
-                  style: GoogleFonts.shareTechMono(
-                    color: FlasherColors.phosphor,
-                    fontSize: 13,
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: FlasherColors.amber,
-                    foregroundColor: FlasherColors.voidBlack,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: const RoundedRectangleBorder(),
-                  ),
-                  child: Text('GOT IT', style: GoogleFonts.shareTechMono()),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> _run({bool testOnly = false}) async {
     final target = _target;
-    if (target == null || _busy) return;
-    setState(() {
-      _busy = true;
-      _progress = 0;
-      _written = 0;
-      _total = 0;
-      _status = null;
-      _logs.clear();
-    });
-    try {
-      switch (target) {
-        case FlashTarget.r36s:
-          await _runR36s();
-        case FlashTarget.cyd:
-        case FlashTarget.esp32e:
-        case FlashTarget.tdeck:
-          await _runEsp(
-            asset: target.firmwareAsset,
-            fileName: target.firmwareFileName,
-            testOnly: testOnly,
-          );
-        case FlashTarget.androidOtg:
-          if (testOnly) {
-            setState(() => _status = 'Test connection not used for Android OTG');
-            return;
-          }
-          await _runAndroidOtg();
-      }
-    } catch (e) {
-      setState(() => _status = 'Failed: $e');
-      _append('ERROR $e');
-    } finally {
-      if (mounted) setState(() => _busy = false);
-      await _savePrefs();
+    if (target != null) {
+      await prefs.setString('last_target', target.name);
     }
-  }
-
-  Future<void> _runR36s() async {
-    _append('Select the SD card roms/ or roms/ports/ folder…');
+    await prefs.setBool('prepare_sd_before_flash', _prepareSdBeforeFlash);
+    await prefs.setBool('wipe_previous_polybius', _wipePreviousPolybius);
+    await prefs.setBool('logical_format_sd', _logicalFormatSd);
+    await prefs.setString('r36_install_mode', _r36InstallMode.name);
     if (_lastSdTreeUri != null) {
-      _append('Last folder remembered — picker will open (re-select if needed).');
+      await prefs.setString('r36s_tree_uri', _lastSdTreeUri!);
     }
-    if (!mounted) return;
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: FlasherColors.panel,
-        title: Text(
-          'R36S SD FOLDER',
-          style: GoogleFonts.orbitron(color: FlasherColors.amber, fontSize: 14),
-        ),
-        content: Text(
-          'Select the roms or roms/ports folder on the SD card '
-          '(ArkOS / JELOS / PortMaster).\n\n'
-          'Card must be FAT32 or exFAT. The flasher will prepare the layout '
-          'before writing the Port zip.\n\n'
-          'Example paths: /roms/ports or /roms2/ports',
-          style: GoogleFonts.shareTechMono(
-            color: FlasherColors.phosphor,
-            fontSize: 13,
-            height: 1.4,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('OPEN PICKER', style: GoogleFonts.shareTechMono()),
-          ),
-        ],
-      ),
-    );
-
-    final zip = await FlasherBridge.instance.materializeAsset(
-      'assets/r36s/polybius-r36s-port.zip',
-      'polybius-r36s-port.zip',
-    );
-    final tree = await FlasherBridge.instance.pickSdTree();
-    if (tree == null) {
-      setState(
-        () => _status =
-            'No SD folder selected — open the picker and choose roms/ or roms/ports/',
-      );
-      _append('Cancelled folder picker.');
-      return;
+    await prefs.setStringList('android_apk_ids', _selectedApkIds.toList());
+    if (_localApkPath != null) {
+      await prefs.setString('android_local_apk', _localApkPath!);
+    } else {
+      await prefs.remove('android_local_apk');
     }
-    _lastSdTreeUri = tree;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('r36s_tree_uri', tree);
-
-    if (_prepareSdBeforeFlash) {
-      _append('Preparing SD (write probe + PortMaster layout)…');
-      setState(() => _status = 'Preparing SD…');
-      final prep = await FlasherBridge.instance.prepareSd(
-        treeUri: tree,
-        layout: 'r36s_ports',
-        logicalFormat: _logicalFormatSd,
-        wipePrevious: _wipePreviousPolybius,
-      );
-      _append(prep.ok ? 'OK ${prep.message}' : 'FAIL ${prep.message}');
-      if (!prep.ok) {
-        setState(() => _status = prep.message);
-        return;
-      }
+    await prefs.setBool('android_force_downgrade', _forceDowngrade);
+    await prefs.setBool('android_force_user0', _forceUser0);
+    await prefs.setBool('android_use_tcp', _useTcpAdb);
+    await prefs.setString('android_tcp_host', _tcpHostCtrl.text.trim());
+    await prefs.setString('android_tcp_port', _tcpPortCtrl.text.trim());
+    if (target?.isEsp ?? false) {
+      final key = target!.name;
+      await prefs.setString('${key}_address_mode', _addressMode.name);
+      await prefs.setString('${key}_custom_offset', _customOffsetCtrl.text);
+      await prefs.setInt('${key}_baud', _baud);
+      await prefs.setBool('${key}_erase_all', _eraseAll);
+      await prefs.setBool('${key}_hard_reset_after', _hardResetAfter);
+      await prefs.setBool('${key}_skip_auto_reset', _skipAutoReset);
+      await prefs.setInt('${key}_serial_monitor_ms', _serialMonitorMs);
     }
-
-    _append('Writing PortMaster layout…');
-    final result = await FlasherBridge.instance.installR36s(
-      zipPath: zip,
-      treeUri: tree,
-    );
-    setState(() => _status = result.message);
-    _append(result.ok ? 'OK ${result.message}' : 'FAIL ${result.message}');
   }
 
-  Future<void> _runPrepareSdOnly({required bool logicalFormat}) async {
+  Future<void> _copyLogs() async {
+    await Clipboard.setData(ClipboardData(text: _bridge.dumpEventLog()));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Event log copied to clipboard.')),
+    );
+  }
+
+  Future<void> _withBusy(String label, Future<void> Function() body) async {
     if (_busy) return;
     setState(() {
       _busy = true;
       _progress = 0;
-      _status = null;
-      _logs.clear();
+      _status = label;
     });
     try {
-      if (!mounted) return;
-      await showDialog<void>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          backgroundColor: FlasherColors.panel,
-          title: Text(
-            logicalFormat ? 'FORMAT SD LAYOUT' : 'PREPARE SD',
-            style: GoogleFonts.orbitron(
-              color: FlasherColors.amber,
-              fontSize: 14,
-            ),
-          ),
-          content: Text(
-            logicalFormat
-                ? 'This WIPEs the selected folder tree, then recreates '
-                    'roms/ports (R36S) or polybius/ (ESP assets).\n\n'
-                    'Filesystem must already be FAT32 or exFAT. For a full '
-                    'block format use SYSTEM FORMAT SETTINGS.'
-                : 'Probes FAT-compatible write access and creates the correct '
-                    'directory layout before flashing.',
-            style: GoogleFonts.shareTechMono(
-              color: FlasherColors.phosphor,
-              fontSize: 13,
-              height: 1.4,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text('OPEN PICKER', style: GoogleFonts.shareTechMono()),
-            ),
-          ],
-        ),
-      );
-      final tree = await FlasherBridge.instance.pickSdTree();
-      if (tree == null) {
-        setState(() => _status = 'No SD folder selected');
-        return;
-      }
-      _lastSdTreeUri = tree;
-      final layout =
-          _target == FlashTarget.r36s || _target == null
-              ? 'r36s_ports'
-              : 'esp_assets';
-      _append('Preparing SD layout=$layout logicalFormat=$logicalFormat…');
-      final result = await FlasherBridge.instance.prepareSd(
-        treeUri: tree,
-        layout: layout,
-        logicalFormat: logicalFormat,
-        wipePrevious: true,
-      );
-      setState(() => _status = result.message);
-      _append(result.ok ? 'OK ${result.message}' : 'FAIL ${result.message}');
-    } catch (e) {
-      setState(() => _status = 'Failed: $e');
-      _append('ERROR $e');
+      await body();
+    } on PlatformException catch (e) {
+      _setStatus('Native bridge error ${e.code}: ${e.message ?? e.details}');
+    } on Object catch (e) {
+      _setStatus('Operation failed: $e');
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        setState(() {
+          _busy = false;
+        });
+      }
       await _savePrefs();
     }
   }
 
-  Future<UsbDeviceInfo?> _ensureDevice() async {
-    await _refreshUsb();
-    if (_devices.isEmpty) {
-      setState(
-        () => _status =
-            'No USB serial device — use a USB-OTG cable and plug in the board',
-      );
-      return null;
-    }
-    var device = _selected ?? _devices.first;
-    if (!device.hasPermission) {
-      _append('Requesting USB permission…');
-      final ok =
-          await FlasherBridge.instance.requestUsbPermission(device.deviceId);
-      if (!ok) {
-        setState(() => _status = 'USB permission denied');
-        return null;
-      }
-      await _refreshUsb();
-      device = _devices
-              .where((d) => d.deviceId == device.deviceId)
-              .firstOrNull ??
-          device;
-    }
-    return device;
+  void _setStatus(String value) {
+    if (!mounted) return;
+    setState(() {
+      _status = value;
+    });
   }
 
-  Future<void> _runEsp({
-    required String asset,
-    required String fileName,
-    required bool testOnly,
+  Future<bool> _confirm({
+    required String title,
+    required String message,
+    String action = 'CONTINUE',
+    bool destructive = false,
   }) async {
-    final choice = await _showDownloadModeSheet();
-    if (choice == null) {
-      setState(() => _status = 'Cancelled');
-      return;
-    }
-    _skipAutoReset = choice == _DownloadModeChoice.manualReady;
-
-    final device = await _ensureDevice();
-    if (device == null) return;
-
-    _append(device.label);
-    final offset = _resolvedOffset;
-    _append(
-      testOnly
-          ? 'Test connection only — chip=$_chip baud=$_baud'
-          : 'Flash $fileName · chip=$_chip · offset=0x${offset.toRadixString(16)} · baud=$_baud'
-              '${_eraseAll ? ' · erase-all' : ''}',
-    );
-
-    String? path;
-    if (!testOnly) {
-      path = await FlasherBridge.instance.materializeAsset(asset, fileName);
-      _append('Cached firmware: $path');
-    }
-
-    final result = await FlasherBridge.instance.flashEsp(
-      deviceId: device.deviceId,
-      firmwarePath: path,
-      chip: _chip,
-      offset: offset,
-      baud: _baud,
-      eraseAll: _eraseAll && !testOnly,
-      skipAutoReset: _skipAutoReset,
-      syncOnly: testOnly,
-      hardResetAfter: _hardResetAfter && !testOnly,
-    );
-
-    setState(() => _status = result.message);
-    _append(result.ok ? 'OK ${result.message}' : 'FAIL ${result.message}');
-
-    if (!result.ok &&
-        result.message.toLowerCase().contains('sync failed') &&
-        mounted) {
-      await _showManualFailSheet();
-    }
-  }
-
-  Future<void> _runAndroidOtg() async {
-    final localPath = _localApkPath;
-    final selected = FlasherBridge.apkCatalog
-        .where((a) => _selectedApkIds.contains(a.id))
-        .toList();
-    if (localPath == null && selected.isEmpty) {
-      setState(
-        () => _status =
-            'Select one or more catalog APKs, or pick a local .apk file',
-      );
-      return;
-    }
-
-    if (!_useTcpAdb) {
-      final ok = await _confirmAndroidOtg();
-      if (!ok) {
-        setState(() => _status = 'Cancelled');
-        return;
-      }
-    }
-
-    final items = <({String label, Future<String> Function() resolve})>[];
-    if (localPath != null) {
-      items.add((label: 'LOCAL APK', resolve: () async => localPath));
-    } else {
-      for (final item in selected) {
-        items.add((
-          label: item.title,
-          resolve: () => FlasherBridge.instance.resolveApk(
-            item,
-            onProgress: (p, recv, total) {
-              setState(() {
-                _progress = p.clamp(0.0, 1.0);
-                _written = recv;
-                _total = total;
-              });
-            },
-          ),
-        ));
-      }
-    }
-
-    UsbDeviceInfo? device;
-    if (!_useTcpAdb) {
-      device = await _ensureAdbDevice();
-      if (device == null) return;
-      _append(device.label);
-    }
-
-    final host = _tcpHostCtrl.text.trim();
-    final port = int.tryParse(_tcpPortCtrl.text.trim()) ?? 5555;
-    var okCount = 0;
-    for (var i = 0; i < items.length; i++) {
-      final entry = items[i];
-      _append('[${i + 1}/${items.length}] Resolving ${entry.label}…');
-      setState(() => _status = 'Preparing ${entry.label}…');
-      final apkPath = await entry.resolve();
-      _append('APK ready: $apkPath');
-
-      if (_useTcpAdb) {
-        _append('TCP ADB install → $host:$port (${entry.label})');
-        setState(() => _status = 'OTG/TCP installing ${entry.label}…');
-        final result = await FlasherBridge.instance.installApkAdbTcp(
-          host: host,
-          port: port,
-          apkPath: apkPath,
-        );
-        _append(result.ok ? 'OK ${result.message}' : 'FAIL ${result.message}');
-        if (!result.ok) {
-          setState(() => _status = result.message);
-          return;
-        }
-        okCount++;
-      } else {
-        setState(() => _status = 'OTG installing ${entry.label}…');
-        final result = await FlasherBridge.instance.installApkAdbUsb(
-          deviceId: device!.deviceId,
-          apkPath: apkPath,
-        );
-        _append(result.ok ? 'OK ${result.message}' : 'FAIL ${result.message}');
-        if (!result.ok) {
-          setState(() => _status = result.message);
-          return;
-        }
-        okCount++;
-      }
-    }
-    setState(
-      () => _status =
-          'Installed $okCount/${items.length} APK(s) over '
-          '${_useTcpAdb ? 'TCP ADB' : 'USB OTG ADB'}',
-    );
-  }
-
-  Future<bool> _confirmAndroidOtg() async {
     if (!mounted) return false;
-    final go = await showDialog<bool>(
+    final result = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (context) => AlertDialog(
         backgroundColor: FlasherColors.panel,
-        title: Text(
-          'ANDROID OTG ADB',
-          style: GoogleFonts.orbitron(color: FlasherColors.amber, fontSize: 14),
-        ),
-        content: Text(
-          'On the TARGET phone:\n'
-          '1. Enable Developer options → USB debugging\n'
-          '2. Connect with a data OTG cable (host = this flasher phone)\n'
-          '3. When prompted, tap Allow USB debugging (RSA key)\n'
-          '4. Leave the target unlocked during install\n\n'
-          'Then tap INSTALL.',
-          style: GoogleFonts.shareTechMono(
-            color: FlasherColors.phosphor,
-            fontSize: 13,
-            height: 1.4,
-          ),
-        ),
+        title: Text(title, style: GoogleFonts.orbitron()),
+        content: Text(message),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('CANCEL', style: GoogleFonts.shareTechMono()),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('CANCEL'),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              'INSTALL',
-              style: GoogleFonts.shareTechMono(color: FlasherColors.phosphor),
-            ),
+          FilledButton(
+            style: destructive
+                ? FilledButton.styleFrom(
+                    backgroundColor: FlasherColors.danger,
+                    foregroundColor: Colors.white,
+                  )
+                : null,
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(action),
           ),
         ],
       ),
     );
-    return go == true;
+    return result ?? false;
   }
 
-  Future<UsbDeviceInfo?> _ensureAdbDevice() async {
-    await _refreshUsb();
-    if (_devices.isEmpty) {
-      setState(
-        () => _status =
-            'No ADB USB device — enable USB debugging on the target and reconnect OTG',
+  Future<bool> _acknowledgeBattery() async {
+    final battery = await _bridge.getBatteryStatus();
+    final warning = battery.warning.trim().isNotEmpty
+        ? battery.warning.trim()
+        : battery.low
+        ? 'Battery is low. Keep this host device powered during flashing.'
+        : '';
+    if (warning.isEmpty) return true;
+    if (!mounted) return false;
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: FlasherColors.panel,
+        title: Text('POWER WARNING', style: GoogleFonts.orbitron()),
+        content: Text(
+          '$warning\n\nHost battery: ${battery.percent}%'
+          '${battery.charging ? ' (charging)' : ''}\n\n'
+          'Acknowledge before any USB OTG operation.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('ABORT'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('I ACKNOWLEDGE'),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
+  Future<void> _cancelOperation() async {
+    await _bridge.cancelFlash();
+    _setStatus('Cancel requested. Waiting for native operation to stop.');
+  }
+
+  Future<void> _refreshUsb({
+    bool checkBattery = true,
+    bool silent = false,
+  }) async {
+    if (checkBattery && !await _acknowledgeBattery()) return;
+    try {
+      final devices = await _bridge.listUsbDevices();
+      if (!mounted) return;
+      setState(() {
+        _devices = devices;
+        if (_selected != null &&
+            !devices.any((d) => d.deviceId == _selected!.deviceId)) {
+          _selected = null;
+        }
+        if (!silent) {
+          _status = devices.isEmpty
+              ? 'No USB devices detected.'
+              : 'USB scan complete: ${devices.length} device(s).';
+        }
+      });
+    } on Object catch (e) {
+      if (!silent) _setStatus('USB scan failed: $e');
+    }
+  }
+
+  Future<void> _refreshAndroidInventory({bool checkBattery = true}) async {
+    if (checkBattery && !await _acknowledgeBattery()) return;
+    final inventory = await _bridge.listUsbInventory();
+    final adb = inventory.where((d) => d.isAdb).toList();
+    final mtpOnly = inventory
+        .where((d) => d.hasMtpOrStorage && !d.isAdb)
+        .map((d) => d.label)
+        .toList();
+    if (!mounted) return;
+    setState(() {
+      _usbInventory = inventory;
+      _androidUsbMessage = adb.isNotEmpty
+          ? 'ADB inventory: ${adb.length} target(s) ready.'
+          : mtpOnly.isNotEmpty
+          ? 'MTP/storage device detected but no ADB interface. Enable Developer Options, USB debugging, then accept the target-phone RSA prompt.'
+          : 'No ADB device detected. Connect TARGET phone by OTG and authorize USB debugging.';
+      _status = _androidUsbMessage;
+    });
+  }
+
+  Future<UsbDeviceInfo?> _pickDeviceFromDialog({
+    required String title,
+    required List<UsbDeviceInfo> devices,
+    UsbDeviceInfo? initial,
+  }) async {
+    if (devices.isEmpty || !mounted) return null;
+    var selected =
+        initial != null && devices.any((d) => d.deviceId == initial.deviceId)
+        ? initial
+        : devices.first;
+    final result = await showDialog<UsbDeviceInfo>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setLocalState) => AlertDialog(
+          backgroundColor: FlasherColors.panel,
+          title: Text(title, style: GoogleFonts.orbitron()),
+          content: SizedBox(
+            width: 520,
+            child: _UsbPicker(
+              devices: devices,
+              selectedDeviceId: selected?.deviceId,
+              onSelected: (device) {
+                setLocalState(() {
+                  selected = device;
+                });
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('CANCEL'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, selected),
+              child: const Text('USE DEVICE'),
+            ),
+          ],
+        ),
+      ),
+    );
+    return result;
+  }
+
+  Future<UsbDeviceInfo?> _freshUsbDevice({
+    bool adbOnly = false,
+    bool checkBattery = true,
+  }) async {
+    if (checkBattery && !await _acknowledgeBattery()) return null;
+    final scanned = adbOnly
+        ? await _bridge.listUsbInventory()
+        : await _bridge.listUsbDevices();
+    final candidates = adbOnly
+        ? scanned.where((d) => d.isAdb).toList()
+        : scanned.where((d) => !d.isAdb && !d.hasMtpOrStorage).toList();
+    if (mounted) {
+      setState(() {
+        if (adbOnly) {
+          _usbInventory = scanned;
+          _androidUsbMessage =
+              candidates.isEmpty &&
+                  scanned.any((d) => d.hasMtpOrStorage && !d.isAdb)
+              ? 'MTP-only phone present. Enable/authorize USB debugging; ADB is not available yet.'
+              : 'ADB scan complete: ${candidates.length} target(s).';
+        } else {
+          _devices = scanned;
+        }
+      });
+    }
+    if (candidates.isEmpty) {
+      _setStatus(
+        adbOnly
+            ? _androidUsbMessage
+            : 'No ESP-class USB serial/JTAG device detected.',
       );
       return null;
     }
-    var device = _selected ?? _devices.first;
-    if (!device.hasPermission) {
-      _append('Requesting USB permission…');
-      final ok =
-          await FlasherBridge.instance.requestUsbPermission(device.deviceId);
-      if (!ok) {
-        setState(() => _status = 'USB permission denied');
+
+    var selected = _selected != null
+        ? candidates.where((d) => d.deviceId == _selected!.deviceId).firstOrNull
+        : null;
+    if (selected == null || candidates.length > 1) {
+      selected = await _pickDeviceFromDialog(
+        title: adbOnly ? 'SELECT ADB TARGET' : 'SELECT USB FLASH TARGET',
+        devices: candidates,
+        initial: selected,
+      );
+    }
+    if (selected == null) return null;
+
+    var fresh = scanned.firstWhere((d) => d.deviceId == selected!.deviceId);
+    if (!fresh.hasPermission) {
+      final granted = await _bridge.requestUsbPermission(fresh.deviceId);
+      if (!granted) {
+        _setStatus('USB permission denied for ${fresh.label}.');
         return null;
       }
-      await _refreshUsb();
-      device = _devices
-              .where((d) => d.deviceId == device.deviceId)
-              .firstOrNull ??
-          device;
+      final rescanned = adbOnly
+          ? await _bridge.listUsbInventory()
+          : await _bridge.listUsbDevices();
+      final matching = rescanned.where((d) => d.deviceId == fresh.deviceId);
+      if (matching.isEmpty) {
+        _setStatus(
+          'USB device changed after permission grant. Re-scan and retry.',
+        );
+        return null;
+      }
+      fresh = matching.first;
+      if (mounted) {
+        setState(() {
+          if (adbOnly) {
+            _usbInventory = rescanned;
+          } else {
+            _devices = rescanned;
+          }
+        });
+      }
     }
-    return device;
+    if (mounted) {
+      setState(() {
+        _selected = fresh;
+      });
+    }
+    return fresh;
+  }
+
+  int _espOffset() {
+    return switch (_addressMode) {
+      AddressMode.fullImage => 0x0,
+      AddressMode.appOnly => 0x10000,
+      AddressMode.custom => _parseOffset(_customOffsetCtrl.text),
+    };
+  }
+
+  int _parseOffset(String raw) {
+    final value = raw.trim().toLowerCase();
+    if (value.startsWith('0x')) {
+      return int.parse(value.substring(2), radix: 16);
+    }
+    return int.parse(value);
+  }
+
+  Future<void> _showDownloadModeSheet(EspPreset preset, String reason) async {
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: FlasherColors.panel,
+      builder: (context) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('DOWNLOAD MODE', style: GoogleFonts.orbitron(fontSize: 20)),
+            const SizedBox(height: 8),
+            Text(reason, style: const TextStyle(color: FlasherColors.amber)),
+            const SizedBox(height: 16),
+            Text(preset.manualBootSteps),
+            const SizedBox(height: 20),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('CONTINUE'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<String?> _materializeEspFirmware(FlashTarget target) async {
+    final bundle = target.firmwareBundle;
+    final preset = target.espPreset;
+    if (bundle == null || preset == null) return null;
+    final path = await _bridge.materializeAsset(
+      bundle.assetPath,
+      bundle.fileName,
+      expectedSha256: bundle.sha256,
+    );
+    final bytes = await File(path).length();
+    if (bytes > preset.flashSizeHintBytes) {
+      final ok = await _confirm(
+        title: 'FLASH SIZE WARNING',
+        message:
+            '${bundle.fileName} is ${_formatBytes(bytes)}, larger than the ${_formatBytes(preset.flashSizeHintBytes)} flash-size hint for ${preset.title}. Continue only if this board has enough flash.',
+        action: 'FLASH ANYWAY',
+        destructive: true,
+      );
+      if (!ok) return null;
+    }
+    return path;
+  }
+
+  Future<void> _runEsp({required bool syncOnly}) async {
+    final target = _target;
+    final preset = target?.espPreset;
+    if (target == null || preset == null) return;
+    await _withBusy(
+      syncOnly ? 'Testing ESP connection...' : 'Flashing ${target.title}...',
+      () async {
+        final report = OperationReport(
+          target: target.name,
+          title: syncOnly
+              ? '${target.title} connection test'
+              : '${target.title} flash',
+        );
+
+        if (_eraseAll && !syncOnly) {
+          final ok = await _confirm(
+            title: 'ERASE ALL FLASH',
+            message:
+                'Erase all flash before writing ${target.firmwareFileName}? This removes existing firmware, settings, and launchers.',
+            action: 'ERASE + FLASH',
+            destructive: true,
+          );
+          if (!ok) return;
+        }
+
+        if (!syncOnly) {
+          final ok = await _confirm(
+            title: 'OVERWRITE WARNING',
+            message: preset.overwriteWarning,
+            action: 'OVERWRITE',
+            destructive: true,
+          );
+          if (!ok) return;
+        }
+
+        if (_skipAutoReset || preset.preferSkipAutoReset) {
+          await _showDownloadModeSheet(
+            preset,
+            'Manual boot is recommended for this target before sync.',
+          );
+        }
+
+        final device = await _freshUsbDevice(adbOnly: false);
+        if (device == null) return;
+        report.add(name: 'USB permission', ok: true, detail: device.label);
+
+        String? firmwarePath;
+        if (!syncOnly) {
+          firmwarePath = await _materializeEspFirmware(target);
+          if (firmwarePath == null) return;
+          report.add(
+            name: 'Firmware SHA verified',
+            ok: true,
+            detail: target.firmwareBundle!.version,
+          );
+        }
+
+        final result = await _bridge.flashEsp(
+          deviceId: device.deviceId,
+          firmwarePath: firmwarePath,
+          chip: preset.chip,
+          offset: _espOffset(),
+          baud: _baud,
+          eraseAll: _eraseAll && !syncOnly,
+          skipAutoReset: _skipAutoReset,
+          syncOnly: syncOnly,
+          hardResetAfter: _hardResetAfter,
+          flashSizeHint: preset.flashSizeHintBytes,
+          serialMonitorMs: _serialMonitorMs,
+          target: target.name,
+        );
+        report.add(
+          name: syncOnly ? 'Sync test' : 'Flash',
+          ok: result.ok,
+          detail: _nativeDetail(result),
+        );
+        _setStatus(report.summary());
+        final text = '${result.message}\n${result.detail}'.toLowerCase();
+        if (!result.ok && text.contains('sync failed')) {
+          await _showDownloadModeSheet(
+            preset,
+            'Sync failed. Put the board in download mode, then retry.',
+          );
+        }
+      },
+    );
+  }
+
+  Future<void> _pickR36Tree() async {
+    final tree = await _bridge.pickSdTree();
+    if (tree == null || tree.isEmpty) return;
+    final candidates = await _bridge.detectR36Paths(tree);
+    final all = [
+      ...candidates,
+      R36PathCandidate(
+        label: 'Create roms/ports',
+        hint: 'roms/ports',
+        exists: false,
+      ),
+    ];
+    if (!mounted) return;
+    setState(() {
+      _lastSdTreeUri = tree;
+      _r36Candidates = all;
+      _selectedR36Hint = all.firstOrNull?.hint;
+      _status = 'SD tree selected. Choose install path candidate.';
+    });
+    await _savePrefs();
+  }
+
+  Future<String?> _ensureR36Tree({bool forcePick = false}) async {
+    if (forcePick || _lastSdTreeUri == null) {
+      await _pickR36Tree();
+    }
+    return _lastSdTreeUri;
+  }
+
+  Future<bool> _confirmR36WipeIfNeeded(String action) async {
+    if (!_wipePreviousPolybius && !_logicalFormatSd) return true;
+    final parts = [
+      if (_wipePreviousPolybius) 'wipe previous PØLYBÎŪS files',
+      if (_logicalFormatSd) 'perform logical format',
+    ].join(' and ');
+    return _confirm(
+      title: 'CONFIRM SD WRITE',
+      message: '$action will $parts on the selected SD tree.',
+      action: 'CONTINUE',
+      destructive: true,
+    );
+  }
+
+  Future<NativeResult?> _prepareR36Sd(
+    String treeUri,
+    OperationReport report,
+  ) async {
+    if (!await _confirmR36WipeIfNeeded('Prepare SD')) return null;
+    final result = await _bridge.prepareSd(
+      treeUri: treeUri,
+      logicalFormat: _logicalFormatSd,
+      wipePrevious: _wipePreviousPolybius,
+    );
+    report.add(
+      name: 'Prepare SD',
+      ok: result.ok,
+      detail: _nativeDetail(result),
+    );
+    return result;
+  }
+
+  Future<void> _prepareR36Only() async {
+    await _withBusy('Preparing R36S SD...', () async {
+      final tree = await _ensureR36Tree();
+      if (tree == null) return;
+      final report = OperationReport(target: 'r36s', title: 'R36S prepare SD');
+      await _prepareR36Sd(tree, report);
+      _setStatus(report.summary());
+    });
+  }
+
+  Future<void> _testR36Connection() async {
+    await _withBusy('Testing SD write access...', () async {
+      final tree = await _ensureR36Tree(forcePick: true);
+      if (tree == null) return;
+      final report = OperationReport(
+        target: 'r36s',
+        title: 'R36S SD write test',
+      );
+      final result = await _bridge.probeSdWrite(tree);
+      report.add(
+        name: 'Probe SD write',
+        ok: result.ok,
+        detail: _nativeDetail(result),
+      );
+      _setStatus(report.summary());
+    });
+  }
+
+  Future<void> _installR36() async {
+    await _withBusy('Installing R36S package...', () async {
+      final tree = await _ensureR36Tree();
+      if (tree == null) return;
+      final report = OperationReport(target: 'r36s', title: 'R36S install');
+      if (_prepareSdBeforeFlash) {
+        final prep = await _prepareR36Sd(tree, report);
+        if (prep == null || !prep.ok) {
+          _setStatus(report.summary());
+          return;
+        }
+      }
+      final zipPath = await _bridge.materializeAsset(
+        AssetIntegrity.r36sZip.assetPath,
+        AssetIntegrity.r36sZip.fileName,
+        expectedSha256: AssetIntegrity.r36sZip.sha256,
+      );
+      report.add(
+        name: 'R36S zip SHA verified',
+        ok: true,
+        detail: AssetIntegrity.r36sZip.version,
+      );
+      final result = await _bridge.installR36s(
+        zipPath: zipPath,
+        treeUri: tree,
+        mode: _r36InstallMode.bridgeValue,
+        preferredHint: _selectedR36Hint,
+      );
+      final extra = [
+        _nativeDetail(result),
+        if (result.verified) 'verified',
+        if (result.portsPath.isNotEmpty) 'portsPath=${result.portsPath}',
+      ].where((part) => part.trim().isNotEmpty).join(' · ');
+      report.add(name: 'Install package', ok: result.ok, detail: extra);
+      _setStatus(report.summary());
+    });
+  }
+
+  Future<void> _openSystemFormat() async {
+    final ok = await _confirm(
+      title: 'OPEN SYSTEM FORMAT',
+      message:
+          'This opens Android system storage format settings. Confirm before wiping or formatting any SD card.',
+      action: 'OPEN SETTINGS',
+      destructive: true,
+    );
+    if (!ok) return;
+    final result = await _bridge.openSystemSdFormat();
+    _setStatus(_nativeDetail(result));
+  }
+
+  Future<bool> _authorizeAdbDialog() async {
+    if (!mounted) return false;
+    var message = _androidUsbMessage;
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setLocalState) => AlertDialog(
+          backgroundColor: FlasherColors.panel,
+          title: Text('AUTHORIZE USB DEBUGGING', style: GoogleFonts.orbitron()),
+          content: SizedBox(
+            width: 520,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Authorize USB debugging on the TARGET phone.'),
+                const SizedBox(height: 12),
+                Text(
+                  message,
+                  style: const TextStyle(color: FlasherColors.amber),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'If the RSA prompt is missing: unplug/replug OTG, set USB mode to file transfer once, then re-scan.',
+                  style: TextStyle(color: FlasherColors.dim),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('CANCEL'),
+            ),
+            OutlinedButton(
+              onPressed: () async {
+                final inventory = await _bridge.listUsbInventory();
+                final adb = inventory.where((d) => d.isAdb).length;
+                final mtpOnly = inventory.any(
+                  (d) => d.hasMtpOrStorage && !d.isAdb,
+                );
+                if (mounted) {
+                  setState(() {
+                    _usbInventory = inventory;
+                    _androidUsbMessage = adb > 0
+                        ? 'ADB inventory: $adb target(s) ready.'
+                        : mtpOnly
+                        ? 'MTP-only phone detected; USB debugging is not authorized yet.'
+                        : 'No ADB target detected.';
+                  });
+                }
+                setLocalState(() {
+                  message = _androidUsbMessage;
+                });
+              },
+              child: const Text('RE-SCAN DEVICES'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('CONTINUE'),
+            ),
+          ],
+        ),
+      ),
+    );
+    return result ?? false;
   }
 
   Future<void> _pickLocalApk() async {
-    final path = await FlasherBridge.instance.pickApk();
-    if (path == null) {
-      _append('APK picker cancelled');
-      return;
-    }
+    final path = await _bridge.pickApk();
+    if (path == null || path.isEmpty) return;
     setState(() {
       _localApkPath = path;
       _selectedApkIds.clear();
+      _status = 'Local APK selected; catalog selection cleared.';
     });
-    _append('Local APK selected: $path');
+    await _savePrefs();
   }
 
-  String get _androidInstallLabel {
-    if (_localApkPath != null) return 'INSTALL APK';
-    final n = _selectedApkIds.length;
-    if (n <= 1) return 'INSTALL APK';
-    return 'INSTALL $n APKS';
+  List<_InstallJob> _installJobs() {
+    final jobs = FlasherBridge.apkCatalog
+        .where((item) => _selectedApkIds.contains(item.id))
+        .map(_InstallJob.catalog)
+        .toList();
+    final local = _localApkPath;
+    if (local != null && local.isNotEmpty) {
+      jobs.add(_InstallJob.local(local));
+    }
+    return jobs;
+  }
+
+  Future<void> _testAndroidConnection() async {
+    await _withBusy('Testing Android ADB USB inventory...', () async {
+      await _refreshAndroidInventory();
+      final report = OperationReport(
+        target: 'android_otg',
+        title: 'Android OTG test',
+      );
+      final device = await _freshUsbDevice(adbOnly: true, checkBattery: false);
+      report.add(
+        name: 'ADB USB target',
+        ok: device != null,
+        detail: device?.label ?? _androidUsbMessage,
+      );
+      _setStatus(report.summary());
+    });
+  }
+
+  Future<void> _installAndroidApks() async {
+    final jobs = _installJobs();
+    if (jobs.isEmpty) {
+      _setStatus('Select at least one bundled APK or pick a local APK.');
+      return;
+    }
+    if (jobs.length >= 2) {
+      final ok = await _confirm(
+        title: 'CONFIRM MULTI-APK INSTALL',
+        message:
+            'Install ${jobs.length} APKs in sequence? Non-fatal failures will be reported and the queue will continue.',
+        action: 'INSTALL ${jobs.length}',
+      );
+      if (!ok) return;
+    }
+    if (_useTcpAdb) {
+      final ok = await _confirm(
+        title: 'WIRELESS ADB REQUIRED',
+        message:
+            'TCP ADB assumes the target is already in adb tcpip mode or Wireless debugging is active at ${_tcpHostCtrl.text.trim()}:${_tcpPortCtrl.text.trim()}.',
+        action: 'USE TCP ADB',
+      );
+      if (!ok) return;
+    }
+
+    await _withBusy('Installing Android APK queue...', () async {
+      if (!await _acknowledgeBattery()) return;
+      await _refreshAndroidInventory(checkBattery: false);
+      if (!await _authorizeAdbDialog()) return;
+
+      UsbDeviceInfo? device;
+      String host = '';
+      int port = 0;
+      if (_useTcpAdb) {
+        host = _tcpHostCtrl.text.trim();
+        port = int.parse(_tcpPortCtrl.text.trim());
+      } else {
+        device = await _freshUsbDevice(adbOnly: true, checkBattery: false);
+        if (device == null) return;
+      }
+
+      final report = OperationReport(
+        target: 'android_otg',
+        title: 'Android APK install queue',
+      );
+
+      for (var i = 0; i < jobs.length; i++) {
+        final job = jobs[i];
+        try {
+          _setStatus('Resolving ${job.title} (${i + 1}/${jobs.length})...');
+          final path = job.item == null
+              ? job.localPath!
+              : await _bridge.resolveApk(
+                  job.item!,
+                  onProgress: (progress, received, total) {
+                    if (!mounted) return;
+                    setState(() {
+                      _progress = progress.clamp(0.0, 1.0);
+                      _status =
+                          'Resolving ${job.title}: ${_formatBytes(received)} / ${total > 0 ? _formatBytes(total) : 'unknown'}';
+                    });
+                  },
+                );
+          _setStatus('Installing ${job.title} (${i + 1}/${jobs.length})...');
+          final result = _useTcpAdb
+              ? await _bridge.installApkAdbTcp(
+                  host: host,
+                  port: port,
+                  apkPath: path,
+                  forceDowngrade: _forceDowngrade,
+                  forceUser0: _forceUser0,
+                )
+              : await _bridge.installApkAdbUsb(
+                  deviceId: device!.deviceId,
+                  apkPath: path,
+                  forceDowngrade: _forceDowngrade,
+                  forceUser0: _forceUser0,
+                );
+          report.add(
+            name: job.title,
+            ok: result.ok,
+            detail: _nativeDetail(result),
+          );
+        } on Object catch (e) {
+          report.add(name: job.title, ok: false, detail: 'exception: $e');
+        }
+      }
+      _setStatus(report.summary());
+    });
+  }
+
+  Future<void> _setTcpAdb(bool value) async {
+    if (!value) {
+      setState(() => _useTcpAdb = false);
+      await _savePrefs();
+      return;
+    }
+    final ok = await _confirm(
+      title: 'ENABLE TCP ADB',
+      message:
+          'Confirm the target phone is already in adb tcpip mode or Wireless debugging is active. USB authorization is still recommended before switching.',
+      action: 'ENABLE TCP',
+    );
+    if (!ok) return;
+    setState(() => _useTcpAdb = true);
+    await _savePrefs();
+  }
+
+  String _nativeDetail(NativeResult result) {
+    final parts = [
+      result.message,
+      if (result.errorCode.isNotEmpty) 'errorCode=${result.errorCode}',
+      if (result.detail.isNotEmpty) result.detail,
+      if (result.pmOutput.isNotEmpty) result.pmOutput,
+    ].where((part) => part.trim().isNotEmpty).toList();
+    return parts.isEmpty ? (result.ok ? 'OK' : 'FAILED') : parts.join(' · ');
+  }
+
+  String _formatBytes(int bytes) {
+    if (bytes >= 1024 * 1024) {
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MiB';
+    }
+    if (bytes >= 1024) return '${(bytes / 1024).toStringAsFixed(1)} KiB';
+    return '$bytes B';
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Text(
+          'PØLYBÎŪS FLASHER',
+          style: GoogleFonts.orbitron(
+            color: FlasherColors.phosphor,
+            letterSpacing: 2,
+          ),
+        ),
+        actions: [
+          TextButton.icon(
+            onPressed: _copyLogs,
+            icon: const Icon(Icons.copy_all, size: 18),
+            label: const Text('COPY LOGS'),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
       body: Stack(
-        fit: StackFit.expand,
         children: [
-          const _Atmosphere(),
+          _Atmosphere(animation: _pulse),
           SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final wide = constraints.maxWidth >= 720;
-                return Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: wide ? 48 : 20,
-                    vertical: 16,
-                  ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(18, 8, 18, 28),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 980),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _HeroHeader(pulse: _pulse),
-                      const SizedBox(height: 20),
-                      Expanded(
-                        child: wide
-                            ? Row(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  Expanded(
-                                    flex: 5,
-                                    child: SingleChildScrollView(
-                                      child: _buildControls(),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 28),
-                                  Expanded(flex: 6, child: _buildConsole()),
-                                ],
-                              )
-                            : ListView(
-                                children: [
-                                  _buildControls(),
-                                  const SizedBox(height: 24),
-                                  SizedBox(
-                                    height: 380,
-                                    child: _buildConsole(),
-                                  ),
-                                ],
-                              ),
+                      _HeroHeader(
+                        status: _status,
+                        progress: _progress,
+                        busy: _busy,
+                        onCancel: _cancelOperation,
                       ),
+                      const SizedBox(height: 18),
+                      _buildTargetTiles(),
+                      const SizedBox(height: 18),
+                      if (_target != null) _buildTargetPanel(_target!),
+                      const SizedBox(height: 18),
+                      _Console(logs: _logs),
                     ],
                   ),
-                );
-              },
+                ),
+              ),
             ),
           ),
         ],
@@ -1055,849 +1219,764 @@ class _FlasherHomePageState extends State<FlasherHomePage>
     );
   }
 
-  Widget _buildControls() {
-    final esp = _target?.isEsp ?? false;
-    final android = _target?.isAndroidOtg ?? false;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          'SELECT TARGET',
-          style: GoogleFonts.shareTechMono(
-            color: FlasherColors.amber,
-            letterSpacing: 3,
-            fontSize: 12,
-          ),
-        ),
-        const SizedBox(height: 12),
-        _TargetTile(
-          selected: _target == FlashTarget.r36s,
-          title: 'R36S',
-          subtitle:
-              'Prepare/format SD (FAT32/exFAT) then install Port into roms/ports',
-          enabled: !_busy,
-          onTap: () => _selectTarget(FlashTarget.r36s),
-        ),
-        if (_target == FlashTarget.r36s) ...[
-          const SizedBox(height: 12),
-          _buildR36SdOptions(),
-        ],
-        const SizedBox(height: 10),
-        _TargetTile(
-          selected: _target == FlashTarget.cyd,
-          title: 'CYD ESP32-2432S028',
-          subtitle: 'USB flash · polybius-cyd.bin · default full image @ 0x0',
-          enabled: !_busy,
-          onTap: () => _selectTarget(FlashTarget.cyd),
-        ),
-        const SizedBox(height: 10),
-        _TargetTile(
-          selected: _target == FlashTarget.esp32e,
-          title: 'ESP32-32E 240×320 Resistive',
-          subtitle:
-              'USB serial flash · polybius-cyd.bin @ 0x0 · chip esp32',
-          enabled: !_busy,
-          onTap: () => _selectTarget(FlashTarget.esp32e),
-        ),
-        if (_target == FlashTarget.esp32e) ...[
-          const SizedBox(height: 8),
-          Text(
-            'Note: common ESP32-32E + 2.8″ 240×320 resistive boards are often '
-            'sold as CYD-compatible — same firmware as CYD.',
-            style: GoogleFonts.shareTechMono(
-              color: FlasherColors.dim,
-              fontSize: 11,
-              height: 1.35,
-            ),
-          ),
-        ],
-        const SizedBox(height: 10),
-        _TargetTile(
-          selected: _target == FlashTarget.tdeck,
-          title: 'LilyGO T-Deck',
-          subtitle:
-              'USB-JTAG flash · polybius-tdeck.bin · default full image @ 0x0',
-          enabled: !_busy,
-          onTap: () => _selectTarget(FlashTarget.tdeck),
-        ),
-        const SizedBox(height: 10),
-        _TargetTile(
-          selected: _target == FlashTarget.androidOtg,
-          title: 'ANDROID (OTG ADB)',
-          subtitle:
-              'Install selected Portal / V.1 / Darth Cherry / catalog APKs via OTG ADB',
-          enabled: !_busy,
-          onTap: () async {
-            await _selectTarget(FlashTarget.androidOtg);
-            await _refreshUsb();
-          },
-        ),
-        if (esp) ...[
-          const SizedBox(height: 16),
-          _UsbPicker(
-            devices: _devices,
-            selected: _selected,
-            busy: _busy,
-            emptyHint: 'None found — connect OTG cable to the board.',
-            onRefresh: _refreshUsb,
-            onSelect: (d) => setState(() => _selected = d),
-          ),
-          const SizedBox(height: 16),
-          _buildEspOptions(),
-        ],
-        if (android) ...[
-          const SizedBox(height: 16),
-          _buildAndroidOtgOptions(),
-        ],
-        const SizedBox(height: 20),
-        FilledButton(
-          onPressed: (_target != null && !_busy) ? () => _run() : null,
-          style: FilledButton.styleFrom(
-            backgroundColor: FlasherColors.phosphor,
-            foregroundColor: FlasherColors.voidBlack,
-            disabledBackgroundColor: FlasherColors.dim.withValues(alpha: 0.3),
-            minimumSize: const Size.fromHeight(52),
-            shape: const RoundedRectangleBorder(),
-          ),
-          child: Text(
-            _busy
-                ? 'WORKING…'
-                : android
-                    ? _androidInstallLabel
-                    : 'FLASH',
-            style: GoogleFonts.shareTechMono(
-              fontWeight: FontWeight.w700,
-              letterSpacing: 4,
-              fontSize: 16,
-            ),
-          ),
-        ),
-        if (_target == FlashTarget.r36s) ...[
-          const SizedBox(height: 10),
-          OutlinedButton(
-            onPressed: _busy
-                ? null
-                : () => _runPrepareSdOnly(logicalFormat: _logicalFormatSd),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: FlasherColors.amber,
-              side: const BorderSide(color: FlasherColors.amber),
-              minimumSize: const Size.fromHeight(48),
-              shape: const RoundedRectangleBorder(),
-            ),
-            child: Text(
-              _logicalFormatSd ? 'FORMAT + PREPARE SD ONLY' : 'PREPARE SD ONLY',
-              style: GoogleFonts.shareTechMono(letterSpacing: 1),
-            ),
-          ),
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: _busy
+  Widget _buildTargetTiles() {
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: FlashTarget.values.map((target) {
+        return SizedBox(
+          width: target.isEsp ? 300 : 230,
+          child: _TargetTile(
+            title: target.title,
+            subtitle: target.subtitle,
+            selected: _target == target,
+            icon: target.isAndroidOtg
+                ? Icons.android
+                : target.isR36s
+                ? Icons.sd_storage
+                : Icons.developer_board,
+            onTap: _busy
                 ? null
                 : () async {
-                    final r =
-                        await FlasherBridge.instance.openSystemSdFormat();
-                    setState(() => _status = r.message);
-                    _append(r.message);
+                    setState(() {
+                      _target = target;
+                      if (target.isEsp) _applyEspDefaults(target);
+                      _status = '${target.title} selected.';
+                    });
+                    await _savePrefs();
                   },
-            child: Text(
-              'SYSTEM FORMAT SETTINGS (FAT32 / exFAT)',
-              style: GoogleFonts.shareTechMono(
-                color: FlasherColors.dim,
-                fontSize: 11,
-              ),
-            ),
           ),
-        ],
-        if (esp) ...[
-          const SizedBox(height: 10),
-          OutlinedButton(
-            onPressed: _busy ? null : () => _run(testOnly: true),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: FlasherColors.amber,
-              side: const BorderSide(color: FlasherColors.amber),
-              minimumSize: const Size.fromHeight(48),
-              shape: const RoundedRectangleBorder(),
-            ),
-            child: Text(
-              'TEST CONNECTION ONLY',
-              style: GoogleFonts.shareTechMono(letterSpacing: 1),
-            ),
-          ),
-        ],
-        if (_busy) ...[
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: () => FlasherBridge.instance.cancelFlash(),
-            child: Text(
-              'CANCEL',
-              style: GoogleFonts.shareTechMono(color: FlasherColors.danger),
-            ),
-          ),
-        ],
-      ],
+        );
+      }).toList(),
     );
   }
 
-  Widget _buildR36SdOptions() {
-    return Material(
-      color: FlasherColors.panel.withValues(alpha: 0.55),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: FlasherColors.phosphor.withValues(alpha: 0.25),
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'SD PREPARE / FORMAT',
-                style: GoogleFonts.shareTechMono(
-                  color: FlasherColors.amber,
-                  letterSpacing: 2,
-                  fontSize: 11,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Card must be FAT32 or exFAT. Prepare verifies write access, '
-                'builds roms/ports, optionally wipes prior Polybius installs.',
-                style: GoogleFonts.shareTechMono(
-                  color: FlasherColors.dim,
-                  fontSize: 11,
-                  height: 1.35,
-                ),
-              ),
-              CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                dense: true,
-                value: _prepareSdBeforeFlash,
-                activeColor: FlasherColors.phosphor,
-                title: Text(
-                  'Prepare SD before flash (recommended)',
-                  style: GoogleFonts.shareTechMono(fontSize: 12),
-                ),
-                onChanged: _busy
-                    ? null
-                    : (v) => setState(() => _prepareSdBeforeFlash = v ?? true),
-              ),
-              CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                dense: true,
-                value: _wipePreviousPolybius,
-                activeColor: FlasherColors.phosphor,
-                title: Text(
-                  'Wipe previous Polybius port files',
-                  style: GoogleFonts.shareTechMono(fontSize: 12),
-                ),
-                onChanged: _busy
-                    ? null
-                    : (v) => setState(() => _wipePreviousPolybius = v ?? true),
-              ),
-              CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                dense: true,
-                value: _logicalFormatSd,
-                activeColor: FlasherColors.danger,
-                title: Text(
-                  'Logical format (wipe selected tree) before layout',
-                  style: GoogleFonts.shareTechMono(fontSize: 12),
-                ),
-                onChanged: _busy
-                    ? null
-                    : (v) => setState(() => _logicalFormatSd = v ?? false),
-              ),
-            ],
-          ),
-        ),
-      ),
+  Widget _buildTargetPanel(FlashTarget target) {
+    return _Panel(
+      child: switch (target) {
+        FlashTarget.r36s => _buildR36Panel(),
+        FlashTarget.androidOtg => _buildAndroidPanel(),
+        _ => _buildEspPanel(target),
+      },
     );
   }
 
-  Widget _buildAndroidOtgOptions() {
-    final bundledIds =
-        FlasherBridge.apkCatalog.where((a) => a.isBundled).map((a) => a.id);
-    final allBundledSelected =
-        bundledIds.every(_selectedApkIds.contains) && bundledIds.isNotEmpty;
-
+  Widget _buildEspPanel(FlashTarget target) {
+    final preset = target.espPreset!;
+    final bundle = target.firmwareBundle!;
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _SectionTitle('${target.title} ESP FLASH'),
+        Text(preset.title, style: const TextStyle(color: FlasherColors.amber)),
+        const SizedBox(height: 4),
         Text(
-          'SELECT APK(S) TO INSTALL',
-          style: GoogleFonts.shareTechMono(
-            color: FlasherColors.amber,
-            letterSpacing: 2,
-            fontSize: 11,
-          ),
+          'Bundled ${bundle.label}: ${bundle.version} · ${bundle.fileName}',
+          style: const TextStyle(color: FlasherColors.cyan),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
         Text(
-          'Check one app, several, or all. Portal / V.1 / Darth Cherry are '
-          'bundled offline; others download once then cache. '
-          'Install uses ADB sync + pm install over USB OTG or TCP.',
-          style: GoogleFonts.shareTechMono(
-            color: FlasherColors.dim,
-            fontSize: 11,
-            height: 1.35,
-          ),
+          'Last USB scan: ${_devices.length} device(s)'
+          '${_selected == null ? '' : ' · selected ${_selected!.label}'}',
+          style: const TextStyle(color: FlasherColors.dim),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 16),
         Wrap(
-          spacing: 4,
-          runSpacing: 0,
+          spacing: 12,
+          runSpacing: 12,
           children: [
-            TextButton(
-              onPressed: _busy
-                  ? null
-                  : () => setState(() {
-                        _localApkPath = null;
-                        if (allBundledSelected) {
-                          _selectedApkIds.removeAll(bundledIds);
-                        } else {
-                          _selectedApkIds.addAll(bundledIds);
-                        }
-                      }),
-              child: Text(
-                allBundledSelected
-                    ? 'CLEAR BUNDLED'
-                    : 'SELECT ALL BUNDLED',
-                style: GoogleFonts.shareTechMono(
-                  color: FlasherColors.amber,
-                  fontSize: 11,
-                ),
+            _ChoiceBox(
+              title: 'Address',
+              child: Column(
+                children: AddressMode.values
+                    .map(
+                      (mode) => RadioListTile<AddressMode>(
+                        value: mode,
+                        groupValue: _addressMode,
+                        dense: true,
+                        title: Text(mode.label),
+                        onChanged: _busy
+                            ? null
+                            : (value) {
+                                if (value == null) return;
+                                setState(() => _addressMode = value);
+                                _savePrefs();
+                              },
+                      ),
+                    )
+                    .toList(),
               ),
             ),
-            TextButton(
-              onPressed: _busy || _selectedApkIds.isEmpty
-                  ? null
-                  : () => setState(() => _selectedApkIds.clear()),
-              child: Text(
-                'CLEAR ALL',
-                style: GoogleFonts.shareTechMono(
-                  color: FlasherColors.dim,
-                  fontSize: 11,
-                ),
+            _ChoiceBox(
+              title: 'Baud',
+              child: DropdownButtonFormField<int>(
+                value: _baud,
+                decoration: const InputDecoration(border: OutlineInputBorder()),
+                items: _baudOptions
+                    .map(
+                      (baud) => DropdownMenuItem(
+                        value: baud,
+                        child: Text(baud == 460800 ? 'Fast 460800' : '$baud'),
+                      ),
+                    )
+                    .toList(),
+                onChanged: _busy
+                    ? null
+                    : (value) {
+                        if (value == null) return;
+                        setState(() => _baud = value);
+                        _savePrefs();
+                      },
+              ),
+            ),
+            _ChoiceBox(
+              title: 'Serial monitor',
+              child: DropdownButtonFormField<int>(
+                value: _serialMonitorMs,
+                decoration: const InputDecoration(border: OutlineInputBorder()),
+                items: const [
+                  DropdownMenuItem(value: 0, child: Text('0 ms / off')),
+                  DropdownMenuItem(
+                    value: 1500,
+                    child: Text('Capture Bruce/Launcher 1500 ms'),
+                  ),
+                ],
+                onChanged: _busy
+                    ? null
+                    : (value) {
+                        if (value == null) return;
+                        setState(() => _serialMonitorMs = value);
+                        _savePrefs();
+                      },
               ),
             ),
           ],
         ),
-        for (final item in FlasherBridge.apkCatalog) ...[
-          CheckboxListTile(
-            contentPadding: EdgeInsets.zero,
-            dense: true,
-            value: _localApkPath == null && _selectedApkIds.contains(item.id),
-            activeColor: FlasherColors.phosphor,
-            title: Text(
-              item.isBundled ? '${item.title}  · OFFLINE' : item.title,
-              style: GoogleFonts.orbitron(
-                fontSize: 12,
-                color: FlasherColors.phosphor,
-              ),
+        if (_addressMode == AddressMode.custom) ...[
+          const SizedBox(height: 12),
+          TextField(
+            controller: _customOffsetCtrl,
+            enabled: !_busy,
+            decoration: const InputDecoration(
+              labelText: 'Custom offset',
+              hintText: '0x0',
+              border: OutlineInputBorder(),
             ),
-            subtitle: Text(
-              item.subtitle,
-              style: GoogleFonts.shareTechMono(
-                fontSize: 10,
-                color: FlasherColors.dim,
-              ),
-            ),
-            onChanged: _busy
-                ? null
-                : (v) => setState(() {
-                      _localApkPath = null;
-                      if (v == true) {
-                        _selectedApkIds.add(item.id);
-                      } else {
-                        _selectedApkIds.remove(item.id);
-                      }
-                    }),
+            onChanged: (_) => _savePrefs(),
           ),
         ],
-        const SizedBox(height: 8),
-        OutlinedButton(
-          onPressed: _busy ? null : _pickLocalApk,
-          style: OutlinedButton.styleFrom(
-            foregroundColor: FlasherColors.amber,
-            side: const BorderSide(color: FlasherColors.amber),
-            minimumSize: const Size.fromHeight(44),
-            shape: const RoundedRectangleBorder(),
-          ),
-          child: Text(
-            _localApkPath == null
-                ? 'PICK LOCAL .APK (instead of catalog)'
-                : 'LOCAL: ${_localApkPath!.split('/').last}',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.shareTechMono(fontSize: 12),
-          ),
-        ),
         const SizedBox(height: 12),
-        CheckboxListTile(
-          contentPadding: EdgeInsets.zero,
-          dense: true,
-          value: _useTcpAdb,
-          activeColor: FlasherColors.phosphor,
-          title: Text(
-            'Use TCP ADB instead of USB (adb tcpip 5555)',
-            style: GoogleFonts.shareTechMono(fontSize: 12),
-          ),
+        SwitchListTile(
+          value: _eraseAll,
           onChanged: _busy
               ? null
-              : (v) => setState(() => _useTcpAdb = v ?? false),
+              : (value) {
+                  setState(() => _eraseAll = value);
+                  _savePrefs();
+                },
+          title: const Text('Erase all before flash'),
+          subtitle: const Text(
+            'Requires confirmation before the operation runs.',
+          ),
         ),
-        if (_useTcpAdb) ...[
+        SwitchListTile(
+          value: _hardResetAfter,
+          onChanged: _busy
+              ? null
+              : (value) {
+                  setState(() => _hardResetAfter = value);
+                  _savePrefs();
+                },
+          title: const Text('Hard reset after flash'),
+        ),
+        SwitchListTile(
+          value: _skipAutoReset,
+          onChanged: _busy
+              ? null
+              : (value) {
+                  setState(() => _skipAutoReset = value);
+                  _savePrefs();
+                },
+          title: const Text('Skip auto-reset / manual download mode'),
+          subtitle: Text(
+            preset.preferSkipAutoReset
+                ? 'Default ON for T-Deck and other flaky DTR paths.'
+                : 'Use when BOOT/RESET must be handled manually.',
+          ),
+        ),
+        ExpansionTile(
+          tilePadding: EdgeInsets.zero,
+          title: const Text('Advanced ESP package mode'),
+          children: const [
+            SwitchListTile(
+              value: false,
+              onChanged: null,
+              title: Text('Multi-file mode'),
+              subtitle: Text(
+                'Multi-file assets not bundled — using merged full image @ 0x0',
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            OutlinedButton.icon(
+              onPressed: _busy ? null : () => _refreshUsb(checkBattery: true),
+              icon: const Icon(Icons.usb),
+              label: const Text('RE-SCAN USB'),
+            ),
+            OutlinedButton.icon(
+              onPressed: _busy
+                  ? null
+                  : () => _showDownloadModeSheet(
+                      preset,
+                      'Follow these steps before sync/flash when auto-reset is unreliable.',
+                    ),
+              icon: const Icon(Icons.info_outline),
+              label: const Text('DOWNLOAD MODE HELP'),
+            ),
+            FilledButton.icon(
+              onPressed: _busy ? null : () => _runEsp(syncOnly: true),
+              icon: const Icon(Icons.cable),
+              label: const Text('TEST CONNECTION ONLY'),
+            ),
+            FilledButton.icon(
+              onPressed: _busy ? null : () => _runEsp(syncOnly: false),
+              icon: const Icon(Icons.flash_on),
+              label: const Text('FLASH ESP'),
+            ),
+            if (_busy)
+              OutlinedButton.icon(
+                onPressed: _cancelOperation,
+                icon: const Icon(Icons.cancel),
+                label: const Text('CANCEL'),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildR36Panel() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionTitle('R36S SD HARDENED INSTALL'),
+        Text(
+          'Bundle: ${AssetIntegrity.r36sZip.label} · ${AssetIntegrity.r36sZip.version}',
+          style: const TextStyle(color: FlasherColors.cyan),
+        ),
+        const SizedBox(height: 14),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            OutlinedButton.icon(
+              onPressed: _busy ? null : _pickR36Tree,
+              icon: const Icon(Icons.folder_open),
+              label: const Text('PICK SD TREE'),
+            ),
+            FilledButton.icon(
+              onPressed: _busy ? null : _testR36Connection,
+              icon: const Icon(Icons.fact_check),
+              label: const Text('TEST CONNECTION'),
+            ),
+            FilledButton.icon(
+              onPressed: _busy ? null : _prepareR36Only,
+              icon: const Icon(Icons.sd_card_alert),
+              label: const Text('PREPARE SD ONLY'),
+            ),
+            OutlinedButton.icon(
+              onPressed: _busy ? null : _openSystemFormat,
+              icon: const Icon(Icons.settings),
+              label: const Text('SYSTEM FORMAT SETTINGS'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (_lastSdTreeUri != null)
+          Text(
+            'Selected tree: $_lastSdTreeUri',
+            style: const TextStyle(color: FlasherColors.dim),
+          ),
+        const SizedBox(height: 10),
+        CheckboxListTile(
+          value: _prepareSdBeforeFlash,
+          onChanged: _busy
+              ? null
+              : (value) {
+                  setState(() => _prepareSdBeforeFlash = value ?? true);
+                  _savePrefs();
+                },
+          title: const Text('Prepare SD before install'),
+        ),
+        CheckboxListTile(
+          value: _wipePreviousPolybius,
+          onChanged: _busy
+              ? null
+              : (value) {
+                  setState(() => _wipePreviousPolybius = value ?? true);
+                  _savePrefs();
+                },
+          title: const Text('Wipe previous PØLYBÎŪS files'),
+        ),
+        CheckboxListTile(
+          value: _logicalFormatSd,
+          onChanged: _busy
+              ? null
+              : (value) {
+                  setState(() => _logicalFormatSd = value ?? false);
+                  _savePrefs();
+                },
+          title: const Text('Logical format selected tree'),
+          subtitle: const Text('Requires confirmation before write/prepare.'),
+        ),
+        const Divider(color: FlasherColors.grid),
+        Text('Install mode', style: GoogleFonts.orbitron(fontSize: 14)),
+        Wrap(
+          children: R36InstallMode.values
+              .map(
+                (mode) => SizedBox(
+                  width: 240,
+                  child: RadioListTile<R36InstallMode>(
+                    value: mode,
+                    groupValue: _r36InstallMode,
+                    title: Text(mode.label),
+                    onChanged: _busy
+                        ? null
+                        : (value) {
+                            if (value == null) return;
+                            setState(() => _r36InstallMode = value);
+                            _savePrefs();
+                          },
+                  ),
+                ),
+              )
+              .toList(),
+        ),
+        if (_r36Candidates.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Detected path candidates',
+            style: GoogleFonts.orbitron(fontSize: 14),
+          ),
+          ..._r36Candidates.map(
+            (candidate) => RadioListTile<String>(
+              value: candidate.hint,
+              groupValue: _selectedR36Hint,
+              title: Text(candidate.label),
+              subtitle: Text(
+                '${candidate.hint} · ${candidate.exists ? 'exists' : 'will create'}',
+              ),
+              onChanged: _busy
+                  ? null
+                  : (value) {
+                      setState(() => _selectedR36Hint = value);
+                    },
+            ),
+          ),
+        ],
+        const SizedBox(height: 14),
+        FilledButton.icon(
+          onPressed: _busy ? null : _installR36,
+          icon: const Icon(Icons.download_for_offline),
+          label: const Text('INSTALL R36S PORT'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAndroidPanel() {
+    final bundledCount = FlasherBridge.apkCatalog
+        .where((item) => item.isBundled)
+        .length;
+    final jobs = _installJobs();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionTitle('ANDROID OTG ADB INSTALLER'),
+        Text(
+          _androidUsbMessage,
+          style: const TextStyle(color: FlasherColors.amber),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Inventory rows: ${_usbInventory.length}',
+          style: const TextStyle(color: FlasherColors.dim),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            OutlinedButton.icon(
+              onPressed: _busy ? null : _refreshAndroidInventory,
+              icon: const Icon(Icons.usb),
+              label: const Text('RE-SCAN DEVICES'),
+            ),
+            FilledButton.icon(
+              onPressed: _busy ? null : _testAndroidConnection,
+              icon: const Icon(Icons.cable),
+              label: const Text('TEST CONNECTION'),
+            ),
+            OutlinedButton.icon(
+              onPressed: _busy
+                  ? null
+                  : () {
+                      setState(() {
+                        _selectedApkIds
+                          ..clear()
+                          ..addAll(
+                            FlasherBridge.apkCatalog
+                                .where((item) => item.isBundled)
+                                .map((item) => item.id),
+                          );
+                        _localApkPath = null;
+                      });
+                      _savePrefs();
+                    },
+              icon: const Icon(Icons.select_all),
+              label: Text('SELECT ALL BUNDLED ($bundledCount)'),
+            ),
+            OutlinedButton.icon(
+              onPressed: _busy
+                  ? null
+                  : () {
+                      setState(() {
+                        _selectedApkIds.clear();
+                        _localApkPath = null;
+                      });
+                      _savePrefs();
+                    },
+              icon: const Icon(Icons.clear_all),
+              label: const Text('CLEAR ALL'),
+            ),
+            OutlinedButton.icon(
+              onPressed: _busy ? null : _pickLocalApk,
+              icon: const Icon(Icons.apk),
+              label: const Text('PICK LOCAL APK'),
+            ),
+          ],
+        ),
+        if (_localApkPath != null) ...[
+          const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
-                flex: 3,
-                child: TextField(
-                  controller: _tcpHostCtrl,
-                  enabled: !_busy,
-                  style: GoogleFonts.shareTechMono(color: FlasherColors.phosphor),
-                  decoration: InputDecoration(
-                    labelText: 'HOST',
-                    labelStyle: GoogleFonts.shareTechMono(color: FlasherColors.dim),
-                    isDense: true,
-                    border: const OutlineInputBorder(),
-                  ),
+                child: Text(
+                  'Local APK: $_localApkPath',
+                  style: const TextStyle(color: FlasherColors.cyan),
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextField(
-                  controller: _tcpPortCtrl,
-                  enabled: !_busy,
-                  keyboardType: TextInputType.number,
-                  style: GoogleFonts.shareTechMono(color: FlasherColors.phosphor),
-                  decoration: InputDecoration(
-                    labelText: 'PORT',
-                    labelStyle: GoogleFonts.shareTechMono(color: FlasherColors.dim),
-                    isDense: true,
-                    border: const OutlineInputBorder(),
-                  ),
-                ),
+              TextButton(
+                onPressed: _busy
+                    ? null
+                    : () {
+                        setState(() => _localApkPath = null);
+                        _savePrefs();
+                      },
+                child: const Text('CLEAR LOCAL'),
               ),
             ],
           ),
-        ] else ...[
-          _UsbPicker(
-            devices: _devices,
-            selected: _selected,
-            busy: _busy,
-            emptyHint:
-                'No ADB gadget — enable USB debugging on the target phone.',
-            onRefresh: _refreshUsb,
-            onSelect: (d) => setState(() => _selected = d),
-          ),
         ],
-      ],
-    );
-  }
-
-  Widget _buildEspOptions() {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border.all(color: FlasherColors.phosphor.withValues(alpha: 0.25)),
-        color: FlasherColors.panel.withValues(alpha: 0.55),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        const SizedBox(height: 12),
+        _ApkCatalogList(
+          selectedIds: _selectedApkIds,
+          enabled: !_busy,
+          onChanged: (item, selected) {
+            setState(() {
+              _localApkPath = null;
+              if (selected) {
+                _selectedApkIds.add(item.id);
+              } else {
+                _selectedApkIds.remove(item.id);
+              }
+            });
+            _savePrefs();
+          },
+        ),
+        ExpansionTile(
+          tilePadding: EdgeInsets.zero,
+          title: const Text('Advanced ADB flags'),
           children: [
-            Text(
-              'FLASH OPTIONS',
-              style: GoogleFonts.shareTechMono(
-                color: FlasherColors.amber,
-                letterSpacing: 2,
-                fontSize: 11,
+            CheckboxListTile(
+              value: _forceDowngrade,
+              onChanged: _busy
+                  ? null
+                  : (value) {
+                      setState(() => _forceDowngrade = value ?? false);
+                      _savePrefs();
+                    },
+              title: const Text('forceDowngrade (-d)'),
+            ),
+            CheckboxListTile(
+              value: _forceUser0,
+              onChanged: _busy
+                  ? null
+                  : (value) {
+                      setState(() => _forceUser0 = value ?? true);
+                      _savePrefs();
+                    },
+              title: const Text('forceUser0 (--user 0)'),
+            ),
+            SwitchListTile(
+              value: _useTcpAdb,
+              onChanged: _busy ? null : _setTcpAdb,
+              title: const Text('useTcpAdb'),
+              subtitle: const Text(
+                'Requires target already in adb tcpip / wireless debugging.',
               ),
             ),
-            const SizedBox(height: 10),
-            Text('BINARY TYPE', style: _labelStyle()),
-            RadioGroup<AddressMode>(
-              groupValue: _addressMode,
-              onChanged: (v) {
-                if (_busy || v == null) return;
-                setState(() => _addressMode = v);
-              },
-              child: Column(
-                children: [
-                  _radio(AddressMode.fullImage, 'Full image @ 0x0 (recommended)'),
-                  _radio(AddressMode.appOnly, 'Application only @ 0x10000'),
-                  _radio(AddressMode.custom, 'Custom address'),
-                ],
-              ),
-            ),
-            if (_addressMode == AddressMode.custom)
+            if (_useTcpAdb)
               Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: TextField(
-                  controller: _customOffsetCtrl,
-                  enabled: !_busy,
-                  style: GoogleFonts.shareTechMono(color: FlasherColors.phosphor),
-                  decoration: InputDecoration(
-                    hintText: '0x0',
-                    hintStyle: GoogleFonts.shareTechMono(color: FlasherColors.dim),
-                    isDense: true,
-                    border: const OutlineInputBorder(),
-                  ),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[0-9a-fxA-FX]')),
+                padding: const EdgeInsets.only(left: 16, right: 16, bottom: 12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _tcpHostCtrl,
+                        enabled: !_busy,
+                        decoration: const InputDecoration(
+                          labelText: 'ADB host',
+                          border: OutlineInputBorder(),
+                        ),
+                        onChanged: (_) => _savePrefs(),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    SizedBox(
+                      width: 110,
+                      child: TextField(
+                        controller: _tcpPortCtrl,
+                        enabled: !_busy,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Port',
+                          border: OutlineInputBorder(),
+                        ),
+                        onChanged: (_) => _savePrefs(),
+                      ),
+                    ),
                   ],
                 ),
               ),
-            Text('CHIP', style: _labelStyle()),
-            DropdownButtonFormField<String>(
-              key: ValueKey('chip-$_chip'),
-              initialValue: _chip,
-              dropdownColor: FlasherColors.panel,
-              decoration: const InputDecoration(
-                isDense: true,
-                border: OutlineInputBorder(),
-              ),
-              items: const [
-                DropdownMenuItem(value: 'esp32', child: Text('esp32')),
-                DropdownMenuItem(value: 'esp32s3', child: Text('esp32s3')),
-              ],
-              onChanged: _busy
-                  ? null
-                  : (v) {
-                      if (v != null) setState(() => _chip = v);
-                    },
-            ),
-            const SizedBox(height: 10),
-            Text('BAUD', style: _labelStyle()),
-            DropdownButtonFormField<int>(
-              key: ValueKey('baud-$_baud'),
-              initialValue: _baud,
-              dropdownColor: FlasherColors.panel,
-              decoration: const InputDecoration(
-                isDense: true,
-                border: OutlineInputBorder(),
-              ),
-              items: [
-                for (final b in _baudOptions)
-                  DropdownMenuItem(value: b, child: Text('$b')),
-              ],
-              onChanged: _busy
-                  ? null
-                  : (v) {
-                      if (v != null) setState(() => _baud = v);
-                    },
-            ),
-            const SizedBox(height: 8),
-            CheckboxListTile(
-              contentPadding: EdgeInsets.zero,
-              dense: true,
-              value: _eraseAll,
-              activeColor: FlasherColors.phosphor,
-              title: Text(
-                'Erase entire flash before writing',
-                style: GoogleFonts.shareTechMono(fontSize: 12),
-              ),
-              onChanged: _busy
-                  ? null
-                  : (v) => setState(() => _eraseAll = v ?? false),
-            ),
-            CheckboxListTile(
-              contentPadding: EdgeInsets.zero,
-              dense: true,
-              value: _hardResetAfter,
-              activeColor: FlasherColors.phosphor,
-              title: Text(
-                'Hard reset after successful flash',
-                style: GoogleFonts.shareTechMono(fontSize: 12),
-              ),
-              onChanged: _busy
-                  ? null
-                  : (v) => setState(() => _hardResetAfter = v ?? true),
-            ),
           ],
         ),
-      ),
+        const SizedBox(height: 12),
+        FilledButton.icon(
+          onPressed: _busy ? null : _installAndroidApks,
+          icon: const Icon(Icons.install_mobile),
+          label: Text(
+            jobs.length <= 1 ? 'INSTALL APK' : 'INSTALL ${jobs.length} APKS',
+          ),
+        ),
+      ],
     );
   }
+}
 
-  TextStyle _labelStyle() => GoogleFonts.shareTechMono(
-        color: FlasherColors.dim,
-        fontSize: 11,
-        letterSpacing: 1,
-      );
+class _HeroHeader extends StatelessWidget {
+  const _HeroHeader({
+    required this.status,
+    required this.progress,
+    required this.busy,
+    required this.onCancel,
+  });
 
-  Widget _radio(AddressMode mode, String label) {
-    return RadioListTile<AddressMode>(
-      dense: true,
-      contentPadding: EdgeInsets.zero,
-      value: mode,
-      activeColor: FlasherColors.phosphor,
-      title: Text(label, style: GoogleFonts.shareTechMono(fontSize: 12)),
-    );
-  }
+  final String status;
+  final double progress;
+  final bool busy;
+  final VoidCallback onCancel;
 
-  Widget _buildConsole() {
-    final bytesLabel = _total > 0
-        ? '${_formatBytes(_written)} / ${_formatBytes(_total)}'
-        : '${(_progress * 100).clamp(0, 100).toStringAsFixed(0)}%';
-    return DecoratedBox(
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: FlasherColors.panel.withValues(alpha: 0.92),
-        border:
-            Border.all(color: FlasherColors.phosphor.withValues(alpha: 0.35)),
+        color: FlasherColors.panel.withValues(alpha: 0.86),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: FlasherColors.phosphor.withValues(alpha: 0.28),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: FlasherColors.phosphor.withValues(alpha: 0.12),
+            blurRadius: 22,
+          ),
+        ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
-            child: Row(
-              children: [
-                Text(
-                  'CONSOLE',
-                  style: GoogleFonts.shareTechMono(
-                    color: FlasherColors.amber,
-                    letterSpacing: 3,
-                    fontSize: 12,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  bytesLabel,
-                  style: GoogleFonts.shareTechMono(
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'HARDENED FLASH CONTROL',
+                  style: GoogleFonts.orbitron(
                     color: FlasherColors.phosphor,
-                    fontSize: 12,
+                    fontSize: 22,
+                    letterSpacing: 1.6,
                   ),
                 ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: ClipRect(
-              child: LinearProgressIndicator(
-                value: _busy || _progress > 0 ? _progress : 0,
-                minHeight: 4,
-                backgroundColor: FlasherColors.grid,
-                color: FlasherColors.phosphor,
               ),
-            ),
-          ),
-          if (_status != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
-              child: Text(
-                _status!,
-                style: GoogleFonts.shareTechMono(
-                  color: _status!.toLowerCase().contains('fail') ||
-                          _status!.toLowerCase().startsWith('failed')
-                      ? FlasherColors.danger
-                      : FlasherColors.amber,
-                  fontSize: 13,
-                  height: 1.35,
+              if (busy)
+                OutlinedButton.icon(
+                  onPressed: onCancel,
+                  icon: const Icon(Icons.cancel),
+                  label: const Text('CANCEL'),
                 ),
-              ),
-            ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-              itemCount: _logs.length,
-              itemBuilder: (context, i) {
-                return Text(
-                  '> ${_logs[i]}',
-                  style: GoogleFonts.shareTechMono(
-                    color: FlasherColors.phosphor.withValues(alpha: 0.85),
-                    fontSize: 12,
-                    height: 1.4,
-                  ),
-                );
-              },
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(status),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(99),
+            child: LinearProgressIndicator(
+              value: busy ? progress.clamp(0.0, 1.0) : progress,
+              minHeight: 8,
+              backgroundColor: FlasherColors.voidBlack,
+              color: busy ? FlasherColors.amber : FlasherColors.phosphor,
             ),
           ),
         ],
       ),
-    );
-  }
-
-  String _formatBytes(int n) {
-    if (n < 1024) return '${n}B';
-    if (n < 1024 * 1024) return '${(n / 1024).toStringAsFixed(1)}KB';
-    return '${(n / (1024 * 1024)).toStringAsFixed(2)}MB';
-  }
-}
-
-enum _DownloadModeChoice { auto, manualReady }
-
-class _HeroHeader extends StatelessWidget {
-  const _HeroHeader({required this.pulse});
-  final AnimationController pulse;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: pulse,
-      builder: (context, _) {
-        final glow = 0.35 + pulse.value * 0.45;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'PØLYBÎŪS',
-              style: GoogleFonts.orbitron(
-                fontSize: 36,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 6,
-                color: FlasherColors.phosphor,
-                shadows: [
-                  Shadow(
-                    color: FlasherColors.phosphor.withValues(alpha: glow),
-                    blurRadius: 18,
-                  ),
-                ],
-              ),
-            ),
-            Text(
-              'FLASHER',
-              style: GoogleFonts.orbitron(
-                fontSize: 20,
-                fontWeight: FontWeight.w500,
-                letterSpacing: 10,
-                color: FlasherColors.amber,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'R36S SD prepare · CYD · T-Deck · Android OTG — Portal / V.1 / Darth Cherry.',
-              style: GoogleFonts.shareTechMono(
-                color: FlasherColors.dim,
-                fontSize: 12,
-                height: 1.4,
-              ),
-            ),
-          ],
-        );
-      },
     );
   }
 }
 
 class _Atmosphere extends StatelessWidget {
-  const _Atmosphere();
+  const _Atmosphere({required this.animation});
+
+  final Animation<double> animation;
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF05070A),
-            Color(0xFF0A1A12),
-            Color(0xFF101008),
-            Color(0xFF05070A),
-          ],
-          stops: [0, 0.35, 0.7, 1],
-        ),
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, _) => CustomPaint(
+        painter: _AtmospherePainter(animation.value),
+        size: Size.infinite,
       ),
-      child: CustomPaint(painter: _GridPainter()),
     );
   }
 }
 
-class _GridPainter extends CustomPainter {
+class _AtmospherePainter extends CustomPainter {
+  const _AtmospherePainter(this.value);
+
+  final double value;
+
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
+    final bg = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [FlasherColors.voidBlack, Color(0xFF091015), Color(0xFF020305)],
+      ).createShader(Offset.zero & size);
+    canvas.drawRect(Offset.zero & size, bg);
+
+    final grid = Paint()
       ..color = FlasherColors.grid
       ..strokeWidth = 1;
-    const step = 28.0;
-    for (double x = 0; x < size.width; x += step) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    const step = 36.0;
+    for (var x = 0.0; x < size.width; x += step) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), grid);
     }
-    for (double y = 0; y < size.height; y += step) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    for (var y = 0.0; y < size.height; y += step) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), grid);
+    }
+
+    final glow = Paint()
+      ..shader =
+          RadialGradient(
+            colors: [
+              FlasherColors.phosphor.withValues(alpha: 0.08 + value * 0.05),
+              Colors.transparent,
+            ],
+          ).createShader(
+            Rect.fromCircle(
+              center: Offset(size.width * 0.72, size.height * 0.18),
+              radius: size.width * 0.45,
+            ),
+          );
+    canvas.drawRect(Offset.zero & size, glow);
+
+    final scan = Paint()..color = Colors.white.withValues(alpha: 0.025);
+    for (var y = 0.0; y < size.height; y += 4) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), scan);
     }
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _AtmospherePainter oldDelegate) {
+    return oldDelegate.value != value;
+  }
 }
 
-class _TargetTile extends StatefulWidget {
+class _TargetTile extends StatelessWidget {
   const _TargetTile({
-    required this.selected,
     required this.title,
     required this.subtitle,
-    required this.enabled,
+    required this.selected,
+    required this.icon,
     required this.onTap,
   });
 
-  final bool selected;
   final String title;
   final String subtitle;
-  final bool enabled;
-  final VoidCallback onTap;
-
-  @override
-  State<_TargetTile> createState() => _TargetTileState();
-}
-
-class _TargetTileState extends State<_TargetTile> {
-  bool _pressed = false;
+  final bool selected;
+  final IconData icon;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final border = widget.selected
-        ? FlasherColors.phosphor
-        : FlasherColors.phosphor.withValues(alpha: 0.25);
-    return GestureDetector(
-      onTapDown: widget.enabled ? (_) => setState(() => _pressed = true) : null,
-      onTapUp: widget.enabled
-          ? (_) {
-              setState(() => _pressed = false);
-              widget.onTap();
-            }
-          : null,
-      onTapCancel: () => setState(() => _pressed = false),
+    final color = selected ? FlasherColors.phosphor : FlasherColors.dim;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        transform: Matrix4.translationValues(0, _pressed ? 1.5 : 0, 0),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: widget.selected
-              ? FlasherColors.phosphor.withValues(alpha: 0.08)
-              : FlasherColors.panel.withValues(alpha: 0.65),
-          border: Border(
-            left: BorderSide(color: border, width: widget.selected ? 3 : 1),
-            top: BorderSide(color: border.withValues(alpha: 0.5)),
-            right: BorderSide(color: border.withValues(alpha: 0.5)),
-            bottom: BorderSide(color: border.withValues(alpha: 0.5)),
+          color: selected
+              ? FlasherColors.panelHot.withValues(alpha: 0.95)
+              : FlasherColors.panel.withValues(alpha: 0.78),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: color.withValues(alpha: selected ? 0.9 : 0.35),
           ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            Text(
-              widget.title,
-              style: GoogleFonts.orbitron(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 1.5,
-                color: widget.selected
-                    ? FlasherColors.phosphor
-                    : FlasherColors.phosphor.withValues(alpha: 0.75),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              widget.subtitle,
-              style: GoogleFonts.shareTechMono(
-                fontSize: 11,
-                height: 1.35,
-                color: FlasherColors.dim,
+            Icon(icon, color: color, size: 28),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.orbitron(
+                      color: selected ? FlasherColors.phosphor : Colors.white70,
+                      fontSize: 14,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    subtitle,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: FlasherColors.dim),
+                  ),
+                ],
               ),
             ),
           ],
@@ -1910,89 +1989,192 @@ class _TargetTileState extends State<_TargetTile> {
 class _UsbPicker extends StatelessWidget {
   const _UsbPicker({
     required this.devices,
-    required this.selected,
-    required this.busy,
-    required this.onRefresh,
-    required this.onSelect,
-    this.emptyHint = 'None found — connect OTG cable to the board.',
+    required this.selectedDeviceId,
+    required this.onSelected,
   });
 
   final List<UsbDeviceInfo> devices;
-  final UsbDeviceInfo? selected;
-  final bool busy;
-  final VoidCallback onRefresh;
-  final ValueChanged<UsbDeviceInfo> onSelect;
-  final String emptyHint;
+  final int? selectedDeviceId;
+  final ValueChanged<UsbDeviceInfo> onSelected;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            Text(
-              'USB DEVICE',
-              style: GoogleFonts.shareTechMono(
-                color: FlasherColors.amber,
-                letterSpacing: 2,
-                fontSize: 11,
-              ),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxHeight: 360),
+      child: ListView.builder(
+        shrinkWrap: true,
+        itemCount: devices.length,
+        itemBuilder: (context, index) {
+          final device = devices[index];
+          final serial = device.serial.trim().isEmpty
+              ? 'unknown serial'
+              : device.serial;
+          return RadioListTile<int>(
+            value: device.deviceId,
+            groupValue: selectedDeviceId,
+            onChanged: (_) => onSelected(device),
+            title: Text(device.label),
+            subtitle: Text(
+              'serial: $serial · permission: ${device.hasPermission ? 'granted' : 'request needed'}',
             ),
-            const Spacer(),
-            TextButton(
-              onPressed: busy ? null : onRefresh,
-              child: Text(
-                'RESCAN',
-                style: GoogleFonts.shareTechMono(
-                  color: FlasherColors.phosphor,
-                  fontSize: 11,
-                ),
-              ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _Console extends StatelessWidget {
+  const _Console({required this.logs});
+
+  final List<String> logs;
+
+  @override
+  Widget build(BuildContext context) {
+    return _Panel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SectionTitle('EVENT CONSOLE (${logs.length}/200)'),
+          const SizedBox(height: 8),
+          Container(
+            height: 260,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.45),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: FlasherColors.grid),
             ),
-          ],
-        ),
-        if (devices.isEmpty)
-          Text(
-            emptyHint,
-            style: GoogleFonts.shareTechMono(
-              color: FlasherColors.dim,
-              fontSize: 12,
-            ),
-          )
-        else
-          ...devices.map((d) {
-            final isSel = selected?.deviceId == d.deviceId ||
-                (selected == null && d == devices.first);
-            return InkWell(
-              onTap: busy ? null : () => onSelect(d),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Row(
-                  children: [
-                    Icon(
-                      isSel
-                          ? Icons.radio_button_checked
-                          : Icons.radio_button_off,
-                      size: 18,
-                      color: FlasherColors.phosphor,
+            child: logs.isEmpty
+                ? const Center(
+                    child: Text(
+                      'No bridge events yet.',
+                      style: TextStyle(color: FlasherColors.dim),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        d.label,
-                        style: GoogleFonts.shareTechMono(
-                          fontSize: 11,
-                          color: FlasherColors.phosphor.withValues(alpha: 0.9),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }),
-      ],
+                  )
+                : ListView.builder(
+                    reverse: true,
+                    itemCount: logs.length,
+                    itemBuilder: (context, index) {
+                      final line = logs[logs.length - 1 - index];
+                      final color =
+                          line.contains('[error]') || line.contains(' FAIL ')
+                          ? FlasherColors.danger
+                          : line.contains('[warn]')
+                          ? FlasherColors.amber
+                          : line.contains('[success]') || line.contains(' OK ')
+                          ? FlasherColors.phosphor
+                          : Colors.white70;
+                      return Text(
+                        line,
+                        style: TextStyle(color: color, fontSize: 12),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Panel extends StatelessWidget {
+  const _Panel({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: FlasherColors.panel.withValues(alpha: 0.86),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: FlasherColors.grid),
+      ),
+      child: child,
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: GoogleFonts.orbitron(
+        color: FlasherColors.phosphor,
+        fontSize: 18,
+        letterSpacing: 1.4,
+      ),
+    );
+  }
+}
+
+class _ChoiceBox extends StatelessWidget {
+  const _ChoiceBox({required this.title, required this.child});
+
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 280,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: GoogleFonts.orbitron(fontSize: 13)),
+          const SizedBox(height: 8),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _ApkCatalogList extends StatelessWidget {
+  const _ApkCatalogList({
+    required this.selectedIds,
+    required this.enabled,
+    required this.onChanged,
+  });
+
+  final Set<String> selectedIds;
+  final bool enabled;
+  final void Function(ApkCatalogItem item, bool selected) onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.22),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: FlasherColors.grid),
+      ),
+      child: Column(
+        children: FlasherBridge.apkCatalog.map((item) {
+          return CheckboxListTile(
+            value: selectedIds.contains(item.id),
+            onChanged: enabled
+                ? (value) => onChanged(item, value ?? false)
+                : null,
+            title: Text(item.title),
+            subtitle: Text(
+              [
+                item.subtitle,
+                if (item.version.isNotEmpty) item.version,
+                item.isBundled ? 'bundled' : 'download',
+                item.fileName,
+              ].where((part) => part.trim().isNotEmpty).join(' · '),
+            ),
+          );
+        }).toList(),
+      ),
     );
   }
 }
