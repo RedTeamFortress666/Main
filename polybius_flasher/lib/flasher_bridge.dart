@@ -130,9 +130,9 @@ class FlasherBridge {
     ApkCatalogItem(
       id: 'doomsday',
       title: 'DOØMSDAY CLØCK',
-      subtitle: '2.1.0 · MechaH portal unlock',
-      fileName: 'doomsday-clock-2.1.0-android-arm64.apk',
-      url: '$distBase/doomsday-clock-2.1.0-android-arm64.apk',
+      subtitle: '2.1.1 · DARTH CHERRY operator cache',
+      fileName: 'doomsday-clock-2.1.1-android-arm64.apk',
+      url: '$distBase/doomsday-clock-2.1.1-android-arm64.apk',
     ),
     ApkCatalogItem(
       id: 'darth_cherry',

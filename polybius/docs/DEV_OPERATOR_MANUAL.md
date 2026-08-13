@@ -293,7 +293,7 @@ Replace branch segment if you cut a new release branch.
 - V.1 APK: `polybius/dist/polybius-v1-stable-user-android-arm64.apk`
 - V.1 iOS (Safari web portable): `polybius/dist/polybius-v1-stable-user-ios-web-portable.zip`
 - DARTH CHERRY: `polybius/dist/darth-cherry-1.0.2-android-arm64.apk`
-- DOØMSDAY CLØCK: `polybius/dist/doomsday_clock/doomsday-clock-2.0.0-android-arm64.apk`
+- DOØMSDAY CLØCK: `polybius/dist/doomsday_clock/doomsday-clock-2.1.1-android-arm64.apk`
 
 Details: `docs/V1_STABLE.md`, `docs/OPERATOR_ACCOUNTS.md`, `docs/RED_VEIL.md`, `docs/RETICULUM.md`, `docs/ESP32.md`.
 

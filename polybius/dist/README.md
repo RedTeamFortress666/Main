@@ -19,6 +19,10 @@ hologram when Polybius matrix mode is engaged. Overlay it on Polybius cipher
 ENCRYPT/DECRYPT to reveal the hidden eyeball (fade-type / matrix green veil).
 See [`../docs/RED_VEIL.md`](../docs/RED_VEIL.md).
 
+`doomsday-clock-2.1.1-android-arm64.apk` — **DOØMSDAY CLØCK** cyberpunk crisis
+chronometer (Gam3.0n DARTH CHERRY operator cache on 5 November). See
+[`doomsday_clock/README.md`](./doomsday_clock/README.md).
+
 `esp32/` — PlatformIO firmware binaries for **LilyGO T-Deck**, **T-Embed S3**,
 **CYD** (Cheap Yellow Display), and **M5Stack Cardputer**. Cipher-compatible
 with the Flutter app; see [`../firmware/README.md`](../firmware/README.md) and
