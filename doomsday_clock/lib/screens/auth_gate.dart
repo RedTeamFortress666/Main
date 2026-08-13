@@ -51,9 +51,9 @@ class _AuthGateState extends State<AuthGate> {
     if (session == null) {
       setState(() {
         _busy = false;
-        _error = AppConfig.isAllTier
+        _error = AppConfig.isStable
             ? 'ACCESS DENIED — check credentials or create account'
-            : 'ACCESS DENIED — developer / admin only';
+            : 'ACCESS DENIED — SpamKat2 / Gam3.0n bunker only';
       });
       return;
     }
@@ -136,7 +136,7 @@ class _AuthGateState extends State<AuthGate> {
                         style: const TextStyle(color: NoirTheme.crimson),
                       ),
                     ],
-                    if (AppConfig.isAllTier) ...[
+                    if (AppConfig.isStable) ...[
                       const SizedBox(height: 12),
                       TextButton(
                         onPressed: _busy
@@ -164,11 +164,7 @@ class _AuthGateState extends State<AuthGate> {
               ),
               const SizedBox(height: 16),
               Text(
-                AppConfig.isAllTier
-                    ? 'All-tier vault — scan operator QR after 5 November unlock. '
-                        'DARTH CHERRY reveals sealed credentials.'
-                    : 'Privileged PØLYBÎŪS operators only. '
-                        'DARTH CHERRY sealed data unlocks in Planner on 5 November.',
+                AppConfig.authFooter,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: NoirTheme.mist.withValues(alpha: 0.55),
                     ),

@@ -47,13 +47,13 @@ class _PlannerTabState extends State<PlannerTab> {
   Timer? _holdTimer;
   Timer? _darthPoll;
 
-  bool get _isGam3on =>
-      PolybiusOperatorCards.canOpenCherryCache(widget.session.username);
+  bool get _isBunkerOperator =>
+      PolybiusOperatorCards.isBunkerOperator(widget.session.username);
 
-  bool get _showGam3onRoster => _isGam3on && AppConfig.isPrivileged;
+  bool get _showBunkerVault => _cherryCacheOpen && AppConfig.isBunker && _isBunkerOperator;
 
-  bool get _showPersonalVault =>
-      _cherryCacheOpen && (_vaultCards.isNotEmpty || AppConfig.isAllTier);
+  bool get _showStableVault =>
+      _cherryCacheOpen && AppConfig.isStable;
 
   @override
   void initState() {
@@ -144,7 +144,7 @@ class _PlannerTabState extends State<PlannerTab> {
   }
 
   Future<void> _maybePromptCustomRitual() async {
-    if (!AppConfig.isAllTier) return;
+    if (!AppConfig.isStable) return;
     if (await _ritualSettings.wasPrompted(widget.session.username)) return;
     await _ritualSettings.markPrompted(widget.session.username);
     if (!mounted) return;
@@ -353,13 +353,15 @@ class _PlannerTabState extends State<PlannerTab> {
             children: [
               Expanded(
                 child: Text(
-                  'DARTH CHERRY · VAULT',
+                  AppConfig.isBunker
+                      ? 'DOØMSDAY BUNKER · DARTH CHERRY'
+                      : 'DARTH CHERRY · VAULT',
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         color: _darthActive ? NoirTheme.crimson : NoirTheme.chrome,
                       ),
                 ),
               ),
-              if (AppConfig.isAllTier) ...[
+              if (AppConfig.isStable) ...[
                 TextButton.icon(
                   onPressed: _scanQr,
                   icon: const Icon(Icons.qr_code_scanner, size: 18),
@@ -372,6 +374,17 @@ class _PlannerTabState extends State<PlannerTab> {
                   icon: const Icon(Icons.tune, color: NoirTheme.chrome),
                 ),
               ],
+              if (AppConfig.isBunker)
+                IconButton(
+                  tooltip: 'Share own QR',
+                  onPressed: () {
+                    final mine = PolybiusOperatorCards.primaryCardFor(
+                      widget.session.username,
+                    );
+                    if (mine != null) QrShareSheet.show(context, mine);
+                  },
+                  icon: const Icon(Icons.qr_code, color: NoirTheme.neonCyan),
+                ),
             ],
           ),
           const SizedBox(height: 6),
@@ -390,66 +403,113 @@ class _PlannerTabState extends State<PlannerTab> {
                     color: NoirTheme.amber,
                   ),
             ),
-          if (_showGam3onRoster) ...[
-            const SizedBox(height: 10),
+          if (_showBunkerVault) ..._buildBunkerVaultSections(),
+          if (_showStableVault) ..._buildStableVaultSections(),
+          if (AppConfig.isBunker && !_isBunkerOperator)
             Text(
-              '${PolybiusOperatorCards.all.length} PØLYBÎŪS operator cards',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: NoirTheme.peace,
-                  ),
-            ),
-            const SizedBox(height: 10),
-            ...PolybiusOperatorCards.all.map(
-              (card) => OperatorIdentityCard(
-                card: card,
-                secretsUnlocked: _darthActive,
-                onShareQr: () => QrShareSheet.show(context, card),
-              ),
-            ),
-          ],
-          if (_showPersonalVault) ...[
-            if (_showGam3onRoster && _vaultCards.isNotEmpty)
-              const SizedBox(height: 16),
-            if (_vaultCards.isNotEmpty || AppConfig.isAllTier)
-              Text(
-                _vaultCards.isEmpty
-                    ? 'No scanned cards yet — tap SCAN QR'
-                    : '${_vaultCards.length} scanned operator card(s)',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: NoirTheme.neonCyan,
-                    ),
-              ),
-            const SizedBox(height: 10),
-            ..._vaultCards.map(
-              (vaultCard) => OperatorIdentityCard(
-                card: vaultCard.toOperatorCard(),
-                secretsUnlocked: _darthActive,
-                onShareQr: () =>
-                    QrShareSheet.show(context, vaultCard.toOperatorCard()),
-                onDelete: () => _removeCard(vaultCard),
-              ),
-            ),
-          ],
-          if (!_showGam3onRoster &&
-              !_showPersonalVault &&
-              AppConfig.isPrivileged)
-            Text(
-              'Cherry cache open — operator roster is restricted to Gam3.0n.',
+              'Bunker vault restricted to SpamKat2 & Gam3.0n.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: NoirTheme.mist.withValues(alpha: 0.5),
                   ),
             ),
         ] else
           Text(
-            AppConfig.isAllTier
+            AppConfig.isStable
                 ? 'VAULT SEALED — jump to your unlock date, enter secret words, '
                     'hold SAVE NOTE 3s. Default: 5 Nov · Remember remember.'
-                : 'DARTH CHERRY cache sealed — 5 November ritual required.',
+                : 'BUNKER SEALED — 5 November · Remember remember · hold SAVE NOTE.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: NoirTheme.mist.withValues(alpha: 0.45),
                 ),
           ),
       ],
     );
+  }
+
+  List<Widget> _buildBunkerVaultSections() {
+    final primary = PolybiusOperatorCards.primaryCardFor(widget.session.username);
+    final secondary =
+        PolybiusOperatorCards.secondaryPlayerCards(widget.session.username);
+
+    return [
+      const SizedBox(height: 12),
+      Text(
+        'PRIMARY · ${widget.session.displayName.toUpperCase()}',
+        style: const TextStyle(
+          color: NoirTheme.neonMagenta,
+          letterSpacing: 2,
+          fontWeight: FontWeight.w800,
+          fontSize: 12,
+        ),
+      ),
+      const SizedBox(height: 4),
+      Text(
+        widget.session.username.toUpperCase() == 'GAM3.0N'
+            ? 'Game on for game on'
+            : 'Spamkat for spamkat',
+        style: TextStyle(
+          color: NoirTheme.chrome.withValues(alpha: 0.7),
+          fontSize: 11,
+          fontStyle: FontStyle.italic,
+        ),
+      ),
+      const SizedBox(height: 10),
+      if (primary != null)
+        OperatorIdentityCard(
+          card: primary,
+          secretsUnlocked: _darthActive,
+          onShareQr: () => QrShareSheet.show(context, primary),
+        ),
+      const SizedBox(height: 18),
+      const Text(
+        'SECONDARY PLAYER VAULT',
+        style: TextStyle(
+          color: NoirTheme.neonCyan,
+          letterSpacing: 2,
+          fontWeight: FontWeight.w800,
+          fontSize: 12,
+        ),
+      ),
+      const SizedBox(height: 4),
+      Text(
+        '${secondary.length} other PØLYBÎŪS operators · DARTH CHERRY viewable',
+        style: TextStyle(
+          color: NoirTheme.mist.withValues(alpha: 0.55),
+          fontSize: 11,
+        ),
+      ),
+      const SizedBox(height: 10),
+      ...secondary.map(
+        (card) => OperatorIdentityCard(
+          card: card,
+          secretsUnlocked: _darthActive,
+          onShareQr: () => QrShareSheet.show(context, card),
+        ),
+      ),
+    ];
+  }
+
+  List<Widget> _buildStableVaultSections() {
+    return [
+      const SizedBox(height: 10),
+      Text(
+        _vaultCards.isEmpty
+            ? 'No scanned cards yet — tap SCAN QR'
+            : '${_vaultCards.length} scanned operator card(s)',
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: NoirTheme.neonCyan,
+            ),
+      ),
+      const SizedBox(height: 10),
+      ..._vaultCards.map(
+        (vaultCard) => OperatorIdentityCard(
+          card: vaultCard.toOperatorCard(),
+          secretsUnlocked: _darthActive,
+          onShareQr: () =>
+              QrShareSheet.show(context, vaultCard.toOperatorCard()),
+          onDelete: () => _removeCard(vaultCard),
+        ),
+      ),
+    ];
   }
 }

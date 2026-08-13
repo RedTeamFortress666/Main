@@ -5,8 +5,9 @@ import 'app_config.dart';
 import 'screens/home_shell.dart';
 import 'theme/noir_theme.dart';
 
-/// DOØMSDAY BUNKER v1 — SpamKat2 & Gam3.0n privileged build.
+/// DOØMSDAY CLØCK (stable) — any-tier accounts + QR vault scan.
 void main() {
+  AppConfig.enableStableRuntime();
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -14,11 +15,11 @@ void main() {
       statusBarIconBrightness: Brightness.light,
     ),
   );
-  runApp(const DoomsdayBunkerApp());
+  runApp(const DoomsdayClockStableApp());
 }
 
-class DoomsdayBunkerApp extends StatelessWidget {
-  const DoomsdayBunkerApp({super.key});
+class DoomsdayClockStableApp extends StatelessWidget {
+  const DoomsdayClockStableApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -30,6 +31,3 @@ class DoomsdayBunkerApp extends StatelessWidget {
     );
   }
 }
-
-/// Alias for existing test / import paths.
-typedef DoomsdayClockApp = DoomsdayBunkerApp;

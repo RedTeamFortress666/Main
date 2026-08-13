@@ -112,7 +112,7 @@ class AuthService {
       );
     }
 
-    if (!AppConfig.isAllTier) return null;
+    if (!AppConfig.isStable) return null;
 
     final locals = await _loadLocalAccounts();
     final u = username.trim().toUpperCase();
@@ -141,7 +141,7 @@ class AuthService {
     required String pin,
     required String tier,
   }) async {
-    if (!AppConfig.isAllTier) return null;
+    if (!AppConfig.isStable) return null;
     final u = username.trim();
     if (u.isEmpty || password.isEmpty || pin.length != 6) return null;
 
