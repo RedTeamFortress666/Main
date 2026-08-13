@@ -6,14 +6,14 @@ cards, an active Bluetooth link on CONNECT, and a redesigned Reticulum relay.
 
 ## Downloads
 
-Raw GitHub links (branch `cursor/pool-pin-bt-ui-d8fa`):
+Raw GitHub links (branch `cursor/flasher-newest-suite-apks-e16f`):
 
 | Artifact | URL |
 | --- | --- |
-| **PØLYBÎŪS PORTAL** (Dev Admin, triple tier) | https://github.com/RedTeamFortress666/Main/raw/cursor/pool-pin-bt-ui-d8fa/polybius/dist/polybius-v1-stable-hq-android-arm64.apk |
-| **PØLYBÎŪS V.1** (ENCRYPT / DECRYPT / SYNC / CONNECT) | https://github.com/RedTeamFortress666/Main/raw/cursor/pool-pin-bt-ui-d8fa/polybius/dist/polybius-v1-stable-user-android-arm64.apk |
+| **PØLYBÎŪS PORTAL** (Dev Admin, triple tier) | https://github.com/RedTeamFortress666/Main/raw/cursor/flasher-newest-suite-apks-e16f/polybius/dist/polybius-v1-stable-hq-android-arm64.apk |
+| **PØLYBÎŪS V.1** (ENCRYPT / DECRYPT / SYNC / CONNECT) | https://github.com/RedTeamFortress666/Main/raw/cursor/flasher-newest-suite-apks-e16f/polybius/dist/polybius-v1-stable-user-android-arm64.apk |
 | **PØLYBÎŪS V.1 — iOS** (Safari web portable) | https://github.com/RedTeamFortress666/Main/raw/cursor/pool-pin-bt-ui-d8fa/polybius/dist/polybius-v1-stable-user-ios-web-portable.zip |
-| DARTH CHERRY | https://github.com/RedTeamFortress666/Main/raw/cursor/pool-pin-bt-ui-d8fa/polybius/dist/darth-cherry-1.0.2-android-arm64.apk |
+| DARTH CHERRY | https://github.com/RedTeamFortress666/Main/raw/cursor/flasher-newest-suite-apks-e16f/polybius/dist/darth-cherry-1.0.2-android-arm64.apk |
 
 Aliases (same binaries):
 

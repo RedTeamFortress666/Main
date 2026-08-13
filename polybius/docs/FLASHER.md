@@ -11,7 +11,7 @@ Phone-side installer for shipping PØLYBĪUS onto handheld / MCU targets — and
 
 - App source: [`../../polybius_flasher/`](../../polybius_flasher/)
 - Package id: `com.polybius.flasher`
-- Dist APK: [`../dist/polybius-flasher-1.5.1-android-arm64.apk`](../dist/polybius-flasher-1.5.1-android-arm64.apk)
+- Dist APK: [`../dist/polybius-flasher-1.5.2-android-arm64.apk`](../dist/polybius-flasher-1.5.2-android-arm64.apk)
 - Launcher icon: Fat Man–style bomb with stencil **GAME ØN**
 
 ## Hardening highlights
@@ -23,11 +23,11 @@ Phone-side installer for shipping PØLYBĪUS onto handheld / MCU targets — and
 
 ## Bundled core APKs (operator-selected)
 
-| App | File |
-| --- | --- |
-| **PØLYBÎŪS PORTAL** | `polybius-v1-stable-hq-android-arm64.apk` |
-| **PØLYBÎŪS V.1 USER** | `polybius-v1-stable-user-android-arm64.apk` |
-| **DARTH CHERRY 1.0.2** | `darth-cherry-1.0.2-android-arm64.apk` |
+| App | File | Notes |
+| --- | --- | --- |
+| **PØLYBÎŪS PORTAL** | `polybius-v1-stable-hq-android-arm64.apk` | Newest tier-gated HQ / Dev Admin |
+| **PØLYBÎŪS V.1 USER** | `polybius-v1-stable-user-android-arm64.apk` | Newest tier-gated V.1 USER |
+| **DARTH CHERRY 1.0.2** | `darth-cherry-1.0.2-android-arm64.apk` | Companion red filter |
 
 Check one, some, or **SELECT ALL BUNDLED** — nothing installs unless selected.
 
