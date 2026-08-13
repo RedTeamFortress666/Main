@@ -10,15 +10,15 @@ Raw GitHub links (branch `cursor/pool-pin-bt-ui-d8fa`):
 
 | Artifact | URL |
 | --- | --- |
-| **PØLYBÎŪS PORTAL** (Dev Admin, triple tier) | https://github.com/RedTeamFortress666/Main/raw/cursor/pool-pin-bt-ui-d8fa/polybius/dist/polybius-v1-stable-hq-android-arm64.apk |
-| **PØLYBÎŪS V.1** (ENCRYPT / DECRYPT / SYNC / CONNECT) | https://github.com/RedTeamFortress666/Main/raw/cursor/pool-pin-bt-ui-d8fa/polybius/dist/polybius-v1-stable-user-android-arm64.apk |
-| **PØLYBÎŪS V.1 — iOS** (Safari web portable) | https://github.com/RedTeamFortress666/Main/raw/cursor/pool-pin-bt-ui-d8fa/polybius/dist/polybius-v1-stable-user-ios-web-portable.zip |
-| DARTH CHERRY | https://github.com/RedTeamFortress666/Main/raw/cursor/pool-pin-bt-ui-d8fa/polybius/dist/darth-cherry-1.0.2-android-arm64.apk |
+| **PØLYBÎŪS PORTAL** (16 dev/admin logins) | https://github.com/RedTeamFortress666/Main/raw/cursor/portal-user-login-e16f/polybius/dist/polybius-v1-stable-hq-android-arm64.apk |
+| **PØLYBÎŪS V.1 USER** (30 user logins) | https://github.com/RedTeamFortress666/Main/raw/cursor/portal-user-login-e16f/polybius/dist/polybius-v1-stable-user-android-arm64.apk |
+| **PØLYBÎŪS V.1 — iOS** (Safari web portable) | https://github.com/RedTeamFortress666/Main/raw/cursor/portal-user-login-e16f/polybius/dist/polybius-v1-stable-user-ios-web-portable.zip |
+| DARTH CHERRY | https://github.com/RedTeamFortress666/Main/raw/cursor/portal-user-login-e16f/polybius/dist/darth-cherry-1.0.2-android-arm64.apk |
 
 Aliases (same binaries):
 
-- https://github.com/RedTeamFortress666/Main/raw/cursor/pool-pin-bt-ui-d8fa/polybius/dist/POLYBIUS-V1-STABLE-hq-emojinigma-android-arm64.apk
-- https://github.com/RedTeamFortress666/Main/raw/cursor/pool-pin-bt-ui-d8fa/polybius/dist/POLYBIUS-V1-STABLE-user-android-arm64.apk
+- https://github.com/RedTeamFortress666/Main/raw/cursor/portal-user-login-e16f/polybius/dist/POLYBIUS-V1-STABLE-hq-emojinigma-android-arm64.apk
+- https://github.com/RedTeamFortress666/Main/raw/cursor/portal-user-login-e16f/polybius/dist/POLYBIUS-V1-STABLE-user-android-arm64.apk
 
 Build locally:
 
@@ -40,9 +40,18 @@ flutter build apk --release --flavor user --dart-define=POLYBIUS_FLAVOR=user
 | Flavor | App label | Dart define | Capabilities |
 | --- | --- | --- | --- |
 | `hq` | **PØLYBÎŪS PORTAL** | `POLYBIUS_FLAVOR=hq` | Login gate, agent + admin + developer unlock, HQ panel, POOL vault, cross encrypt/decrypt. Ritual: diff 11 → **Russian** → lose → GAME OVER (diagnostic code unused) |
-| `user` | **PØLYBÎŪS V.1** | `POLYBIUS_FLAVOR=user` | Splash → arcade menu (no pre-login). Ritual: early lose → hold **GAME OVER** → ERROR → **USER ACCESS PORTAL**. Tabs: ENCRYPT / DECRYPT / SYNC / CONNECT (no POOL) |
+| `user` | **PØLYBÎŪS V.1** | `POLYBIUS_FLAVOR=user` | **Login gate** (user/agent accounts only). Ritual: early lose → hold **GAME OVER** → ERROR → **USER ACCESS PORTAL**. Tabs: ENCRYPT / DECRYPT / SYNC / CONNECT (no POOL) |
 
-Both flavors accept certified accounts for encrypt / decrypt / QR sync / Bluetooth.
+Both flavors require **Layer-1 operator login** (username + password + PIN). Accounts are **tier-gated by APK**:
+
+| APK | Who can log in at startup |
+| --- | --- |
+| **PØLYBÎŪS PORTAL** | All **16** dev/admin accounts (5 developer + 11 admin) |
+| **PØLYBÎŪS V.1 USER** | All **30** user/agent accounts |
+
+Wrong APK for your tier shows a redirect message (e.g. user account on Portal → install V.1 USER).
+
+Both flavors accept certified accounts for encrypt / decrypt / QR sync / Bluetooth after portal unlock.
 
 ## High scores
 
