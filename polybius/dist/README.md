@@ -17,7 +17,7 @@ filter (aliased as `darth-cherry-1.0.1-…` / `red-veil-1.0.0-…`). Home screen
 Star: plain + green beam when off; green hologram when the filter is on; red
 hologram when Polybius matrix mode is engaged. Overlay it on Polybius cipher
 ENCRYPT/DECRYPT to reveal the hidden eyeball (fade-type / matrix green veil).
-See [`../docs/RED_VEIL.md`](../docs/RED_VEIL.md).
+See [`../docs/RED_VEIL.md`](../docs/RED_VEIL.md) and [`darth_cherry/README.md`](./darth_cherry/README.md).
 
 `esp32/` — PlatformIO firmware binaries for **LilyGO T-Deck**, **T-Embed S3**,
 **CYD** (Cheap Yellow Display), and **M5Stack Cardputer**. Cipher-compatible
