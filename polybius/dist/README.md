@@ -37,17 +37,18 @@ firmware's ports directory (e.g. `/roms/ports/`) and launch **Polybius** from th
 Ports menu. Includes an X/`xinit` launcher, a `gptokeyb` controller map, and a
 per-launch log. See the bundled `README.txt` for caveats (GTK/Mali GL support on
 RK3326 is limited, so the native app is unverified on the physical device).
-Or use the **PØLYBÎŪS FLASHER** Android APK (`polybius-flasher-1.5.1-android-arm64.apk`)
+Or use the **PØLYBÎŪS FLASHER** Android APK (`polybius-flasher-1.5.2-android-arm64.apk`)
 to prepare/format an SD card, install this zip from a phone, flash ESP boards over
 USB-OTG, or install selected Portal / V.1 / Darth Cherry APKs onto another Android
 phone via OTG ADB — see [`../docs/FLASHER.md`](../docs/FLASHER.md).
 
-`polybius-flasher-1.5.1-android-arm64.apk` — Android **arm64** hardened flasher
+`polybius-flasher-1.5.2-android-arm64.apk` — Android **arm64** hardened flasher
 (SHA-256 asset checks, structured event log / COPY LOGS, cancellable stages,
 CYD/T-Deck presets + download-mode wizards, R36S path detect + autoinstall,
-selective multi-APK ADB with pm error surfacing). Source:
+selective multi-APK ADB with pm error surfacing). Bundles newest tier-gated
+Portal HQ + V.1 USER + DARTH CHERRY 1.0.2. Source:
 [`../../polybius_flasher/`](../../polybius_flasher/).
-(Older `polybius-flasher-1.0.0`–`1.4.1` builds remain for rollback.)
+(Older `polybius-flasher-1.0.0`–`1.5.1` builds remain for rollback.)
 
 Also on this branch (for the flasher catalog / sideload):
 

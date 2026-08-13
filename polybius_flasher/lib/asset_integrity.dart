@@ -57,18 +57,18 @@ class AssetIntegrity {
     assetPath: 'assets/apks/polybius-v1-stable-hq-android-arm64.apk',
     fileName: 'polybius-v1-stable-hq-android-arm64.apk',
     sha256:
-        'da19a6650c5536d9bec08528b4b054ceaa273ffd420a53c3334778aaa8331797',
+        '3ca48d13785feb5f12ee416a840bb55264f47502bd730734161141cf5f860dc8',
     label: 'PØLYBÎŪS PORTAL',
-    version: 'v1-stable-hq',
+    version: 'v1-stable-hq · tier-gated',
   );
 
   static const userApk = BundledAsset(
     assetPath: 'assets/apks/polybius-v1-stable-user-android-arm64.apk',
     fileName: 'polybius-v1-stable-user-android-arm64.apk',
     sha256:
-        'b80aa0d3a5be89d7388135ede9193a82fc92cb58a92d4262c9815fc0ba27f294',
+        '7ea7b2d795f08537a0116478d240e72aa983ca397808ed7fd9380005273bb6b5',
     label: 'PØLYBÎŪS V.1 USER',
-    version: 'v1-stable-user',
+    version: 'v1-stable-user · tier-gated',
   );
 
   static const darthApk = BundledAsset(
