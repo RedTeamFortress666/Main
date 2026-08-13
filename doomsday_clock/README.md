@@ -2,11 +2,20 @@
 
 Cyberpunk crisis chronometer with DARTH CHERRY operator vaults.
 
+## Separate Android apps
+
+| Flavor | Package ID | Launcher name | Icon |
+| --- | --- | --- | --- |
+| **bunker** | `com.polybius.doomsday_bunker` | DOØMSDAY BUNKER | Neon green |
+| **stable** | `com.polybius.doomsday_clock` | DOØMSDAY CLØCK | Classic red |
+
+They install **side-by-side** on the same device.
+
 ## Flavors
 
 | Build | Who | Branding |
 | --- | --- | --- |
-| **Bunker** (default) | SpamKat2 & Gam3.0n only | **DOØMSDAY BUNKER v1** |
+| **Bunker** | SpamKat2 & Gam3.0n only | **DOØMSDAY BUNKER v1** |
 | **Stable** | Any tier (create account / jack in) | **DOØMSDAY CLØCK (stable)** |
 
 ### Bunker vault layout
@@ -36,14 +45,19 @@ cd doomsday_clock
 flutter pub get
 flutter test
 
-# Bunker (SpamKat2 / Gam3.0n)
-flutter build apk --release --target-platform=android-arm64
+# Bunker (SpamKat2 / Gam3.0n) — neon green icon
+flutter build apk --release --flavor bunker --target-platform=android-arm64 \
+  --target lib/main.dart
 
-# Stable (any tier)
-flutter build apk --release --target-platform=android-arm64 \
+# Stable (any tier) — classic icon
+flutter build apk --release --flavor stable --target-platform=android-arm64 \
   --target lib/main_stable.dart
 ```
 
-APKs:
+APK outputs:
+- `build/app/outputs/flutter-apk/app-bunker-release.apk`
+- `build/app/outputs/flutter-apk/app-stable-release.apk`
+
+Dist:
 - `polybius/dist/doomsday_clock/doomsday-bunker-v1-android-arm64.apk`
 - `polybius/dist/doomsday_clock/doomsday-clock-stable-android-arm64.apk`

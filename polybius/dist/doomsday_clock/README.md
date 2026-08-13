@@ -1,23 +1,30 @@
 # DOØMSDAY BUNKER v1 · DOØMSDAY CLØCK (stable)
 
+Android installs them as **two separate apps** (different package IDs + launcher names/icons).
+
+| App | Package | APK |
+| --- | --- | --- |
+| **DOØMSDAY BUNKER** | `com.polybius.doomsday_bunker` | `doomsday-bunker-v1-android-arm64.apk` |
+| **DOØMSDAY CLØCK** | `com.polybius.doomsday_clock` | `doomsday-clock-stable-android-arm64.apk` |
+
 ## Downloads (Android arm64)
 
-### DOØMSDAY BUNKER v1 — SpamKat2 & Gam3.0n
+### DOØMSDAY BUNKER v1 — SpamKat2 & Gam3.0n (neon green icon)
 
-**`doomsday-bunker-v1-android-arm64.apk`** (~51 MB)
+**`doomsday-bunker-v1-android-arm64.apk`**
 
-SHA-256: `28b7390ac0668004ecea905248f2bbf4f3c4fb2797ac5eb33135590c041ba8e7`
+SHA-256: `b98ccee30886f9dbcecea05286f9ff260c225ac26769cbbea7cf070cd3d1974a`
 
 Also at: `polybius/dist/doomsday-bunker-v1-android-arm64.apk`
 
 - Login: **SpamKat2** / **Gam3.0n** only
 - Vault: own DARTH CHERRY card first, then **SECONDARY PLAYER VAULT** with every other operator
 
-### DOØMSDAY CLØCK (stable) — any tier
+### DOØMSDAY CLØCK (stable) — any tier (classic red icon)
 
-**`doomsday-clock-stable-android-arm64.apk`** (~52 MB)
+**`doomsday-clock-stable-android-arm64.apk`**
 
-SHA-256: `7553ccaa869d6d2ed0d75bc4e376829edc617374223d07fc193806d86c9c22d1`
+SHA-256: `8b6a02284e848bb1fc3a4ea2da16deb90ae3d6a56d00759a85798aabe2dcfdc5`
 
 Also at: `polybius/dist/doomsday-clock-stable-android-arm64.apk`
 
@@ -26,10 +33,9 @@ Also at: `polybius/dist/doomsday-clock-stable-android-arm64.apk`
 
 ## Install
 
-1. Download the APK on your Android device (arm64).
-2. Enable install from unknown apps for your browser/file manager.
-3. Open the APK and launch the app.
-4. Install **DARTH CHERRY** to reveal sealed credentials.
+1. Download both APKs if you want them side-by-side.
+2. Enable install from unknown apps.
+3. Install **DARTH CHERRY** to reveal sealed credentials.
 
 ## 5 November unlock
 

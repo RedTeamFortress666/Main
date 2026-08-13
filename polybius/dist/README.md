@@ -19,12 +19,12 @@ hologram when Polybius matrix mode is engaged. Overlay it on Polybius cipher
 ENCRYPT/DECRYPT to reveal the hidden eyeball (fade-type / matrix green veil).
 See [`../docs/RED_VEIL.md`](../docs/RED_VEIL.md).
 
-`doomsday-bunker-v1-android-arm64.apk` — **DOØMSDAY BUNKER v1** for SpamKat2 &
-Gam3.0n (own card first + secondary player vault). See
+`doomsday-bunker-v1-android-arm64.apk` — **DOØMSDAY BUNKER** (`com.polybius.doomsday_bunker`,
+neon green icon) for SpamKat2 & Gam3.0n. See
 [`doomsday_clock/README.md`](./doomsday_clock/README.md).
 
-`doomsday-clock-stable-android-arm64.apk` — **DOØMSDAY CLØCK (stable)** for any
-tier (create account + SCAN QR vault). See
+`doomsday-clock-stable-android-arm64.apk` — **DOØMSDAY CLØCK** (`com.polybius.doomsday_clock`,
+classic icon) for any tier. See
 [`doomsday_clock/README.md`](./doomsday_clock/README.md).
 
 `esp32/` — PlatformIO firmware binaries for **LilyGO T-Deck**, **T-Embed S3**,
