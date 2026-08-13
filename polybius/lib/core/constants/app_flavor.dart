@@ -42,8 +42,8 @@ class AppFlavor {
   /// Developer unlock state + red-team panel only on the HQ fork.
   static bool get allowDeveloperTools => isHq;
 
-  /// HQ keeps the Layer-1 login gate; user builds skip pre-login.
-  static bool get requiresStartupLogin => isHq;
+  /// Both flavors require Layer-1 operator login (tier-gated per APK).
+  static bool get requiresStartupLogin => true;
 
   /// Raw 560-emoji pool viewer is HQ-only (leak prevention + admin tooling).
   static bool get showPoolTab => isHq;

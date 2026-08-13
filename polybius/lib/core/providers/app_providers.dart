@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:polybius/core/auth/login_policy.dart';
 import 'package:polybius/core/constants/app_constants.dart';
 import 'package:polybius/core/constants/app_flavor.dart';
 import 'package:polybius/core/constants/operator_identities.dart';
@@ -310,6 +311,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
       _recordFailure();
       await _storage.logAudit('LOGIN_FAIL', username);
       state = const AuthState(error: 'ACCESS DENIED');
+      return false;
+    }
+    if (!LoginPolicy.tierAllowed(account.tier)) {
+      _recordFailure();
+      await _storage.logAudit(
+        'LOGIN_FAIL',
+        username,
+        'tier ${account.tier.name} rejected for ${AppFlavor.current.name}',
+      );
+      state = AuthState(error: LoginPolicy.rejectionMessage(account.tier));
       return false;
     }
     _failedAttempts = 0;

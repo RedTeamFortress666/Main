@@ -84,7 +84,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             color: NeonTheme.neonGreen,
                           ),
                     ),
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 10),
+                    Text(
+                      AppFlavor.isHq
+                          ? 'Dev/admin operators only (16). User ops → V.1 USER APK.'
+                          : 'User operators only (30). Dev/admin → PORTAL APK.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontSize: 11,
+                            color: Colors.white70,
+                          ),
+                    ),
+                    const SizedBox(height: 32),
                     _LoginField(
                       controller: _usernameController,
                       label: 'OPERATOR ID',
@@ -121,25 +132,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         color: NeonTheme.neonPink,
                       ),
                     ),
-                    TextButton(
-                      onPressed: auth.isLoading
-                          ? null
-                          : () => context.go('/register'),
-                      child: const Text(
-                        'CREATE ACCOUNT',
-                        style: TextStyle(
-                          fontFamily: 'monospace',
-                          color: NeonTheme.neonCyan,
-                          letterSpacing: 2,
+                    if (AppFlavor.isUser)
+                      TextButton(
+                        onPressed: auth.isLoading
+                            ? null
+                            : () => context.go('/register'),
+                        child: const Text(
+                          'CREATE ACCOUNT',
+                          style: TextStyle(
+                            fontFamily: 'monospace',
+                            color: NeonTheme.neonCyan,
+                            letterSpacing: 2,
+                          ),
                         ),
                       ),
-                    ),
                     if (kDebugMode) ...[
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 16),
                       Text(
                         AppFlavor.isHq
-                            ? 'HQ: use an operator login from OPERATOR CARDS'
-                            : 'User build: operator / invite via portal ritual',
+                            ? 'PORTAL: RedTeam01, SpamKat2, KASP3R, wave-2 admins/devs'
+                            : 'V.1 USER: T3mptress, Gl1tchCat, wave-2 users',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontSize: 11,
                               color: Colors.white38,

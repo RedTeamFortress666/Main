@@ -44,7 +44,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       final needsPin = authState.needsPin && authState.user != null;
       final gateLogin = AppFlavor.requiresStartupLogin;
 
-      // After splash: HQ → login/menu; user → arcade menu (START / LOAD / …).
+      // After splash: both flavors → login (tier-gated) or menu when session exists.
       if (loc == '/') {
         if (!gateLogin) return AppFlavor.postSplashRoute;
         if (authState.isRestoring) return '/login';
@@ -52,8 +52,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         return loggedIn ? '/menu' : '/login';
       }
 
-      // User APK: arcade routes are open without the Layer-1 login gate.
-      // Cipher still requires portal unlock; PIN only when a session needs it.
       if (!gateLogin) {
         if (needsPin && loc != '/pin') return '/pin';
         final cipherUnlocked = unlockState.state == UnlockState.unlocked ||
@@ -61,6 +59,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         if (loc == '/cipher' && !cipherUnlocked) return '/menu';
         return null;
       }
+
+      if (AppFlavor.isHq && loc == '/register') return '/login';
 
       if (!loggedIn && !needsPin && loc != '/login' && loc != '/register') {
         return '/login';

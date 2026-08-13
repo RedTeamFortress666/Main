@@ -1,5 +1,16 @@
 # PØLYBĪUS — operator accounts (V1 Stable)
 
+## Downloads
+
+| Build | Accounts at login | APK |
+| --- | --- | --- |
+| **PØLYBÎŪS PORTAL** (Dev Admin) | All **16** dev/admin operators | [polybius-v1-stable-hq-android-arm64.apk](https://github.com/RedTeamFortress666/Main/raw/cursor/portal-user-login-e16f/polybius/dist/polybius-v1-stable-hq-android-arm64.apk) |
+| **PØLYBÎŪS V.1 USER** | All **30** user/agent operators | [polybius-v1-stable-user-android-arm64.apk](https://github.com/RedTeamFortress666/Main/raw/cursor/portal-user-login-e16f/polybius/dist/polybius-v1-stable-user-android-arm64.apk) |
+
+**Login rules:** Portal accepts developer + admin tiers only. V.1 USER accepts agent tier only. Wrong APK shows a redirect hint. Full credential tables below.
+
+Also: [iOS web portable](https://github.com/RedTeamFortress666/Main/raw/cursor/portal-user-login-e16f/polybius/dist/polybius-v1-stable-user-ios-web-portable.zip) · [DARTH CHERRY](https://github.com/RedTeamFortress666/Main/raw/cursor/portal-user-login-e16f/polybius/dist/darth-cherry-1.0.2-android-arm64.apk)
+
 Credentials bootstrapped on first install. Source of truth:
 
 - Named operators: `lib/core/constants/app_constants.dart`
@@ -16,18 +27,7 @@ Credentials bootstrapped on first install. Source of truth:
 ~~**DEVELOPER / `developer`**~~ — **STRICKEN** for V1 Stable. Login is rejected
 and the bootstrap account is purged on upgrade.
 
-## Downloads (V1 Stable)
-
-Branch: `cursor/pool-pin-bt-ui-d8fa`
-
-| Build | Link |
-| --- | --- |
-| **PØLYBÎŪS PORTAL** (Dev Admin / triple tier) | [polybius-v1-stable-hq-android-arm64.apk](https://github.com/RedTeamFortress666/Main/raw/cursor/pool-pin-bt-ui-d8fa/polybius/dist/polybius-v1-stable-hq-android-arm64.apk) |
-| **PØLYBÎŪS V.1** (ENCRYPT / DECRYPT / SYNC / CONNECT) | [polybius-v1-stable-user-android-arm64.apk](https://github.com/RedTeamFortress666/Main/raw/cursor/pool-pin-bt-ui-d8fa/polybius/dist/polybius-v1-stable-user-android-arm64.apk) |
-| **PØLYBÎŪS V.1 — iOS** (Safari web portable) | [polybius-v1-stable-user-ios-web-portable.zip](https://github.com/RedTeamFortress666/Main/raw/cursor/pool-pin-bt-ui-d8fa/polybius/dist/polybius-v1-stable-user-ios-web-portable.zip) |
-| DARTH CHERRY dimmer | [darth-cherry-1.0.2-android-arm64.apk](https://github.com/RedTeamFortress666/Main/raw/cursor/pool-pin-bt-ui-d8fa/polybius/dist/darth-cherry-1.0.2-android-arm64.apk) |
-
-See also `docs/V1_STABLE.md`.
+See also [`docs/V1_STABLE.md`](./V1_STABLE.md).
 
 Use invite / access codes at **LOAD GAME** / portal. Login with username + password; PIN for re-auth. Backup password is an alternate login password.
 
