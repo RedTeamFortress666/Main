@@ -1,4 +1,4 @@
-/// Privileged developer / admin identities accepted for vault login.
+/// Privileged developer / admin identities accepted for terminal login.
 class PolybiusOperator {
   const PolybiusOperator({
     required this.username,
@@ -19,7 +19,7 @@ class PolybiusOperator {
   final String? inviteOrDevCode;
 }
 
-/// Only privileged admins + developers may open the vault.
+/// Only privileged admins + developers may jack in.
 /// DEVELOPER / developer is stricken for V1 Stable.
 const polybiusPrivilegedOperators = <PolybiusOperator>[
   PolybiusOperator(

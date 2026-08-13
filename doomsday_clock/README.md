@@ -1,33 +1,23 @@
 # DOØMSDAY CLØCK
 
-Neon / matrix crisis chronometer for privileged developers & admins.
+Cyberpunk crisis chronometer for privileged PØLYBÎŪS developers & admins.
 
 ## Features
 
-- **Vault login** — developer/admin credentials; first login seeds a personal vault
+- **Cyber terminal login** — developer/admin credentials only
 - **Bulletin** — daily BAS minutes/seconds to midnight
 - **Clock** — **Brisbane QLD AEST (UTC+10, no DST)** primary + threat-colored world zones
-- **Planner / calendar** — rituals: **5 November** (Gunpowder Plot) or **20 April** (MechaH birthday) → hold **SAVE NOTE** 3s → OPEN vault
-- **Concealable PORTAL slot** — hide the operator portal APK entry for extra privacy
-- **MechaH Dev Portal** — 20 April unlock embeds a ready-to-install **PØLYBÎŪS PORTAL · DEV** APK
+- **Planner / calendar** — **5 November** ritual → type `Remember remember` → hold **SAVE NOTE** 3s → DARTH CHERRY operator cache (Gam3.0n only)
+- **DARTH CHERRY operator cache** — full PØLYBÎŪS login cards; passwords/PINs visible only with the red filter overlay active
 - **Alarm** — hidden **DARTH CHERRY** veil unlocks **GRØK-REBEL 6.0** local uncensored AI loader (Gemma heretic / quantized GGUF slots)
 
-## Vault rituals
+## 5 November · DARTH CHERRY cache
 
-### Gunpowder (5 November)
-
-1. Open Planner and jump the calendar to **5 November**
-2. Paste / type:
-   > Remember Remember the 5th of November, the gunpowder treason and plot- I know of no reason why gunpowder treason should ever be forgot
-3. Hold **SAVE NOTE** until it reads **OPEN**
-
-### MechaH Dev Portal (20 April)
-
-1. Jump the calendar to **20 April**
-2. Paste / type:
-   > Happy Birthday MechaH! I grok thee
-3. Hold **SAVE NOTE** until **OPEN** — vault injects **PØLYBÎŪS PORTAL · DEV · MECHAH**
-4. Tap **INSTALL EMBEDDED APK** (allow unknown apps if prompted)
+1. Log in as **GAM3.0N** (Gam3.0n admin)
+2. Open **Planner** and jump the calendar to **5 November**
+3. Type: `Remember remember`
+4. Hold **SAVE NOTE** for 3 seconds until it reads **CACHE OPEN**
+5. Enable the **DARTH CHERRY** companion filter to reveal sealed credentials
 
 ## Build
 
@@ -38,4 +28,4 @@ flutter test
 flutter build apk --release --target-platform=android-arm64
 ```
 
-APK: `polybius/dist/doomsday_clock/doomsday-clock-2.1.0-android-arm64.apk`
+APK: `polybius/dist/doomsday_clock/doomsday-clock-2.1.1-android-arm64.apk`

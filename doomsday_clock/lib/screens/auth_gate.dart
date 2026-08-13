@@ -9,8 +9,7 @@ import '../widgets/matrix_chrome.dart';
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key, required this.onAuthenticated});
 
-  final void Function(AuthSession session, {required bool needsVaultSetup})
-      onAuthenticated;
+  final void Function(AuthSession session) onAuthenticated;
 
   @override
   State<AuthGate> createState() => _AuthGateState();
@@ -33,8 +32,7 @@ class _AuthGateState extends State<AuthGate> {
   Future<void> _tryRestore() async {
     final s = await _auth.currentSession();
     if (s == null || !mounted) return;
-    final needs = await _auth.needsVaultSetup(s.username);
-    widget.onAuthenticated(s, needsVaultSetup: needs);
+    widget.onAuthenticated(s);
   }
 
   Future<void> _submit() async {
@@ -55,12 +53,8 @@ class _AuthGateState extends State<AuthGate> {
       });
       return;
     }
-    final needs = await _auth.needsVaultSetup(session.username);
-    if (needs) {
-      await _auth.seedUserVault(session.username);
-    }
     HapticFeedback.mediumImpact();
-    widget.onAuthenticated(session, needsVaultSetup: needs);
+    widget.onAuthenticated(session);
   }
 
   @override
@@ -83,13 +77,12 @@ class _AuthGateState extends State<AuthGate> {
               const Center(child: DoomsdayLogo(size: 140)),
               const SizedBox(height: 18),
               Text(
-                'VAULT LOGIN · DEVELOPER / ADMIN',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: NoirTheme.pink,
-                    ),
+                'CYBER TERMINAL · OPERATOR AUTH',
+                style: Theme.of(context).textTheme.labelLarge,
               ),
               const SizedBox(height: 24),
               NeonPanel(
+                color: NoirTheme.neonMagenta,
                 child: Column(
                   children: [
                     TextField(
@@ -97,7 +90,7 @@ class _AuthGateState extends State<AuthGate> {
                       style: const TextStyle(color: NoirTheme.mist),
                       decoration: const InputDecoration(
                         labelText: 'USERNAME',
-                        labelStyle: TextStyle(color: NoirTheme.matrix),
+                        labelStyle: TextStyle(color: NoirTheme.neonCyan),
                       ),
                     ),
                     TextField(
@@ -106,7 +99,7 @@ class _AuthGateState extends State<AuthGate> {
                       style: const TextStyle(color: NoirTheme.mist),
                       decoration: const InputDecoration(
                         labelText: 'PASSWORD / BACKUP',
-                        labelStyle: TextStyle(color: NoirTheme.matrix),
+                        labelStyle: TextStyle(color: NoirTheme.neonCyan),
                       ),
                     ),
                     TextField(
@@ -116,7 +109,7 @@ class _AuthGateState extends State<AuthGate> {
                       style: const TextStyle(color: NoirTheme.mist),
                       decoration: const InputDecoration(
                         labelText: '6-DIGIT PIN',
-                        labelStyle: TextStyle(color: NoirTheme.matrix),
+                        labelStyle: TextStyle(color: NoirTheme.neonCyan),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -125,112 +118,32 @@ class _AuthGateState extends State<AuthGate> {
                       child: OutlinedButton(
                         onPressed: _busy ? null : _submit,
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: NoirTheme.matrix,
-                          side: const BorderSide(color: NoirTheme.matrix),
+                          foregroundColor: NoirTheme.neonMagenta,
+                          side: const BorderSide(color: NoirTheme.neonMagenta),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
-                        child: Text(_busy ? 'AUTH…' : 'OPEN TERMINAL'),
+                        child: Text(_busy ? 'AUTH…' : 'JACK IN'),
                       ),
                     ),
                     if (_error != null) ...[
                       const SizedBox(height: 12),
-                      Text(_error!,
-                          style: const TextStyle(color: NoirTheme.crimson)),
+                      Text(
+                        _error!,
+                        style: const TextStyle(color: NoirTheme.crimson),
+                      ),
                     ],
                   ],
                 ),
               ),
               const SizedBox(height: 16),
               Text(
-                'Privileged operator credentials only. '
-                'First login seeds a personal vault for this terminal.',
+                'Privileged PØLYBÎŪS operators only. '
+                'DARTH CHERRY sealed data unlocks in Planner on 5 November.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: NoirTheme.mist.withValues(alpha: 0.55),
                     ),
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class VaultSetupScreen extends StatefulWidget {
-  const VaultSetupScreen({
-    super.key,
-    required this.session,
-    required this.onDone,
-  });
-
-  final AuthSession session;
-  final VoidCallback onDone;
-
-  @override
-  State<VaultSetupScreen> createState() => _VaultSetupScreenState();
-}
-
-class _VaultSetupScreenState extends State<VaultSetupScreen> {
-  final _auth = AuthService();
-  bool _done = false;
-
-  Future<void> _finish() async {
-    await _auth.seedUserVault(widget.session.username);
-    await _auth.markVaultSetupComplete(widget.session.username);
-    setState(() => _done = true);
-    await Future<void>.delayed(const Duration(milliseconds: 600));
-    widget.onDone();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return MatrixRainBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: NeonPanel(
-              color: NoirTheme.pink,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'FIRST LOGIN · VAULT SETUP',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: NoirTheme.pink,
-                        ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Operator ${widget.session.displayName} (${widget.session.tier})',
-                    style: Theme.of(context).textTheme.headlineMedium,
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Seeding personal vault:\n'
-                    '• Concealable PORTAL APK slot\n'
-                    '• DARTH CHERRY companion slot\n'
-                    '• GRØK-REBEL 6.0 alarm interface hook\n\n'
-                    'Vault unlock: calendar → 5 November + Gunpowder Plot '
-                    'riddle, then hold SAVE NOTE.',
-                  ),
-                  const Spacer(),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
-                      onPressed: _done ? null : _finish,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: NoirTheme.matrix,
-                        side: const BorderSide(color: NoirTheme.matrix),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      child: Text(_done ? 'VAULT ARMED' : 'INITIALIZE VAULT'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ),
         ),
       ),

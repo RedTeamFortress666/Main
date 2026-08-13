@@ -1,27 +1,30 @@
 import 'package:flutter/material.dart';
 
-/// Heavy neon / matrix palette for DOOMSDAY CLOCK 2.0.
+/// Cyberpunk neon palette for DOOMSDAY CLOCK 2.1.
 class NoirTheme {
-  static const ink = Color(0xFF020403);
-  static const panel = Color(0xFF07110C);
-  static const line = Color(0xFF1AFF80);
-  static const mist = Color(0xFFD7FFE8);
+  static const voidBlack = Color(0xFF05000C);
+  static const ink = Color(0xFF0A0014);
+  static const panel = Color(0xFF120820);
+  static const mist = Color(0xFFE8E0FF);
   static const matrix = Color(0xFF39FF14);
-  static const cyan = Color(0xFF5EEAD4);
-  static const amber = Color(0xFFE8B86D);
-  static const orange = Color(0xFFF07A3A);
+  static const neonCyan = Color(0xFF00F0FF);
+  static const neonMagenta = Color(0xFFFF00AA);
+  static const cyan = neonCyan;
+  static const amber = Color(0xFFFFB347);
+  static const orange = Color(0xFFFF6B2B);
   static const crimson = Color(0xFFFF1744);
-  static const pink = Color(0xFFFF2D95);
+  static const pink = neonMagenta;
   static const yellow = Color(0xFFFFF200);
   static const peace = Color(0xFF34D399);
+  static const chrome = Color(0xFF8A9BB5);
 
   static ThemeData get dark => ThemeData(
         brightness: Brightness.dark,
         scaffoldBackgroundColor: ink,
         colorScheme: const ColorScheme.dark(
           surface: panel,
-          primary: matrix,
-          secondary: pink,
+          primary: neonCyan,
+          secondary: neonMagenta,
           error: crimson,
         ),
         fontFamily: 'monospace',
@@ -30,22 +33,23 @@ class NoirTheme {
             fontFamily: 'monospace',
             fontSize: 40,
             fontWeight: FontWeight.w800,
-            letterSpacing: 2,
-            color: matrix,
+            letterSpacing: 3,
+            color: neonCyan,
           ),
           headlineMedium: TextStyle(
             fontFamily: 'monospace',
-            fontSize: 20,
+            fontSize: 18,
             fontWeight: FontWeight.w700,
             color: mist,
+            letterSpacing: 1.2,
           ),
           bodyLarge: TextStyle(fontSize: 14, height: 1.45, color: mist),
           bodyMedium: TextStyle(fontSize: 12, height: 1.4, color: mist),
           labelLarge: TextStyle(
-            fontSize: 11,
-            letterSpacing: 2.2,
+            fontSize: 10,
+            letterSpacing: 2.4,
             fontWeight: FontWeight.w700,
-            color: matrix,
+            color: neonMagenta,
           ),
         ),
         appBarTheme: const AppBarTheme(

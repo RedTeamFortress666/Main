@@ -19,13 +19,11 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   AuthSession? _session;
-  bool _vaultSetupPending = false;
   int _index = 0;
 
-  void _onAuth(AuthSession session, {required bool needsVaultSetup}) {
+  void _onAuth(AuthSession session) {
     setState(() {
       _session = session;
-      _vaultSetupPending = needsVaultSetup;
       _index = 0;
     });
   }
@@ -34,12 +32,6 @@ class _HomeShellState extends State<HomeShell> {
   Widget build(BuildContext context) {
     if (_session == null) {
       return AuthGate(onAuthenticated: _onAuth);
-    }
-    if (_vaultSetupPending) {
-      return VaultSetupScreen(
-        session: _session!,
-        onDone: () => setState(() => _vaultSetupPending = false),
-      );
     }
 
     final pages = [
@@ -67,15 +59,16 @@ class _HomeShellState extends State<HomeShell> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'DOOMSDAY CLOCK 2.0',
+                            'DOOMSDAY CLOCK 2.1',
                             style: Theme.of(context)
                                 .textTheme
                                 .displayLarge
                                 ?.copyWith(
-                                  fontSize: 20,
+                                  fontSize: 18,
+                                  color: NoirTheme.neonCyan,
                                   shadows: [
                                     Shadow(
-                                      color: NoirTheme.matrix
+                                      color: NoirTheme.neonMagenta
                                           .withValues(alpha: 0.45),
                                       blurRadius: 16,
                                     ),
@@ -87,7 +80,7 @@ class _HomeShellState extends State<HomeShell> {
                             style: Theme.of(context)
                                 .textTheme
                                 .labelLarge
-                                ?.copyWith(color: NoirTheme.pink),
+                                ?.copyWith(color: NoirTheme.neonMagenta),
                           ),
                         ],
                       ),
@@ -96,10 +89,7 @@ class _HomeShellState extends State<HomeShell> {
                       tooltip: 'Logout',
                       onPressed: () async {
                         await AuthService().logout();
-                        setState(() {
-                          _session = null;
-                          _vaultSetupPending = false;
-                        });
+                        setState(() => _session = null);
                       },
                       icon: const Icon(Icons.logout, color: NoirTheme.crimson),
                     ),
@@ -112,7 +102,7 @@ class _HomeShellState extends State<HomeShell> {
         ),
         bottomNavigationBar: NavigationBar(
           backgroundColor: NoirTheme.panel,
-          indicatorColor: NoirTheme.matrix.withValues(alpha: 0.2),
+          indicatorColor: NoirTheme.neonMagenta.withValues(alpha: 0.2),
           selectedIndex: _index,
           onDestinationSelected: (i) => setState(() => _index = i),
           destinations: const [

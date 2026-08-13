@@ -1,7 +1,7 @@
 name: doomsday_clock
-description: DOØMSDAY CLØCK — neo-noir cyberpunk crisis clock + vault planner
+description: DOØMSDAY CLØCK — cyberpunk crisis clock + DARTH CHERRY operator cache
 publish_to: 'none'
-version: 2.1.0+3
+version: 2.1.1+4
 
 environment:
   sdk: ^3.12.2

@@ -1,16 +1,17 @@
-import 'dart:convert';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
+import '../data/polybius_operator_cards.dart';
 import '../models/models.dart';
-import '../services/apk_installer.dart';
+import '../services/darth_probe.dart';
 import '../services/auth_service.dart';
-import '../services/vault_service.dart';
+import '../services/planner_service.dart';
 import '../theme/noir_theme.dart';
 import '../widgets/matrix_chrome.dart';
+import '../widgets/operator_identity_card.dart';
 
 class PlannerTab extends StatefulWidget {
   const PlannerTab({super.key, required this.session});
@@ -22,73 +23,60 @@ class PlannerTab extends StatefulWidget {
 }
 
 class _PlannerTabState extends State<PlannerTab> {
-  final _vault = VaultService();
-  final _auth = AuthService();
+  final _planner = PlannerService();
   final _noteCtrl = TextEditingController();
   DateTime _selected = DateTime.now();
   List<PlannerNote> _notes = [];
-  List<VaultEntry> _vaultEntries = [];
-  bool _vaultOpen = false;
+  bool _cherryCacheOpen = false;
+  bool _darthActive = false;
+  bool _darthInstalled = false;
   String _holdLabel = 'SAVE NOTE';
   bool _holding = false;
-  DateTime? _holdStarted;
-  bool _showConcealed = false;
+  double _holdProgress = 0;
+  Timer? _holdTimer;
+  Timer? _darthPoll;
+
+  bool get _isGam3on =>
+      PolybiusOperatorCards.canOpenCherryCache(widget.session.username);
 
   @override
   void initState() {
     super.initState();
     _reload();
+    _pollDarth();
+    _darthPoll = Timer.periodic(const Duration(seconds: 2), (_) => _pollDarth());
   }
 
   @override
   void dispose() {
+    _holdTimer?.cancel();
+    _darthPoll?.cancel();
     _noteCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _reload() async {
-    final notes = await _vault.loadNotes();
-    final open = await _vault.isVaultOpenForDay(
-      widget.session.username,
-      _selected,
-    );
-    final entries = await _loadUserVault();
+  Future<void> _pollDarth() async {
+    final installed = await DarthCherryProbe.isInstalled();
+    final filter = await DarthCherryProbe.probeFilter();
     if (!mounted) return;
     setState(() {
-      _notes = notes;
-      _vaultOpen = open;
-      _vaultEntries = entries;
-      _holdLabel = open ? 'OPEN' : 'SAVE NOTE';
+      _darthInstalled = installed;
+      _darthActive = filter.active;
     });
   }
 
-  Future<List<VaultEntry>> _loadUserVault() async {
-    final prefs = await SharedPreferences.getInstance();
-    final key = 'vault_entries_${widget.session.username.toUpperCase()}';
-    final raw = prefs.getString(key);
-    if (raw == null) return [];
-    final list = jsonDecode(raw) as List<dynamic>;
-    return list
-        .map((e) => VaultEntry.fromJson(Map<String, dynamic>.from(e as Map)))
-        .toList();
-  }
-
-  Future<void> _persistVault(List<VaultEntry> entries) async {
-    await _auth.saveUserVault(widget.session.username, entries);
-    if (mounted) setState(() => _vaultEntries = entries);
-  }
-
-  Future<void> _toggleConceal(VaultEntry entry) async {
-    if (!entry.concealable) return;
-    final next = _vaultEntries
-        .map(
-          (e) => e.id == entry.id
-              ? e.copyWith(concealed: !e.concealed)
-              : e,
-        )
-        .toList();
-    await _persistVault(next);
-    HapticFeedback.selectionClick();
+  Future<void> _reload() async {
+    final notes = await _planner.loadNotes();
+    final open = await _planner.isCherryCacheOpenForDay(
+      widget.session.username,
+      _selected,
+    );
+    if (!mounted) return;
+    setState(() {
+      _notes = notes;
+      _cherryCacheOpen = open;
+      _holdLabel = open ? 'CACHE OPEN' : 'SAVE NOTE';
+    });
   }
 
   Future<void> _pickDate() async {
@@ -101,7 +89,7 @@ class _PlannerTabState extends State<PlannerTab> {
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
           colorScheme: const ColorScheme.dark(
-            primary: NoirTheme.matrix,
+            primary: NoirTheme.neonCyan,
             surface: NoirTheme.panel,
             onSurface: NoirTheme.mist,
           ),
@@ -115,83 +103,90 @@ class _PlannerTabState extends State<PlannerTab> {
     }
   }
 
-  Future<void> _onHoldStart() async {
+  void _onHoldStart() {
+    if (_holding) return;
     setState(() {
       _holding = true;
-      _holdStarted = DateTime.now();
-      _holdLabel = '…';
+      _holdProgress = 0;
+      _holdLabel = 'HOLD…';
     });
-    await Future<void>.delayed(const Duration(seconds: 3));
-    if (!_holding || _holdStarted == null) return;
+    const steps = 30;
+    var tick = 0;
+    _holdTimer?.cancel();
+    _holdTimer = Timer.periodic(const Duration(milliseconds: 100), (t) async {
+      tick++;
+      if (!mounted) return;
+      setState(() => _holdProgress = tick / steps);
+      if (tick < steps) return;
+      t.cancel();
+      await _completeHold();
+    });
+  }
+
+  Future<void> _completeHold() async {
     final body = _noteCtrl.text.trim();
     final note = PlannerNote(
-      id: _vault.newId(),
-      dayKey: _vault.dayKey(_selected),
+      id: _planner.newId(),
+      dayKey: _planner.dayKey(_selected),
       body: body.isEmpty ? '(empty note)' : body,
       updatedAt: DateTime.now(),
     );
     final notes = [..._notes, note];
-    await _vault.saveNotes(notes);
+    await _planner.saveNotes(notes);
 
-    var unlocked = _vaultOpen;
-    if (_vault.matchesRitual(body, _selected)) {
-      await _vault.unlockVaultForDay(widget.session.username, _selected);
+    var unlocked = _cherryCacheOpen;
+    if (_planner.matchesRitual(body, _selected)) {
+      await _planner.unlockCherryCacheForDay(
+        widget.session.username,
+        _selected,
+      );
       unlocked = true;
       HapticFeedback.heavyImpact();
-      if (_vault.isMechaHDay(_selected)) {
-        await _auth.ensureMechaHDevPortal(widget.session.username);
-      }
     }
 
     if (!mounted) return;
     setState(() {
       _notes = notes;
-      _vaultOpen = unlocked;
-      _holdLabel = unlocked ? 'OPEN' : 'SAVE NOTE';
+      _cherryCacheOpen = unlocked;
       _holding = false;
+      _holdProgress = 0;
+      _holdLabel = unlocked ? 'CACHE OPEN' : 'SAVE NOTE';
     });
-    if (unlocked) {
-      final entries = await _loadUserVault();
-      if (mounted) setState(() => _vaultEntries = entries);
-    }
   }
 
   void _onHoldEnd() {
-    if (_holdLabel == 'OPEN' && _vaultOpen) return;
+    if (!_holding) return;
+    _holdTimer?.cancel();
     setState(() {
       _holding = false;
-      _holdLabel = _vaultOpen ? 'OPEN' : 'SAVE NOTE';
+      _holdProgress = 0;
+      _holdLabel = _cherryCacheOpen ? 'CACHE OPEN' : 'SAVE NOTE';
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final dayKey = _vault.dayKey(_selected);
+    final dayKey = _planner.dayKey(_selected);
     final dayNotes = _notes.where((n) => n.dayKey == dayKey);
-    final visibleEntries = _vaultEntries.where((e) {
-      if (!e.concealed) return true;
-      return _showConcealed;
-    }).toList();
-    final concealedCount =
-        _vaultEntries.where((e) => e.concealable && e.concealed).length;
+    final showCherrySection = _cherryCacheOpen && _isGam3on;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       children: [
-        Text('CALENDAR · PAST / FUTURE',
-            style: Theme.of(context).textTheme.labelLarge),
+        Text('CYBER PLANNER', style: Theme.of(context).textTheme.labelLarge),
         const SizedBox(height: 8),
         NeonPanel(
+          color: NoirTheme.neonMagenta,
           child: Row(
             children: [
               IconButton(
                 onPressed: () async {
-                  setState(() {
-                    _selected = _selected.subtract(const Duration(days: 1));
-                  });
+                  setState(
+                    () => _selected = _selected.subtract(const Duration(days: 1)),
+                  );
                   await _reload();
                 },
-                icon: const Icon(Icons.chevron_left, color: NoirTheme.matrix),
+                icon: const Icon(Icons.chevron_left, color: NoirTheme.neonCyan),
               ),
               Expanded(
                 child: InkWell(
@@ -201,33 +196,36 @@ class _PlannerTabState extends State<PlannerTab> {
                       Text(
                         DateFormat('EEEE').format(_selected).toUpperCase(),
                         style: TextStyle(
-                          color: _vault.isUnlockDay(_selected)
+                          color: _planner.isGunpowderDay(_selected)
                               ? NoirTheme.crimson
-                              : NoirTheme.pink,
+                              : NoirTheme.neonMagenta,
+                          letterSpacing: 2,
                         ),
                       ),
                       Text(
                         DateFormat('d MMM yyyy').format(_selected),
                         style: Theme.of(context).textTheme.headlineMedium,
                       ),
-                      const Text('TAP TO JUMP',
-                          style: TextStyle(
-                            fontSize: 10,
-                            letterSpacing: 2,
-                            color: NoirTheme.yellow,
-                          )),
+                      const Text(
+                        'TAP TO JUMP DATE',
+                        style: TextStyle(
+                          fontSize: 9,
+                          letterSpacing: 2,
+                          color: NoirTheme.chrome,
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
               IconButton(
                 onPressed: () async {
-                  setState(() {
-                    _selected = _selected.add(const Duration(days: 1));
-                  });
+                  setState(
+                    () => _selected = _selected.add(const Duration(days: 1)),
+                  );
                   await _reload();
                 },
-                icon: const Icon(Icons.chevron_right, color: NoirTheme.matrix),
+                icon: const Icon(Icons.chevron_right, color: NoirTheme.neonCyan),
               ),
             ],
           ),
@@ -238,11 +236,18 @@ class _PlannerTabState extends State<PlannerTab> {
           maxLines: 5,
           style: const TextStyle(color: NoirTheme.mist),
           decoration: InputDecoration(
-            hintText: _vault.unlockHintFor(_selected),
+            hintText: _planner.plannerHintFor(_selected),
             hintStyle: TextStyle(color: NoirTheme.mist.withValues(alpha: 0.35)),
             filled: true,
-            fillColor: NoirTheme.panel,
-            border: const OutlineInputBorder(borderRadius: BorderRadius.zero),
+            fillColor: NoirTheme.voidBlack,
+            enabledBorder: OutlineInputBorder(
+              borderSide: BorderSide(
+                color: NoirTheme.neonCyan.withValues(alpha: 0.4),
+              ),
+            ),
+            focusedBorder: const OutlineInputBorder(
+              borderSide: BorderSide(color: NoirTheme.neonMagenta, width: 1.5),
+            ),
           ),
         ),
         const SizedBox(height: 10),
@@ -251,158 +256,85 @@ class _PlannerTabState extends State<PlannerTab> {
           onPointerUp: (_) => _onHoldEnd(),
           onPointerCancel: (_) => _onHoldEnd(),
           child: NeonPanel(
-            color: _holdLabel == 'OPEN' ? NoirTheme.peace : NoirTheme.matrix,
-            child: Center(
-              child: Text(
-                _holdLabel,
-                style: TextStyle(
-                  letterSpacing: 3,
-                  fontWeight: FontWeight.w800,
-                  color: _holdLabel == 'OPEN'
-                      ? NoirTheme.peace
-                      : NoirTheme.matrix,
+            color: _cherryCacheOpen ? NoirTheme.peace : NoirTheme.neonCyan,
+            child: Column(
+              children: [
+                if (_holding)
+                  LinearProgressIndicator(
+                    value: _holdProgress,
+                    backgroundColor: NoirTheme.voidBlack,
+                    color: NoirTheme.neonMagenta,
+                    minHeight: 3,
+                  ),
+                const SizedBox(height: 8),
+                Text(
+                  _holdLabel,
+                  style: TextStyle(
+                    letterSpacing: 3,
+                    fontWeight: FontWeight.w800,
+                    color: _cherryCacheOpen
+                        ? NoirTheme.peace
+                        : NoirTheme.neonCyan,
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ),
         const SizedBox(height: 18),
         Text('NOTES · $dayKey', style: Theme.of(context).textTheme.labelLarge),
         ...dayNotes.map((n) => Text('• ${n.body}')),
-        if (_vaultOpen) ...[
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'VAULT · ${widget.session.displayName}',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: NoirTheme.peace,
-                      ),
-                ),
-              ),
-              if (concealedCount > 0 || _showConcealed)
-                TextButton(
-                  onPressed: () =>
-                      setState(() => _showConcealed = !_showConcealed),
-                  child: Text(
-                    _showConcealed ? 'HIDE SLOT' : 'REVEAL SLOT',
-                    style: const TextStyle(
-                      color: NoirTheme.yellow,
-                      letterSpacing: 1,
-                      fontSize: 11,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          ...visibleEntries.map((e) => _vaultCard(e)),
-          if (concealedCount > 0 && !_showConcealed)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                '$concealedCount concealable slot(s) hidden',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: NoirTheme.mist.withValues(alpha: 0.4),
-                      fontSize: 11,
-                    ),
-              ),
-            ),
-        ] else
+        if (showCherrySection) ...[
+          const SizedBox(height: 20),
           Text(
-            'VAULT SEALED — rituals: 5 Nov (Gunpowder Plot) or 20 Apr '
-            '(Happy Birthday MechaH! I grok thee). Hold SAVE NOTE until OPEN.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: NoirTheme.mist.withValues(alpha: 0.45),
+            'DARTH CHERRY · OPERATOR CACHE',
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: _darthActive ? NoirTheme.crimson : NoirTheme.chrome,
                 ),
+          ),
+          const SizedBox(height: 6),
+          if (!_darthInstalled)
+            Text(
+              'Install DARTH CHERRY companion to view sealed credentials.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: NoirTheme.amber,
+                  ),
+            )
+          else if (!_darthActive)
+            Text(
+              'Enable the DARTH CHERRY red filter overlay to reveal passwords, '
+              'backup keys, and PINs.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: NoirTheme.amber,
+                  ),
+            )
+          else
+            Text(
+              '${PolybiusOperatorCards.all.length} PØLYBÎŪS operator cards · '
+              'secrets unlocked',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: NoirTheme.peace,
+                  ),
+            ),
+          const SizedBox(height: 10),
+          ...PolybiusOperatorCards.all.map(
+            (card) => OperatorIdentityCard(
+              card: card,
+              secretsUnlocked: _darthActive,
+            ),
+          ),
+        ],
+        if (!showCherrySection && _cherryCacheOpen && !_isGam3on)
+          Padding(
+            padding: const EdgeInsets.only(top: 16),
+            child: Text(
+              'Cherry cache open — operator roster is restricted to Gam3.0n.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: NoirTheme.mist.withValues(alpha: 0.5),
+                  ),
+            ),
           ),
       ],
-    );
-  }
-
-  Widget _vaultCard(VaultEntry e) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: NeonPanel(
-        color: e.concealed ? NoirTheme.yellow : NoirTheme.peace,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    e.concealed ? '∎ CONCEALED' : e.title,
-                    style: TextStyle(
-                      color: e.concealed ? NoirTheme.yellow : NoirTheme.peace,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                if (e.concealable)
-                  IconButton(
-                    tooltip: e.concealed ? 'Reveal portal' : 'Conceal portal',
-                    onPressed: () => _toggleConceal(e),
-                    icon: Icon(
-                      e.concealed ? Icons.visibility : Icons.visibility_off,
-                      color: e.concealed ? NoirTheme.yellow : NoirTheme.pink,
-                      size: 26,
-                    ),
-                  ),
-              ],
-            ),
-            if (!e.concealed) ...[
-              if (e.detail.isNotEmpty) Text(e.detail),
-              if (e.apkHint != null) ...[
-                const SizedBox(height: 4),
-                SelectableText(
-                  e.apkHint!,
-                  style: const TextStyle(
-                    color: NoirTheme.cyan,
-                    fontSize: 11,
-                  ),
-                ),
-              ],
-              if (e.assetApk != null) ...[
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton(
-                    onPressed: () async {
-                      try {
-                        await ApkInstaller.installAsset(e.assetApk!);
-                        if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Install prompt launched'),
-                          ),
-                        );
-                      } catch (err) {
-                        if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Install failed: $err')),
-                        );
-                      }
-                    },
-                    style: TextButton.styleFrom(
-                      foregroundColor: NoirTheme.peace,
-                    ),
-                    child: const Text(
-                      'INSTALL EMBEDDED APK',
-                      style: TextStyle(letterSpacing: 1.5, fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                ),
-              ],
-            ] else
-              const Text(
-                'Portal slot concealed — tap the eye to restore.',
-                style: TextStyle(fontSize: 12, color: NoirTheme.mist),
-              ),
-          ],
-        ),
-      ),
     );
   }
 }
