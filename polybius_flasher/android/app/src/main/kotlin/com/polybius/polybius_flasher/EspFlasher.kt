@@ -53,6 +53,8 @@ class EspFlasher(
         val syncOnly: Boolean = false,
         val hardResetAfter: Boolean = true,
         val flashSizeHint: Int? = null,
+        /** Capture serial text after flash for Bruce/Launcher boot clues. */
+        val serialMonitorMs: Int = 0,
     )
 
     data class Result(val ok: Boolean, val message: String)
@@ -123,8 +125,16 @@ class EspFlasher(
             val image = file.readBytes()
             if (image.isEmpty()) return Result(false, "Firmware file is empty")
 
+            val flashHint = options.flashSizeHint ?: options.chip.defaultFlashBytes
+            if (image.size > flashHint) {
+                onLog(
+                    "WARNING: image is ${image.size} bytes but flash hint is $flashHint " +
+                        "(classic CYD ≈ 4 MiB). Flashing may fail or brick if the chip is smaller.",
+                )
+            }
+
             if (options.eraseAll) {
-                val eraseBytes = options.flashSizeHint ?: options.chip.defaultFlashBytes
+                val eraseBytes = flashHint
                 onLog("Erasing flash (${eraseBytes / (1024 * 1024)} MiB)…")
                 session.eraseRegion(0, eraseBytes)
             }
@@ -140,10 +150,21 @@ class EspFlasher(
             onLog("Finishing…")
             session.flashEnd(reboot = options.hardResetAfter)
             onProgress(image.size.toLong(), image.size.toLong())
+
+            var monitorNote = ""
+            if (options.serialMonitorMs > 0) {
+                onLog("Capturing serial for ${options.serialMonitorMs} ms…")
+                monitorNote = session.captureSerial(options.serialMonitorMs)
+                if (monitorNote.isNotBlank()) {
+                    onLog("Serial capture:\n$monitorNote")
+                }
+            }
+
             Result(
                 true,
                 "Flash complete — ${options.chip.label} @ 0x${options.flashOffset.toString(16)}. " +
-                    "Press RESET / power-cycle the device now.",
+                    "Press RESET / power-cycle the device now." +
+                    if (monitorNote.isNotBlank()) " Serial: ${monitorNote.take(120)}" else "",
             )
         } catch (e: Exception) {
             Result(false, e.message ?: e.toString())
@@ -439,6 +460,30 @@ class EspFlasher(
                 }
                 if (n <= 0) return
             }
+        }
+
+        /** Best-effort ASCII capture after reboot for Bruce/Launcher boot lines. */
+        fun captureSerial(ms: Int): String {
+            val buf = StringBuilder()
+            val deadline = System.currentTimeMillis() + ms.coerceAtLeast(0)
+            val tmp = ByteArray(512)
+            while (System.currentTimeMillis() < deadline) {
+                if (cancelled.get()) break
+                val n = try {
+                    port.read(tmp, 80)
+                } catch (_: Exception) {
+                    0
+                }
+                if (n > 0) {
+                    for (i in 0 until n) {
+                        val c = tmp[i].toInt() and 0xFF
+                        if (c in 32..126 || c == 10 || c == 13) {
+                            buf.append(c.toChar())
+                        }
+                    }
+                }
+            }
+            return buf.toString().trim().take(2000)
         }
     }
 

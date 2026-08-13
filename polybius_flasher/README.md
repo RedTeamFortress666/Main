@@ -1,15 +1,21 @@
 # PØLYBÎŪS FLASHER (Android)
 
-Phone-side installer for shipping PØLYBĪUS onto handheld / MCU targets:
+Phone-side installer for shipping PØLYBĪUS onto handheld / MCU targets and other Android phones:
 
 | Target | What it does |
 | --- | --- |
-| **R36S** | Unzips the PortMaster port into an SD card `roms/ports/` tree via SAF |
-| **CYD ESP32-2432S028** | USB-OTG serial flash of `polybius-cyd.bin` |
-| **ESP32-32E 240×320 Resistive** | Same CYD firmware on classic ESP32 + 2.8″ resistive panels |
-| **LilyGO T-Deck** | USB-OTG serial flash of `polybius-tdeck.bin` (ESP32-S3 USB-JTAG) |
+| **R36S** | Path detect (`roms/ports`, `roms2/ports`, …) + Direct / Autoinstall + SD prepare |
+| **CYD / ESP32-32E** | Presets (classic / CYD2USB / 32E / generic) + manual BOOT/RESET wizard |
+| **LilyGO T-Deck** | Dedicated ESP32-S3 preset + trackball download-mode UX |
+| **Android (OTG ADB)** | Selective multi-APK over USB OTG / TCP with SHA-256 + pm error surfacing |
 
-Package id: `com.polybius.flasher` · Version **1.2.0**
+Package id: `com.polybius.flasher` · Version **1.5.1**
+
+## Bundled APKs
+
+- `assets/apks/polybius-v1-stable-hq-android-arm64.apk` — Portal
+- `assets/apks/polybius-v1-stable-user-android-arm64.apk` — V.1 USER
+- `assets/apks/darth-cherry-1.0.2-android-arm64.apk` — Darth Cherry
 
 ## T-Deck download mode (important)
 
@@ -20,15 +26,6 @@ Android often cannot auto-reset Espressif USB-Serial/JTAG (`VID 303a PID 1001`).
 3. Keep holding 2–3s until the screen stays black.
 4. In the flasher, choose **I already put the device in download mode — Skip**.
 
-The app also tries classic DTR/RTS, inverted lines, and a **1200-baud touch** before giving up.
-
-## Flash options
-
-- Full image `@ 0x0` (default) / app-only `@ 0x10000` / custom address
-- Chip: `esp32` / `esp32s3`
-- Baud: 115200 → 921600 (start low on S3)
-- Erase entire flash · hard reset after write · **Test connection only**
-
 ## Build
 
 ```bash
@@ -38,4 +35,6 @@ flutter test
 flutter build apk --release --target-platform=android-arm64
 ```
 
-Dist: `polybius/dist/polybius-flasher-1.2.0-android-arm64.apk`
+Dist: `polybius/dist/polybius-flasher-1.5.1-android-arm64.apk`
+
+See [`../polybius/docs/FLASHER.md`](../polybius/docs/FLASHER.md).

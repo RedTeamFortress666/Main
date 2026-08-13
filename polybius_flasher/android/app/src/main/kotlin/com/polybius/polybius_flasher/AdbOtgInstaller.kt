@@ -49,6 +49,31 @@ object AdbOtgInstaller {
         val hasPermission: Boolean,
     )
 
+    data class UsbInventoryItem(
+        val deviceId: Int,
+        val vendorId: Int,
+        val productId: Int,
+        val productName: String?,
+        val manufacturerName: String?,
+        val serial: String?,
+        val hasAdbInterface: Boolean,
+        val hasMtpOrStorage: Boolean,
+        val hasPermission: Boolean,
+        val hint: String,
+    )
+
+    data class InstallOptions(
+        val forceDowngrade: Boolean = false,
+        val forceUser0: Boolean = false,
+    )
+
+    data class InstallOutcome(
+        val ok: Boolean,
+        val message: String,
+        val pmOutput: String = "",
+        val errorCode: String = "",
+    )
+
     fun listAdbDevices(context: Context): List<AdbUsbDeviceInfo> {
         val usb = context.getSystemService(Context.USB_SERVICE) as UsbManager
         return usb.deviceList.values.mapNotNull { d ->
@@ -70,6 +95,51 @@ object AdbOtgInstaller {
         }
     }
 
+    /** Full USB inventory including MTP-only gadgets (no ADB). */
+    fun listUsbInventory(context: Context): List<UsbInventoryItem> {
+        val usb = context.getSystemService(Context.USB_SERVICE) as UsbManager
+        return usb.deviceList.values.map { d ->
+            val adb = findAdbInterface(d) != null
+            val mtp = hasMtpOrMassStorage(d)
+            val hint = when {
+                adb -> "ADB ready — authorize USB debugging on the target if prompted"
+                mtp -> "MTP/storage only — enable USB debugging (and set USB mode to File transfer / charging+ADB)"
+                else -> "Unknown USB gadget — enable USB debugging on the target"
+            }
+            UsbInventoryItem(
+                deviceId = d.deviceId,
+                vendorId = d.vendorId,
+                productId = d.productId,
+                productName = d.productName,
+                manufacturerName = d.manufacturerName,
+                serial = try {
+                    d.serialNumber
+                } catch (_: SecurityException) {
+                    null
+                },
+                hasAdbInterface = adb,
+                hasMtpOrStorage = mtp,
+                hasPermission = usb.hasPermission(d),
+                hint = hint,
+            )
+        }
+    }
+
+    fun hasMtpOrMassStorage(device: UsbDevice): Boolean {
+        for (i in 0 until device.interfaceCount) {
+            val intf = device.getInterface(i)
+            // Still Image / MTP often appears as class 6 (Still Image) or vendor-specific
+            // Mass storage = class 8
+            if (intf.interfaceClass == 0x08) return true
+            if (intf.interfaceClass == 0x06) return true
+            // PTP/MTP subclass patterns
+            if (intf.interfaceClass == 0xFF && intf.interfaceSubclass == 0xFF) {
+                // ambiguous; ignore
+            }
+        }
+        return false
+    }
+
     fun findDevice(context: Context, deviceId: Int): UsbDevice? {
         val usb = context.getSystemService(Context.USB_SERVICE) as UsbManager
         return usb.deviceList.values.firstOrNull { it.deviceId == deviceId }
@@ -86,6 +156,27 @@ object AdbOtgInstaller {
             }
         }
         return null
+    }
+
+    fun classifyPmError(output: String): String {
+        val u = output.uppercase()
+        return when {
+            u.contains("INSUFFICIENT_STORAGE") || u.contains("INSTALL_FAILED_INSUFFICIENT_STORAGE") ->
+                "INSUFFICIENT_STORAGE"
+            u.contains("VERSION_DOWNGRADE") || u.contains("INSTALL_FAILED_VERSION_DOWNGRADE") ->
+                "VERSION_DOWNGRADE"
+            u.contains("INCOMPATIBLE") || u.contains("INSTALL_FAILED_NO_MATCHING_ABIS") ||
+                u.contains("INSTALL_PARSE_FAILED") ->
+                "INCOMPATIBLE"
+            u.contains("UPDATE_INCOMPATIBLE") || u.contains("INSTALL_FAILED_UPDATE_INCOMPATIBLE") ->
+                "UPDATE_INCOMPATIBLE"
+            u.contains("PERMISSION_DENIED") || u.contains("INSTALL_FAILED_USER_RESTRICTED") ->
+                "PERMISSION_DENIED"
+            u.contains("ALREADY_EXISTS") -> "ALREADY_EXISTS"
+            u.contains("CANCEL") -> "CANCELLED"
+            u.contains("SUCCESS") -> "SUCCESS"
+            else -> "UNKNOWN"
+        }
     }
 
     private fun adbBase64(): AdbBase64 = AdbBase64 { data ->
@@ -112,16 +203,23 @@ object AdbOtgInstaller {
         apkFile: File,
         cancel: AtomicBoolean,
         onProgress: (Double, String) -> Unit,
-    ): String {
+        options: InstallOptions = InstallOptions(),
+    ): InstallOutcome {
+        // Always re-resolve the device from the live USB list — handles replug.
+        val live = findDevice(context, device.deviceId)
+            ?: throw IOException("USB device gone — unplugged or permission revoked. Reconnect OTG and re-scan.")
         val usb = context.getSystemService(Context.USB_SERVICE) as UsbManager
-        if (!usb.hasPermission(device)) {
-            throw IOException("USB permission not granted for ADB device")
+        if (!usb.hasPermission(live)) {
+            throw IOException("USB permission not granted for ADB device — re-request permission")
         }
-        val intf = findAdbInterface(device)
-            ?: throw IOException("No ADB interface on USB device (enable USB debugging on the target)")
+        val intf = findAdbInterface(live)
+            ?: throw IOException(
+                "No ADB interface on USB device. If you only see MTP/file-transfer, " +
+                    "enable USB debugging and switch USB mode so ADB is exposed.",
+            )
 
-        val connection = usb.openDevice(device)
-            ?: throw IOException("Failed to open USB device")
+        val connection = usb.openDevice(live)
+            ?: throw IOException("Failed to open USB device — replug OTG cable and retry")
         if (!connection.claimInterface(intf, true)) {
             connection.close()
             throw IOException("Failed to claim ADB interface")
@@ -132,12 +230,12 @@ object AdbOtgInstaller {
         val adb = AdbConnection.create(channel, crypto)
         activeConnection.set(adb)
         try {
-            onProgress(0.02, "ADB handshake — authorize this key on the target if prompted…")
+            onProgress(0.02, "ADB handshake — authorize this key on the TARGET if prompted…")
             if (cancel.get()) throw IOException("Cancelled")
             adb.connect()
             val maxData = adb.maxDataSafe()
             onProgress(0.08, "ADB connected (maxData=$maxData)")
-            return pushAndInstall(adb, apkFile, maxData, cancel, onProgress)
+            return pushAndInstall(adb, apkFile, maxData, cancel, onProgress, options)
         } finally {
             activeConnection.compareAndSet(adb, null)
             try {
@@ -154,7 +252,8 @@ object AdbOtgInstaller {
         apkFile: File,
         cancel: AtomicBoolean,
         onProgress: (Double, String) -> Unit,
-    ): String {
+        options: InstallOptions = InstallOptions(),
+    ): InstallOutcome {
         onProgress(0.02, "Connecting TCP ADB $host:$port…")
         val socket = Socket()
         socket.tcpNoDelay = true
@@ -168,7 +267,7 @@ object AdbOtgInstaller {
             adb.connect()
             val maxData = adb.maxDataSafe()
             onProgress(0.08, "ADB connected (maxData=$maxData)")
-            return pushAndInstall(adb, apkFile, maxData, cancel, onProgress)
+            return pushAndInstall(adb, apkFile, maxData, cancel, onProgress, options)
         } finally {
             activeConnection.compareAndSet(adb, null)
             try {
@@ -193,13 +292,23 @@ object AdbOtgInstaller {
         }
     }
 
+    private fun buildPmCommand(remotePath: String, options: InstallOptions): String {
+        val flags = StringBuilder("pm install -r")
+        if (options.forceDowngrade) flags.append(" -d")
+        if (options.forceUser0) flags.append(" --user 0")
+        flags.append(" -t")
+        flags.append(" \"").append(remotePath).append("\"")
+        return flags.toString()
+    }
+
     private fun pushAndInstall(
         adb: AdbConnection,
         apkFile: File,
         maxData: Int,
         cancel: AtomicBoolean,
         onProgress: (Double, String) -> Unit,
-    ): String {
+        options: InstallOptions,
+    ): InstallOutcome {
         if (!apkFile.isFile || apkFile.length() <= 0L) {
             throw IOException("APK missing or empty: ${apkFile.absolutePath}")
         }
@@ -214,38 +323,55 @@ object AdbOtgInstaller {
 
         if (cancel.get()) throw IOException("Cancelled")
 
-        onProgress(0.82, "pm install -r …")
-        val installOut = shellExec(adb, "pm install -r \"$remotePath\"", cancel)
+        val primaryCmd = buildPmCommand(remotePath, options)
+        onProgress(0.82, primaryCmd)
+        val installOut = shellExec(adb, primaryCmd, cancel)
         Log.i(TAG, "pm install output: $installOut")
 
-        val ok = installOut.contains("Success", ignoreCase = true)
-        if (!ok) {
-            onProgress(0.88, "Retry pm install -r -t --user 0…")
-            val retry = shellExec(adb, "pm install -r -t --user 0 \"$remotePath\"", cancel)
-            Log.i(TAG, "pm install retry: $retry")
-            if (!retry.contains("Success", ignoreCase = true)) {
-                try {
-                    shellExec(adb, "rm -f \"$remotePath\"", cancel)
-                } catch (_: Exception) {
-                }
-                throw IOException("pm install failed:\n$installOut\n$retry")
-            }
+        val code = classifyPmError(installOut)
+        if (code == "SUCCESS" || installOut.contains("Success", ignoreCase = true)) {
             onProgress(0.95, "Cleaning temp APK…")
             try {
                 shellExec(adb, "rm -f \"$remotePath\"", cancel)
             } catch (_: Exception) {
             }
-            onProgress(1.0, "Installed (retry)")
-            return retry.trim()
+            onProgress(1.0, "Installed")
+            return InstallOutcome(true, installOut.trim(), installOut, "SUCCESS")
         }
 
-        onProgress(0.95, "Cleaning temp APK…")
+        // Fallback without assuming prior flags worked
+        onProgress(0.88, "Retry pm install -r -t --user 0…")
+        val retryCmd = "pm install -r -t --user 0 \"$remotePath\"" +
+            if (options.forceDowngrade) " -d" else ""
+        // note: flag order varies by Android; try a clean known-good form
+        val retry = shellExec(
+            adb,
+            if (options.forceDowngrade) {
+                "pm install -r -d -t --user 0 \"$remotePath\""
+            } else {
+                "pm install -r -t --user 0 \"$remotePath\""
+            },
+            cancel,
+        )
+        Log.i(TAG, "pm install retry: $retry")
+        val retryCode = classifyPmError(retry)
         try {
             shellExec(adb, "rm -f \"$remotePath\"", cancel)
         } catch (_: Exception) {
         }
-        onProgress(1.0, "Installed")
-        return installOut.trim()
+        if (retryCode == "SUCCESS" || retry.contains("Success", ignoreCase = true)) {
+            onProgress(1.0, "Installed (retry)")
+            return InstallOutcome(true, retry.trim(), "$installOut\n---\n$retry", "SUCCESS")
+        }
+
+        val combined = "$installOut\n---\n$retry"
+        val err = classifyPmError(combined)
+        return InstallOutcome(
+            ok = false,
+            message = "pm install failed [$err]:\n$combined",
+            pmOutput = combined,
+            errorCode = err,
+        )
     }
 
     private fun syncPush(
