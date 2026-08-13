@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:polybius/core/constants/unlock_codes.dart';
 import 'package:polybius/core/audio/music_service.dart';
+import 'package:polybius/core/constants/app_flavor.dart';
+import 'package:polybius/core/providers/intro_provider.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/routing/router_refresh.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
@@ -19,6 +21,7 @@ import 'package:polybius/features/auth/screens/pin_screen.dart';
 import 'package:polybius/features/auth/screens/register_screen.dart';
 import 'package:polybius/features/cipher/screens/cipher_shell.dart';
 import 'package:polybius/features/game/screens/game_screen.dart';
+import 'package:polybius/features/reticulum/reticulum_relay_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ref.watch(routerRefreshProvider);
@@ -29,21 +32,35 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final authState = ref.read(authProvider);
       final unlockState = ref.read(unlockProvider);
+      final introDone = ref.read(introCompleteProvider);
       final loc = state.matchedLocation;
 
-      // Keep the splash visible until session restore completes.
-      if (authState.isRestoring) {
+      // Stay on splash only while the cinematic intro runs.
+      if (!introDone) {
         return loc == '/' ? null : '/';
       }
 
       final loggedIn = authState.isAuthenticated;
       final needsPin = authState.needsPin && authState.user != null;
+      final gateLogin = AppFlavor.requiresStartupLogin;
 
-      // Route away from the splash once restore has finished.
+      // After splash: both flavors → login (tier-gated) or menu when session exists.
       if (loc == '/') {
+        if (!gateLogin) return AppFlavor.postSplashRoute;
+        if (authState.isRestoring) return '/login';
         if (needsPin) return '/pin';
         return loggedIn ? '/menu' : '/login';
       }
+
+      if (!gateLogin) {
+        if (needsPin && loc != '/pin') return '/pin';
+        final cipherUnlocked = unlockState.state == UnlockState.unlocked ||
+            unlockState.state == UnlockState.developer;
+        if (loc == '/cipher' && !cipherUnlocked) return '/menu';
+        return null;
+      }
+
+      if (AppFlavor.isHq && loc == '/register') return '/login';
 
       if (!loggedIn && !needsPin && loc != '/login' && loc != '/register') {
         return '/login';
@@ -71,6 +88,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/devportal', builder: (_, _) => const DevPortalScreen()),
       GoRoute(path: '/error', builder: (_, _) => const ErrorScreen()),
       GoRoute(path: '/cipher', builder: (_, _) => const CipherShell()),
+      GoRoute(path: '/relay', builder: (_, _) => const ReticulumRelayScreen()),
     ],
   );
 });
@@ -94,9 +112,6 @@ class _PolybiusAppState extends ConsumerState<PolybiusApp> {
 
   @override
   Widget build(BuildContext context) {
-    // Note: logging in does NOT auto-open the cipher. The crypto engine is
-    // reachable only via the dev access portal with a valid access code.
-
     // Start/stop the soundtrack when the sound setting changes.
     ref.listen(gameSettingsProvider.select((s) => s.soundEnabled), (_, enabled) {
       ref.read(musicServiceProvider).setEnabled(enabled);
@@ -106,7 +121,7 @@ class _PolybiusAppState extends ConsumerState<PolybiusApp> {
     final unlock = ref.watch(unlockProvider);
 
     return MaterialApp.router(
-      title: 'PØLYBĪUS',
+      title: AppFlavor.displayName,
       debugShowCheckedModeBanner: false,
       theme: NeonTheme.dark,
       routerConfig: router,

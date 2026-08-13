@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:polybius/core/constants/app_constants.dart';
+import 'package:polybius/core/constants/app_flavor.dart';
+import 'package:polybius/core/constants/operator_identities.dart';
+import 'package:polybius/core/constants/operator_roster.dart';
 import 'package:polybius/core/constants/unlock_codes.dart';
 import 'package:polybius/core/crypto/signature_service.dart';
 import 'package:polybius/core/providers/app_providers.dart';
@@ -10,10 +13,11 @@ import 'package:polybius/core/widgets/arcade_ui.dart';
 
 enum _Grant { none, user, developer }
 
-/// POLYBIUS dev access portal — reached via the ritual sequence
-/// (title hold -> difficulty 11 -> Russian hold-to-select). This is the ONLY
-/// entry to the crypto engine: a valid account login plus an access code
-/// (B1-66-3R / D1-66-3R for dev, Tr1-66-3R for user, or a signed invite token).
+/// Access portal — reached via LOAD GAME → difficulty 11 → ritual language
+/// (Russian on PORTAL / Japanese on V.1) → lose a game → GAME OVER hold →
+/// ERROR report SEND. This is the ONLY entry to the crypto engine: a valid
+/// account login plus an access code (B1-66-3R / D1-66-3R / W1-66-3R for
+/// dev, Tr1-66-3R for user/admin, or a signed invite token).
 class DevPortalScreen extends ConsumerStatefulWidget {
   const DevPortalScreen({super.key});
 
@@ -62,14 +66,19 @@ class _DevPortalScreenState extends ConsumerState<DevPortalScreen> {
           tier == UserTier.developer || tier == UserTier.admin;
 
       // Resolve which access the supplied code grants.
-      //   B1-66-3R / D1-66-3R -> developer (requires privileged account)
-      //   Tr1-66-3R           -> user-only cipher (no dev panel)
-      //   signed invite token -> tier per token (dev needs privileged account)
+      //   B1 / D1 / W1           -> developer (requires privileged account)
+      //   Tr1 + any operator invite / game code -> user for agents;
+      //                           full engine for admin/dev
+      //   signed invite token    -> tier per token (dev needs privileged account)
       _Grant grant = _Grant.none;
-      if (code == UnlockCodes.devB1663R || code == UnlockCodes.devD1663R) {
+      final knownInvite = OperatorRoster.inviteCodes.contains(code) ||
+          OperatorIdentities.unique.any(
+            (o) => o.inviteOrFileCode.toUpperCase() == code,
+          );
+      if (UnlockCodes.developerCodes.contains(code)) {
         if (privileged) grant = _Grant.developer;
-      } else if (code == UnlockCodes.userTr1663R) {
-        grant = _Grant.user;
+      } else if (code == UnlockCodes.userTr1663R || knownInvite) {
+        grant = privileged ? _Grant.developer : _Grant.user;
       } else {
         final token = SignedToken.tryParse(rawCode);
         if (token != null) {
@@ -87,9 +96,11 @@ class _DevPortalScreenState extends ConsumerState<DevPortalScreen> {
       switch (grant) {
         case _Grant.developer:
           ref.read(unlockProvider.notifier).grantDeveloperAccess();
+          ref.read(authProvider.notifier).clearPinGate();
           if (mounted) context.go('/cipher');
         case _Grant.user:
           ref.read(unlockProvider.notifier).grantUserAccess();
+          ref.read(authProvider.notifier).clearPinGate();
           if (mounted) context.go('/cipher');
         case _Grant.none:
           setState(() => _error = 'ACCESS DENIED');
@@ -104,7 +115,7 @@ class _DevPortalScreenState extends ConsumerState<DevPortalScreen> {
   @override
   Widget build(BuildContext context) {
     return ArcadeScaffold(
-      accent: NeonTheme.dangerRed,
+      accent: AppFlavor.isUser ? NeonTheme.neonCyan : NeonTheme.dangerRed,
       showFooter: false,
       child: LayoutBuilder(
         builder: (context, constraints) => SingleChildScrollView(
@@ -125,11 +136,11 @@ class _DevPortalScreenState extends ConsumerState<DevPortalScreen> {
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
-            'DEV ACCESS PORTAL',
+          Text(
+            AppFlavor.accessPortalTitle,
             style: TextStyle(
               fontFamily: 'monospace',
-              color: NeonTheme.dangerRed,
+              color: AppFlavor.isUser ? NeonTheme.neonCyan : NeonTheme.dangerRed,
               letterSpacing: 4,
               fontSize: 14,
             ),
@@ -139,7 +150,7 @@ class _DevPortalScreenState extends ConsumerState<DevPortalScreen> {
           const SizedBox(height: 14),
           _labelled('PASSWORD', _password, obscure: true),
           const SizedBox(height: 14),
-          _labelled('DEV CODE', _devCode),
+          _labelled(AppFlavor.isUser ? 'ACCESS CODE' : 'DEV CODE', _devCode),
           if (_error != null) ...[
             const SizedBox(height: 14),
             Text(_error!,

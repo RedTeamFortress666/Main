@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Silicon Labs CP210x (common on CYD boards) -->
+    <usb-device vendor-id="4292" product-id="60000" />
+    <usb-device vendor-id="4292" product-id="60016" />
+    <!-- WCH CH340 / CH341 -->
+    <usb-device vendor-id="6790" product-id="29987" />
+    <usb-device vendor-id="6790" product-id="21795" />
+    <!-- FTDI -->
+    <usb-device vendor-id="1027" product-id="24577" />
+    <usb-device vendor-id="1027" product-id="24592" />
+    <usb-device vendor-id="1027" product-id="24593" />
+    <!-- Prolific PL2303 -->
+    <usb-device vendor-id="1659" product-id="8963" />
+    <!-- Espressif USB JTAG/serial (ESP32-S3 native USB) -->
+    <usb-device vendor-id="12346" product-id="4097" />
+    <usb-device vendor-id="12346" product-id="33040" />
+    <usb-device vendor-id="12346" product-id="33041" />
+    <!-- CDC ACM catch-all classes (T-Deck, etc.) — matched in code too -->
+    <usb-device class="2" subclass="2" protocol="1" />
+    <!-- Android ADB gadget (OTG phone-to-phone) -->
+    <usb-device class="255" subclass="66" protocol="1" />
+</resources>

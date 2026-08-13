@@ -85,7 +85,10 @@ class PolybiusGame extends FlameGame with KeyboardEvents {
   void _subscribeGamepad() {
     if (kIsWeb) return; // gamepads plugin has no web implementation
     try {
-      _gamepadSub = Gamepads.events.listen(_onGamepadEvent);
+      // onError swallows async stream failures (e.g. MissingPluginException on
+      // a platform without a gamepad backend) so the game never crashes when no
+      // controller/backend is present — keyboard/touch still work.
+      _gamepadSub = Gamepads.events.listen(_onGamepadEvent, onError: (_) {});
     } catch (_) {
       // No gamepad backend on this platform; keyboard/touch still work.
     }

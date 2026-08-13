@@ -1,10 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:polybius/core/auth/login_policy.dart';
 import 'package:polybius/core/constants/app_constants.dart';
+import 'package:polybius/core/constants/app_flavor.dart';
+import 'package:polybius/core/constants/operator_identities.dart';
 import 'package:polybius/core/storage/create_polybius_secret_store.dart';
 import 'package:polybius/core/constants/unlock_codes.dart';
 import 'package:polybius/core/crypto/encryption_service.dart';
 import 'package:polybius/core/models/models.dart';
 import 'package:polybius/core/storage/storage_service.dart';
+import 'package:polybius/features/arcade/high_score_models.dart';
 import 'package:polybius/features/cipher/engine/cipher_engine.dart';
 import 'package:polybius/features/cipher/engine/daily_pool.dart';
 import 'dart:convert';
@@ -54,9 +58,35 @@ class PoolSeedNotifier extends StateNotifier<String> {
   }
 }
 
+/// Rotor complexity (2–6 emojis per character). Dev-configurable; persisted;
+/// carried in the pool-sync token so aligned users match.
+final cipherComplexityProvider =
+    StateNotifierProvider<CipherComplexityNotifier, int>((ref) {
+  return CipherComplexityNotifier(ref.read(storageServiceProvider));
+});
+
+class CipherComplexityNotifier extends StateNotifier<int> {
+  CipherComplexityNotifier(this._storage) : super(2) {
+    _load();
+  }
+
+  final StorageService _storage;
+
+  Future<void> _load() async {
+    final saved = await _storage.getCipherComplexity();
+    if (saved != null) state = saved.clamp(2, 6);
+  }
+
+  void setComplexity(int value) {
+    state = value.clamp(2, 6);
+    _storage.setCipherComplexity(state);
+  }
+}
+
 final cipherEngineProvider = Provider<CipherEngine>((ref) {
   final seed = ref.watch(poolSeedProvider);
-  return CipherEngine(seed: seed);
+  final complexity = ref.watch(cipherComplexityProvider);
+  return CipherEngine(seed: seed, complexity: complexity);
 });
 
 final gameSettingsProvider =
@@ -78,6 +108,99 @@ class GameSettingsNotifier extends StateNotifier<GameSettings> {
   Future<void> update(GameSettings settings) async {
     state = settings;
     await _storage.saveSettings(settings);
+  }
+}
+
+/// Local arcade high-score board — merged when peers share a pool-sync QR.
+final highScoresProvider =
+    StateNotifierProvider<HighScoresNotifier, List<HighScoreEntry>>((ref) {
+  return HighScoresNotifier(ref.read(storageServiceProvider));
+});
+
+class HighScoresNotifier extends StateNotifier<List<HighScoreEntry>> {
+  HighScoresNotifier(this._storage) : super(const []) {
+    _load();
+  }
+
+  final StorageService _storage;
+  static const _maxEntries = 20;
+
+  Future<void> _load() async {
+    final raw = await _storage.getHighScores();
+    state = _sorted([
+      for (final m in raw) HighScoreEntry.fromJson(m),
+    ]);
+  }
+
+  Future<void> _persist() async {
+    await _storage.setHighScores([for (final e in state) e.toJson()]);
+  }
+
+  List<HighScoreEntry> _sorted(List<HighScoreEntry> input) {
+    final copy = [...input]..sort((a, b) {
+        final byScore = b.score.compareTo(a.score);
+        if (byScore != 0) return byScore;
+        return b.at.compareTo(a.at);
+      });
+    if (copy.length <= _maxEntries) return copy;
+    return copy.sublist(0, _maxEntries);
+  }
+
+  Future<void> submit({required String name, required int score}) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty || score <= 0) return;
+    state = _sorted([
+      ...state,
+      HighScoreEntry(name: trimmed, score: score, at: DateTime.now()),
+    ]);
+    await _persist();
+    await _storage.setPlayerDisplayName(trimmed);
+  }
+
+  /// Merge remote scores from a pool-sync QR (keeps the best unique name+score).
+  Future<int> mergeRemote(List<HighScoreEntry> remote) async {
+    if (remote.isEmpty) return 0;
+    final beforeKeys = {
+      for (final e in state) '${e.name.toUpperCase()}::${e.score}',
+    };
+    var added = 0;
+    final keyed = <String, HighScoreEntry>{
+      for (final e in state) '${e.name.toUpperCase()}::${e.score}': e,
+    };
+    for (final e in remote) {
+      if (e.name.trim().isEmpty || e.score <= 0) continue;
+      final key = '${e.name.toUpperCase()}::${e.score}';
+      if (!beforeKeys.contains(key) && !keyed.containsKey(key)) added++;
+      final existing = keyed[key];
+      if (existing == null || e.at.isAfter(existing.at)) {
+        keyed[key] = e;
+      }
+    }
+    state = _sorted(keyed.values.toList());
+    await _persist();
+    return added;
+  }
+}
+
+final playerDisplayNameProvider =
+    StateNotifierProvider<PlayerDisplayNameNotifier, String>((ref) {
+  return PlayerDisplayNameNotifier(ref.read(storageServiceProvider));
+});
+
+class PlayerDisplayNameNotifier extends StateNotifier<String> {
+  PlayerDisplayNameNotifier(this._storage) : super('') {
+    _load();
+  }
+
+  final StorageService _storage;
+
+  Future<void> _load() async {
+    state = await _storage.getPlayerDisplayName() ?? '';
+  }
+
+  Future<void> setName(String name) async {
+    state = name.trim();
+    await _storage.setPlayerDisplayName(state);
   }
 }
 
@@ -108,21 +231,34 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> _restoreSession() async {
     state = const AuthState(isRestoring: true);
-    final username = await _storage.getSessionUser();
-    if (username == null) {
+    try {
+      // Hard timeout — a hung Hive/secure-storage read must never
+      // leave isRestoring=true (that previously trapped the splash).
+      await () async {
+        final username = await _storage.getSessionUser();
+        if (username == null) {
+          state = const AuthState();
+          return;
+        }
+        final account = await _storage.getAccount(username);
+        if (account == null) {
+          await _storage.clearSession();
+          state = const AuthState();
+          return;
+        }
+        state = AuthState(
+          user: account,
+          needsPin: account.requiresPin,
+        );
+      }().timeout(const Duration(seconds: 3));
+    } catch (_) {
+      // Timeout or storage failure → treat as logged out.
       state = const AuthState();
-      return;
+    } finally {
+      if (state.isRestoring) {
+        state = const AuthState();
+      }
     }
-    final account = await _storage.getAccount(username);
-    if (account == null) {
-      await _storage.clearSession();
-      state = const AuthState();
-      return;
-    }
-    state = AuthState(
-      user: account,
-      needsPin: account.requiresPin,
-    );
   }
 
   static const _maxAttemptsBeforeLockout = 5;
@@ -146,21 +282,59 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = const AuthState(error: 'TOO MANY ATTEMPTS — TRY AGAIN LATER');
       return false;
     }
+    final normalized = username.trim().toUpperCase();
+    // V1 Stable: beta DEVELOPER login is permanently retired.
+    if (normalized == AppConstants.retiredDeveloperUsername ||
+        (normalized == 'DEVELOPER' && password == 'developer')) {
+      await _storage.logAudit('LOGIN_FAIL', username, 'DEVELOPER retired');
+      state = const AuthState(
+        error: 'DEVELOPER ACCOUNT STRICKEN — V1 STABLE',
+      );
+      return false;
+    }
     state = const AuthState(isLoading: true);
-    final account = await _storage.getAccount(username.toUpperCase());
+    // Resolve display-name aliases (e.g. Art3mas → ARTEM3S) before lookup.
+    var lookupKey = normalized;
+    final byName = OperatorIdentities.byUsername(normalized) ??
+        OperatorIdentities.byDisplayName(normalized);
+    if (byName != null) {
+      lookupKey = byName.username.toUpperCase();
+    }
+    final account = await _storage.getAccount(lookupKey);
     // Same error for unknown user and bad password to avoid enumeration.
-    if (account == null ||
-        !EncryptionService.verifyPassword(password, account.passwordHash)) {
+    final primaryOk = account != null &&
+        EncryptionService.verifyPassword(password, account.passwordHash);
+    final backupOk = account?.backupPasswordHash != null &&
+        EncryptionService.verifyPassword(
+            password, account!.backupPasswordHash!);
+    if (account == null || (!primaryOk && !backupOk)) {
       _recordFailure();
       await _storage.logAudit('LOGIN_FAIL', username);
       state = const AuthState(error: 'ACCESS DENIED');
       return false;
     }
+    if (!LoginPolicy.tierAllowed(account.tier)) {
+      _recordFailure();
+      await _storage.logAudit(
+        'LOGIN_FAIL',
+        username,
+        'tier ${account.tier.name} rejected for ${AppFlavor.current.name}',
+      );
+      state = AuthState(error: LoginPolicy.rejectionMessage(account.tier));
+      return false;
+    }
     _failedAttempts = 0;
     var updated = account.copyWith(lastLogin: DateTime.now());
-    if (EncryptionService.isLegacyHash(account.passwordHash)) {
+    // Rehash whichever credential matched if it is still a legacy hash.
+    if (primaryOk && EncryptionService.isLegacyHash(account.passwordHash)) {
       updated = updated.copyWith(
         passwordHash: EncryptionService.hashPassword(password),
+      );
+    } else if (backupOk &&
+        account.backupPasswordHash != null &&
+        EncryptionService.isLegacyHash(account.backupPasswordHash!)) {
+      updated = updated.copyWith(
+        backupPasswordHash: EncryptionService.hashPassword(password),
       );
     }
     await _storage.saveAccount(updated);
@@ -170,12 +344,23 @@ class AuthNotifier extends StateNotifier<AuthState> {
     return true;
   }
 
+  /// Clears the PIN gate after a successful access-portal login so User APK
+  /// operators (requiresPin=true) are not bounced away from `/cipher`.
+  void clearPinGate() {
+    final user = state.user;
+    if (user == null) return;
+    state = AuthState(user: user, needsPin: false);
+  }
+
   /// Creates a new user-tier account. Returns null on success, or an error
   /// message. Does not log the new user in.
   Future<String?> register(String username, String password) async {
     final u = username.trim().toUpperCase();
     if (u.isEmpty || password.isEmpty) {
       return 'ENTER A USERNAME AND PASSWORD';
+    }
+    if (u == AppConstants.retiredDeveloperUsername) {
+      return 'USERNAME RESERVED / RETIRED';
     }
     if (password.length < 4) return 'PASSWORD TOO SHORT';
     final existing = await _storage.getAccount(u);
@@ -219,6 +404,34 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = const AuthState();
   }
 
+  /// Confirms a password against the current account (used to gate the dev UI).
+  bool verifyCurrentPassword(String password) {
+    final user = state.user;
+    if (user == null) return false;
+    return EncryptionService.verifyPassword(password, user.passwordHash);
+  }
+
+  Future<String?> changePassword(String newPassword) async {
+    final user = state.user;
+    if (user == null) return 'NOT LOGGED IN';
+    if (newPassword.length < 4) return 'PASSWORD TOO SHORT';
+    final updated =
+        user.copyWith(passwordHash: EncryptionService.hashPassword(newPassword));
+    await _storage.saveAccount(updated);
+    await _storage.logAudit('PASSWORD_CHANGE', user.username);
+    state = AuthState(user: updated);
+    return null;
+  }
+
+  Future<void> setDisplayName(String name) async {
+    final user = state.user;
+    if (user == null) return;
+    final updated = user.copyWith(displayName: name.trim());
+    await _storage.saveAccount(updated);
+    await _storage.logAudit('RENAME', user.username, name.trim());
+    state = AuthState(user: updated);
+  }
+
   Future<String> mintInvite(InviteTier tier, String createdBy) async {
     const uuid = Uuid();
     final code = 'PB-${uuid.v4().substring(0, 8).toUpperCase()}';
@@ -247,12 +460,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> setAdminPin(String pin, String actor) async {
-    final dev = await _storage.getAccount(AppConstants.developerUsername);
-    if (dev == null) return;
+    final actorAccount = await _storage.getAccount(actor.toUpperCase());
+    final targetName =
+        (actorAccount?.tier == UserTier.admin ||
+                actorAccount?.tier == UserTier.developer)
+            ? actor.toUpperCase()
+            : AppConstants.adminUsername;
+    final target = await _storage.getAccount(targetName);
+    if (target == null) return;
     await _storage.saveAccount(
-      dev.copyWith(pinHash: EncryptionService.hashPin(pin)),
+      target.copyWith(pinHash: EncryptionService.hashPin(pin)),
     );
-    await _storage.logAudit('PIN_MINT', actor);
+    await _storage.logAudit('PIN_MINT', actor, targetName);
   }
 }
 
@@ -274,8 +493,9 @@ class UnlockStateData {
   final bool showGlitch;
   final bool fakeCrash;
 
-  /// Set after the 6-second title hold: opens the route toward the hidden
-  /// dev access portal (difficulty 11 + Russian hold-to-select).
+  /// Set after LOAD GAME binds a file number (or legacy title hold): opens the
+  /// route toward the access portal (difficulty 11 + ritual language + lose
+  /// one game + GAME OVER hold).
   final bool pathwayPrimed;
 
   UnlockStateData copyWith({
@@ -303,8 +523,12 @@ class UnlockNotifier extends StateNotifier<UnlockStateData> {
 
   Future<void> _loadPersisted() async {
     final saved = await _storage.getUnlockState();
-    if (saved != null) {
-      state = state.copyWith(state: saved);
+    final primed = await _storage.getPathwayPrimed();
+    if (saved != null || primed) {
+      state = state.copyWith(
+        state: saved ?? state.state,
+        pathwayPrimed: primed,
+      );
     }
   }
 
@@ -313,6 +537,11 @@ class UnlockNotifier extends StateNotifier<UnlockStateData> {
   }
 
   void grantDeveloperAccess() {
+    // User-tier APK never receives HQ / developer unlock.
+    if (!AppFlavor.allowDeveloperTools) {
+      grantUserAccess();
+      return;
+    }
     if (state.state.index < UnlockState.developer.index) {
       state = state.copyWith(state: UnlockState.developer);
       _persistUnlock();
@@ -345,17 +574,46 @@ class UnlockNotifier extends StateNotifier<UnlockStateData> {
     if (nextState != UnlockState.locked) {
       _persistUnlock();
     }
+    _storage.setPathwayPrimed(true);
     _storage.logAudit('UNLOCK_RITUAL', 'SYSTEM', 'Title hold completed');
+  }
+
+  /// Primary ritual prime: LOAD GAME successfully bound a file number.
+  void onGameFileLoaded(String fileNumber) {
+    final nextState = state.state == UnlockState.locked
+        ? UnlockState.hinted
+        : state.state;
+    state = state.copyWith(
+      showGlitch: true,
+      state: nextState,
+      pathwayPrimed: true,
+    );
+    if (nextState != UnlockState.locked) {
+      _persistUnlock();
+    }
+    _storage.setPathwayPrimed(true);
+    _storage.logAudit('UNLOCK_RITUAL', 'SYSTEM', 'Game file loaded: $fileNumber');
   }
 
   void onGlitchComplete() {
     state = state.copyWith(showGlitch: false);
   }
 
-  /// The difficulty/language settings no longer unlock the cipher on their own;
-  /// they are only part of the ritual that leads to the dev access portal,
-  /// which is the sole entry to the crypto engine.
+  /// Difficulty/language alone never open the cipher; they only qualify the
+  /// GAME OVER → ERROR → portal pathway.
   void checkDifficultyRitual(GameSettings settings) {}
+
+  /// True when difficulty 11 + flavor ritual language are set.
+  ///
+  /// PORTAL (HQ): game-file / invite is NOT required for the GAME OVER → ERROR
+  /// → portal path (the diagnostic box under "describe incident" is decoy only).
+  /// V.1 (user): LOAD GAME must have primed the pathway first.
+  bool isPortalRitualReady(GameSettings settings) {
+    final settingsOk = settings.difficulty == UnlockCodes.ritualDifficulty &&
+        settings.language == UnlockCodes.ritualLanguage;
+    if (AppFlavor.isHq) return settingsOk;
+    return state.pathwayPrimed && settingsOk;
+  }
 
   Future<void> checkInviteCode(
     String code,
@@ -363,8 +621,8 @@ class UnlockNotifier extends StateNotifier<UnlockStateData> {
     UserTier? userTier,
   ) async {
     final upper = code.toUpperCase();
-    if (upper == UnlockCodes.devB1663R || upper == UnlockCodes.devD1663R) {
-      if (settings.language == UnlockCodes.ritualLanguage) {
+    if (UnlockCodes.developerCodes.contains(upper)) {
+      if (settings.language == UnlockCodes.chineseLanguage) {
         state = state.copyWith(state: UnlockState.developer, showGlitch: true);
         _persistUnlock();
         await _storage.logAudit('DEV_UNLOCK', 'SYSTEM', upper);
@@ -404,6 +662,7 @@ class UnlockNotifier extends StateNotifier<UnlockStateData> {
   void reset() {
     state = const UnlockStateData();
     _storage.clearUnlockState();
+    _storage.setPathwayPrimed(false);
   }
 }
 

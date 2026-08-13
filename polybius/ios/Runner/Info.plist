@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Polybius</string>
+	<string>PØLYBÎŪS V.1</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -66,5 +66,30 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- Camera is used only to scan pool-sync QR codes (mobile_scanner). iOS
+	     terminates the app if this string is missing when the camera opens. -->
+	<key>NSCameraUsageDescription</key>
+	<string>PØLYBĪUS uses the camera only to scan pool-sync QR codes.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>PØLYBĪUS uses Bluetooth to exchange ciphertext with nearby operators.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>PØLYBĪUS uses Bluetooth to exchange ciphertext with nearby operators.</string>
+	<!-- The Reticulum relay connects to a companion bridge on your local network
+	     (a desktop running polybius_bridge.py). iOS 14+ prompts for local network
+	     access; this string explains why. -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>PØLYBĪUS connects to a Reticulum bridge on your local network to relay ciphertext.</string>
+	<!-- Allow cleartext ws:// to a LAN bridge without blanket-disabling ATS.
+	     NSAllowsLocalNetworking permits local/hostname connections only. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<!-- The app only uses standard/exempt encryption; declaring this avoids the
+	     App Store Connect export-compliance prompt on every TestFlight/sideload
+	     build. Review this before a public App Store submission. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>

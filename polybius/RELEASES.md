@@ -15,7 +15,8 @@ GitHub's runners (which already have the Android SDK etc.).
    - `polybius-android-apk` — `app-release.apk` (side-loadable)
    - `polybius-linux-x64` — Linux desktop bundle (`.tar.gz`, x86-64)
    - `polybius-linux-arm64` — **aarch64** Linux bundle for R36 S / R36 Ultra
-   - `polybius-ios-unsigned` — unsigned iOS `Runner.app` (needs signing to install)
+   - `polybius-ios-unsigned` — unsigned iOS **`.ipa`** (`Payload/Runner.app`);
+     sideload with AltStore / Sideloadly / TrollStore, or re-sign for TestFlight
 
 **Publish a Release** (attaches the files to a GitHub Release)
 
@@ -30,8 +31,9 @@ attached. (Requires GitHub Actions to be enabled for the repo.)
 > Android APKs from CI are **debug-signed** unless you add a release keystore —
 > see the Android section of `BUILD.md`. Debug-signed APKs side-load fine for
 > BETA but should be replaced with a properly signed build for distribution.
-> iOS is not built in CI here because it needs an Apple signing identity; build
-> it on macOS with `flutter build ipa` (see `BUILD.md`).
+> The iOS CI artifact is an **unsigned** `.ipa` (built on a `macos-latest`
+> runner). Sideload it for personal use, or re-sign it for TestFlight / the App
+> Store with your Apple Developer identity — see the iOS section of `BUILD.md`.
 
 ## 2. Build locally
 

@@ -28,7 +28,7 @@ class _SyncTabState extends ConsumerState<SyncTab> {
     super.dispose();
   }
 
-  void _import(String raw) {
+  Future<void> _import(String raw) async {
     final token = PoolSync.tryParse(raw);
     if (token == null) {
       setState(() {
@@ -52,9 +52,23 @@ class _SyncTabState extends ConsumerState<SyncTab> {
       return;
     }
     ref.read(poolSeedProvider.notifier).setSeed(token.seed);
+    ref.read(cipherComplexityProvider.notifier).setComplexity(token.complexity);
+    var scoreNote = '';
+    if (token.scores.isNotEmpty) {
+      final added = await ref
+          .read(highScoresProvider.notifier)
+          .mergeRemote(token.scores);
+      if (added > 0) {
+        scoreNote = ' · +$added high scores';
+      } else {
+        scoreNote = ' · high scores synced';
+      }
+    }
+    if (!mounted) return;
     setState(() {
       _ok = true;
-      _message = 'POOL ALIGNED — ${token.poolId}';
+      _message =
+          'POOL ALIGNED — ${token.poolId} (${token.complexity}/char)$scoreNote';
     });
   }
 
@@ -68,8 +82,14 @@ class _SyncTabState extends ConsumerState<SyncTab> {
   @override
   Widget build(BuildContext context) {
     final seed = ref.watch(poolSeedProvider);
+    final complexity = ref.watch(cipherComplexityProvider);
     final engine = ref.watch(cipherEngineProvider);
-    final token = PoolSync.fromSeed(seed);
+    final scores = ref.watch(highScoresProvider);
+    final token = PoolSync.fromSeed(
+      seed,
+      complexity: complexity,
+      scores: scores,
+    );
     final code = token.encode();
 
     return ListView(
@@ -90,6 +110,12 @@ class _SyncTabState extends ConsumerState<SyncTab> {
           'Active pool: ${engine.poolId}',
           textAlign: TextAlign.center,
           style: const TextStyle(color: Colors.white54, fontSize: 12),
+        ),
+        const SizedBox(height: 6),
+        const Text(
+          'QR scan / share works across all certified tiers — HQ and user builds encrypt, decrypt, and align to the same pool. High scores ride along on the sync QR so boards compete.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.white38, fontSize: 11, height: 1.35),
         ),
         const SizedBox(height: 16),
         ElevatedButton.icon(

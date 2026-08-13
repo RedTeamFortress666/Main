@@ -9,7 +9,7 @@ plugins {
 
 // Load release signing config from android/key.properties if present. This
 // file is gitignored (see key.properties.example). When absent, release builds
-// fall back to debug signing so `flutter run --release` still works for BETA.
+// fall back to debug signing so `flutter run --release` still works.
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
 val hasReleaseKeystore = keystorePropertiesFile.exists()
@@ -29,12 +29,22 @@ android {
 
     defaultConfig {
         applicationId = "com.polybius.polybius"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+    }
+
+    flavorDimensions += "tier"
+    productFlavors {
+        create("hq") {
+            dimension = "tier"
+            applicationIdSuffix = ".hq"
+        }
+        create("user") {
+            dimension = "tier"
+            applicationIdSuffix = ".user"
+        }
     }
 
     signingConfigs {
@@ -50,9 +60,6 @@ android {
 
     buildTypes {
         release {
-            // Use the real release keystore when configured (key.properties);
-            // otherwise fall back to debug signing so `flutter run --release`
-            // works during BETA. Distribution builds MUST provide key.properties.
             signingConfig = if (hasReleaseKeystore) {
                 signingConfigs.getByName("release")
             } else {

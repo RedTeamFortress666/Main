@@ -216,8 +216,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        // Hold-to-select. On RUSSIAN with the pathway primed + difficulty 11,
-        // a 3-second hold opens the dev access portal.
+        // Hold-to-select confirms the language. Portal entry is the GAME OVER
+        // ritual after LOAD GAME + difficulty 11 + flavor ritual language.
         GestureDetector(
           onLongPressStart: (_) => _startSelectHold(),
           onLongPressEnd: (_) => _endSelectHold(),
@@ -277,21 +277,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   void _completeSelectHold() {
     if (!_holdingSelect) return;
     setState(() => _holdingSelect = false);
-    final settings = ref.read(gameSettingsProvider);
-    final unlock = ref.read(unlockProvider);
-    final ritualReady = unlock.pathwayPrimed &&
-        settings.difficulty == 11 &&
-        settings.language == 'RUSSIAN';
-    if (ritualReady) {
-      context.push('/devportal');
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('LANGUAGE SET'),
-          duration: Duration(seconds: 1),
-        ),
-      );
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('LANGUAGE SET'),
+        duration: Duration(seconds: 1),
+      ),
+    );
   }
 
   Widget _credits() {

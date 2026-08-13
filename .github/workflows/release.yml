@@ -50,14 +50,41 @@ jobs:
           channel: ${{ env.FLUTTER_CHANNEL }}
       - run: flutter pub get
         working-directory: ${{ env.WORKING_DIR }}
-      # Builds a release APK. Without android/key.properties this is debug-signed
-      # (fine for BETA side-loading); add a keystore for distribution signing.
-      - run: flutter build apk --release
+      # V1 Stable: HQ (EMOJINIGMA) + everyday User APKs.
+      - name: Build HQ (EMOJINIGMA) APK
+        run: |
+          flutter build apk --release --flavor hq \
+            --dart-define=POLYBIUS_FLAVOR=hq
         working-directory: ${{ env.WORKING_DIR }}
+      - name: Build User APK
+        run: |
+          flutter build apk --release --flavor user \
+            --dart-define=POLYBIUS_FLAVOR=user
+        working-directory: ${{ env.WORKING_DIR }}
+      - name: Stage V1 Stable APKs
+        run: |
+          HQ="${{ env.WORKING_DIR }}/build/app/outputs/flutter-apk/app-hq-release.apk"
+          USER="${{ env.WORKING_DIR }}/build/app/outputs/flutter-apk/app-user-release.apk"
+          mkdir -p "${{ env.WORKING_DIR }}/dist"
+          cp "$HQ" "${{ env.WORKING_DIR }}/dist/POLYBIUS-V1-STABLE-hq-emojinigma-android-arm64.apk"
+          cp "$USER" "${{ env.WORKING_DIR }}/dist/POLYBIUS-V1-STABLE-user-android-arm64.apk"
+          # Convenience aliases (ASCII-safe filenames for raw GitHub links).
+          cp "$HQ" "${{ env.WORKING_DIR }}/dist/polybius-v1-stable-hq-android-arm64.apk"
+          cp "$USER" "${{ env.WORKING_DIR }}/dist/polybius-v1-stable-user-android-arm64.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: polybius-android-apk-hq
+          path: ${{ env.WORKING_DIR }}/dist/polybius-v1-stable-hq-android-arm64.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: polybius-android-apk-user
+          path: ${{ env.WORKING_DIR }}/dist/polybius-v1-stable-user-android-arm64.apk
       - uses: actions/upload-artifact@v4
         with:
           name: polybius-android-apk
-          path: ${{ env.WORKING_DIR }}/build/app/outputs/flutter-apk/app-release.apk
+          path: |
+            ${{ env.WORKING_DIR }}/dist/polybius-v1-stable-hq-android-arm64.apk
+            ${{ env.WORKING_DIR }}/dist/polybius-v1-stable-user-android-arm64.apk
 
   linux:
     runs-on: ubuntu-latest
@@ -122,14 +149,19 @@ jobs:
         working-directory: ${{ env.WORKING_DIR }}
       - run: flutter build ios --release --no-codesign
         working-directory: ${{ env.WORKING_DIR }}
-      - name: Package unsigned .app
+      - name: Package unsigned .ipa (Payload/Runner.app)
         run: |
           cd ${{ env.WORKING_DIR }}/build/ios/iphoneos
-          zip -r "$GITHUB_WORKSPACE/polybius-ios-unsigned.zip" Runner.app
+          rm -rf Payload && mkdir Payload
+          cp -R Runner.app Payload/
+          # A .ipa is just a zip with a top-level Payload/ dir; this layout is
+          # what AltStore / Sideloadly / TrollStore expect. It is UNSIGNED —
+          # sideload with your own Apple ID, or sign for TestFlight/App Store.
+          zip -r "$GITHUB_WORKSPACE/polybius-ios-unsigned.ipa" Payload
       - uses: actions/upload-artifact@v4
         with:
           name: polybius-ios-unsigned
-          path: polybius-ios-unsigned.zip
+          path: polybius-ios-unsigned.ipa
 
   release:
     needs: [web, android, linux, linux-arm64, ios]

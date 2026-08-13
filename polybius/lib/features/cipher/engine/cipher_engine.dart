@@ -11,12 +11,19 @@ import 'package:polybius/features/cipher/engine/rotor.dart';
 /// character index for guaranteed round-trip decryption. All three rotors step
 /// on every character processed.
 class CipherEngine {
-  CipherEngine({DateTime? date, String? seed, List<String>? pool})
+  CipherEngine({DateTime? date, String? seed, List<String>? pool, int complexity = 2})
       : _seed = seed ?? DailyPool(date: date).dateKey,
-        _pool = pool ?? DailyPool(seed: seed, date: date).generate() {
+        _pool = pool ?? DailyPool(seed: seed, date: date).generate(),
+        complexity = complexity < 2 ? 2 : (complexity > 6 ? 6 : complexity) {
     _resetRotors();
     _reflector = _buildReflector(_seed);
   }
+
+  /// Emojis emitted per plaintext character (2–6). The first two carry the
+  /// data; any extra are rotor-derived chaff for added obfuscation. Both
+  /// sender and receiver must use the same value (carried in the pool-sync
+  /// token), and it is never shown to non-dev users.
+  final int complexity;
 
   /// Secret seed that fully determines the pool, rotors and reflector. Never
   /// surfaced in the UI; only [poolId] (a non-reversible short id) is shown.
@@ -102,7 +109,7 @@ class CipherEngine {
     return (idx1, idx2);
   }
 
-  /// Encrypt plaintext to emoji sequence (2 emojis per character).
+  /// Encrypt plaintext to an emoji sequence ([complexity] emojis per char).
   String encrypt(String plaintext) {
     _resetRotors();
     final buffer = StringBuffer();
@@ -113,20 +120,26 @@ class CipherEngine {
       _stepRotors();
       final transformed = _transform(charIndex);
       buffer.write(_toEmojiPair(charIndex, transformed));
+      // Rotor-derived chaff emojis to reach the configured complexity.
+      for (var j = 0; j < complexity - 2; j++) {
+        final idx = (_rotorI.position + charIndex + j * 17) % AppConstants.halfPool;
+        buffer.write(_pool[idx]);
+      }
     }
     return buffer.toString();
   }
 
-  /// Decrypt emoji sequence back to plaintext.
+  /// Decrypt an emoji sequence back to plaintext. Reads [complexity]-emoji
+  /// groups per character, using the first two and skipping any chaff.
   String decrypt(String emojiText) {
     _resetRotors();
     final runes = emojiText.runes.toList();
     final buffer = StringBuffer();
     var i = 0;
-    while (i + 1 < runes.length) {
+    while (i + complexity <= runes.length) {
       final e1 = String.fromCharCode(runes[i]);
       final e2 = String.fromCharCode(runes[i + 1]);
-      i += 2;
+      i += complexity;
       final decoded = _fromEmojiPair(e1, e2);
       if (decoded == null) continue;
       final (transformed, charIndex) = decoded;
@@ -139,7 +152,7 @@ class CipherEngine {
   }
 
   CipherEngine clone() {
-    final engine = CipherEngine(seed: _seed, pool: _pool);
+    final engine = CipherEngine(seed: _seed, pool: _pool, complexity: complexity);
     engine._rotorI = _rotorI.copy();
     engine._rotorII = _rotorII.copy();
     engine._rotorIII = _rotorIII.copy();

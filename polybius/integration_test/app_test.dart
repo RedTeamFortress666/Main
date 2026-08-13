@@ -62,7 +62,7 @@ void main() {
     if (tempDir.existsSync()) await tempDir.delete(recursive: true);
   });
 
-  testWidgets('login as DEVELOPER, open cipher, encrypt/decrypt round-trips',
+  testWidgets('login as RedTeam01, open cipher, encrypt/decrypt round-trips',
       (tester) async {
     await tester.pumpWidget(
       UncontrolledProviderScope(
@@ -76,8 +76,8 @@ void main() {
     expect(find.text('LOGIN'), findsOneWidget);
 
     final loginFields = find.byType(TextField);
-    await tester.enterText(loginFields.at(0), 'DEVELOPER');
-    await tester.enterText(loginFields.at(1), 'developer');
+    await tester.enterText(loginFields.at(0), 'REDTEAM01');
+    await tester.enterText(loginFields.at(1), '816639');
     await tester.tap(find.text('LOGIN'));
     await settle(tester);
 
@@ -88,8 +88,8 @@ void main() {
     await settle(tester);
 
     final portalFields = find.byType(TextField);
-    await tester.enterText(portalFields.at(0), 'DEVELOPER');
-    await tester.enterText(portalFields.at(1), 'developer');
+    await tester.enterText(portalFields.at(0), 'REDTEAM01');
+    await tester.enterText(portalFields.at(1), '816639');
     await tester.enterText(portalFields.at(2), 'B1-66-3R');
     await tester.tap(find.text('LOG IN?'));
     await settle(tester);

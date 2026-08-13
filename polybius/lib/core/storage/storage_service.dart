@@ -2,7 +2,9 @@ import 'dart:convert';
 
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:polybius/core/constants/app_constants.dart';
+import 'package:polybius/core/constants/operator_roster.dart';
 import 'package:polybius/core/constants/unlock_codes.dart';
+import 'package:polybius/core/constants/operator_wave2.dart';
 import 'package:polybius/core/crypto/encryption_service.dart';
 import 'package:polybius/core/models/models.dart';
 
@@ -33,25 +35,212 @@ class StorageService {
 
   Future<void> _bootstrapDeveloper() async {
     final box = Hive.box(accountsBox);
-    if (!box.containsKey(AppConstants.developerUsername)) {
-      final dev = UserAccount(
-        username: AppConstants.developerUsername,
-        passwordHash: EncryptionService.hashPassword('developer'),
-        pinHash: EncryptionService.hashPin(AppConstants.developerDefaultPin),
-        tier: UserTier.developer,
+    // V1 Stable: DEVELOPER / developer is stricken — purge if an older install
+    // left the beta bootstrap account behind.
+    if (box.containsKey(AppConstants.retiredDeveloperUsername)) {
+      await deleteAccount(AppConstants.retiredDeveloperUsername);
+      await logAudit(
+        'BOOTSTRAP',
+        AppConstants.retiredDeveloperUsername,
+        'DEVELOPER account stricken for V1 Stable',
+      );
+    }
+    // Operator admin account: RedTeam01, dev code B1-66-3R, dev number 816639.
+    if (!box.containsKey(AppConstants.adminUsername)) {
+      final admin = UserAccount(
+        username: AppConstants.adminUsername,
+        displayName: AppConstants.adminDisplayName,
+        passwordHash: EncryptionService.hashPassword(AppConstants.adminDevNumber),
+        pinHash: EncryptionService.hashPin(AppConstants.adminDevNumber),
+        tier: UserTier.admin,
         createdAt: DateTime.now(),
       );
       await box.put(
-        dev.username,
-        _encryption.encrypt(_encodeJson(dev.toJson())),
+        admin.username,
+        _encryption.encrypt(_encodeJson(admin.toJson())),
       );
-      await logAudit('BOOTSTRAP', AppConstants.developerUsername,
-          'DEVELOPER account created on first install');
+      await logAudit('BOOTSTRAP', AppConstants.adminUsername,
+          'RedTeam01 admin account created on first install');
     }
-    // Embed the developer's game file number on first install.
-    if (await getGameFileNumber() == null) {
-      await setGameFileNumber(AppConstants.devGameFileNumber);
+    await _bootstrapOperator(
+      username: AppConstants.opSpamKatUsername,
+      displayName: AppConstants.opSpamKatDisplayName,
+      password: AppConstants.opSpamKatPassword,
+      backupPassword: AppConstants.opSpamKatBackupPassword,
+      pin: AppConstants.opSpamKatPin,
+      tier: UserTier.developer,
+      note: 'SpamKat2 developer (W1-66-3R)',
+    );
+    await _bootstrapOperator(
+      username: AppConstants.opGameOnUsername,
+      displayName: AppConstants.opGameOnDisplayName,
+      password: AppConstants.opGameOnPassword,
+      backupPassword: AppConstants.opGameOnBackupPassword,
+      pin: AppConstants.opGameOnPin,
+      tier: UserTier.developer,
+      note: 'Gam3.0n developer (B1-66-3R)',
+    );
+    await _bootstrapOperator(
+      username: AppConstants.opKasperUsername,
+      displayName: AppConstants.opKasperDisplayName,
+      password: AppConstants.opKasperPassword,
+      backupPassword: AppConstants.opKasperBackupPassword,
+      pin: AppConstants.opKasperPin,
+      tier: UserTier.admin,
+      note: 'KASP3R admin (TR1-66-3R)',
+    );
+    await _bootstrapOperator(
+      username: AppConstants.opTemptressUsername,
+      displayName: AppConstants.opTemptressDisplayName,
+      password: AppConstants.opTemptressPassword,
+      backupPassword: AppConstants.opTemptressBackupPassword,
+      pin: AppConstants.opTemptressPin,
+      tier: UserTier.agent,
+      note: 'T3mptress standard user (80-081-35)',
+    );
+    if (await getInvite(AppConstants.opTemptressInviteCode) == null) {
+      await saveInvite(InviteCode(
+        code: AppConstants.opTemptressInviteCode.toUpperCase(),
+        tier: InviteTier.standard,
+        createdBy: 'SYSTEM',
+        createdAt: DateTime.now(),
+      ));
     }
+    await _bootstrapOperator(
+      username: AppConstants.opCrownOfCornsUsername,
+      displayName: AppConstants.opCrownOfCornsDisplayName,
+      password: AppConstants.opCrownOfCornsPassword,
+      backupPassword: AppConstants.opCrownOfCornsBackupPassword,
+      pin: AppConstants.opCrownOfCornsPin,
+      tier: UserTier.admin,
+      note: 'CrownOfCorns admin (C0-9N-3E)',
+    );
+    if (await getInvite(AppConstants.opCrownOfCornsInviteCode) == null) {
+      await saveInvite(InviteCode(
+        code: AppConstants.opCrownOfCornsInviteCode.toUpperCase(),
+        tier: InviteTier.admin,
+        createdBy: 'SYSTEM',
+        createdAt: DateTime.now(),
+      ));
+    }
+    await _bootstrapOperator(
+      username: AppConstants.opMizzPicklesUsername,
+      displayName: AppConstants.opMizzPicklesDisplayName,
+      password: AppConstants.opMizzPicklesPassword,
+      backupPassword: AppConstants.opMizzPicklesBackupPassword,
+      pin: AppConstants.opMizzPicklesPin,
+      tier: UserTier.agent,
+      note: 'MizzPickl3s standard user (SP-1N-33)',
+    );
+    if (await getInvite(AppConstants.opMizzPicklesInviteCode) == null) {
+      await saveInvite(InviteCode(
+        code: AppConstants.opMizzPicklesInviteCode.toUpperCase(),
+        tier: InviteTier.standard,
+        createdBy: 'SYSTEM',
+        createdAt: DateTime.now(),
+      ));
+    }
+    await _bootstrapOperator(
+      username: AppConstants.opPikZupUsername,
+      displayName: AppConstants.opPikZupDisplayName,
+      password: AppConstants.opPikZupPassword,
+      backupPassword: AppConstants.opPikZupBackupPassword,
+      pin: AppConstants.opPikZupPin,
+      tier: UserTier.admin,
+      note: 'P!k.ZuP admin (D4-N6-3R)',
+    );
+    if (await getInvite(AppConstants.opPikZupInviteCode) == null) {
+      await saveInvite(InviteCode(
+        code: AppConstants.opPikZupInviteCode.toUpperCase(),
+        tier: InviteTier.admin,
+        createdBy: 'SYSTEM',
+        createdAt: DateTime.now(),
+      ));
+    }
+    // Admin/user pool roster (10 procedurally assigned operators).
+    for (final op in OperatorRoster.pool) {
+      await _bootstrapOperator(
+        username: op.username,
+        displayName: op.displayName,
+        password: op.password,
+        backupPassword: op.backupPassword,
+        pin: op.pin,
+        tier: op.tier,
+        note: '${op.displayName} ${op.tier.name} (${op.inviteCode})',
+      );
+      // Persist the invite so the invites box / audit trail also lists it.
+      if (await getInvite(op.inviteCode) == null) {
+        await saveInvite(InviteCode(
+          code: op.inviteCode.toUpperCase(),
+          tier: op.tier == UserTier.admin
+              ? InviteTier.admin
+              : InviteTier.standard,
+          createdBy: 'SYSTEM',
+          createdAt: DateTime.now(),
+        ));
+      }
+    }
+    // Wave 2 — 5 admins + 3 developers + 20 users.
+    for (final op in OperatorWave2.all) {
+      await _bootstrapOperator(
+        username: op.username,
+        displayName: op.displayName,
+        password: op.password,
+        backupPassword: op.backupPassword,
+        pin: op.pin,
+        tier: op.tier,
+        note: '${op.displayName} ${op.tier.name} (${op.inviteCode})',
+      );
+      if (await getInvite(op.inviteCode) == null) {
+        final inviteTier = switch (op.tier) {
+          UserTier.developer => InviteTier.developer,
+          UserTier.admin => InviteTier.admin,
+          _ => InviteTier.standard,
+        };
+        await saveInvite(InviteCode(
+          code: op.inviteCode.toUpperCase(),
+          tier: inviteTier,
+          createdBy: 'SYSTEM',
+          createdAt: DateTime.now(),
+        ));
+      }
+    }
+    // Do NOT seed unlock codes (B1/D1/W1) as the default game file number —
+    // that leaked B1-66-3R into the ERROR "diagnostic code" box for every
+    // fresh install. Operators bind a file number via LOAD GAME instead.
+    final existing = await getGameFileNumber();
+    if (existing != null &&
+        UnlockCodes.developerCodes.contains(existing.toUpperCase())) {
+      await clearGameFileNumber();
+    }
+  }
+
+  Future<void> _bootstrapOperator({
+    required String username,
+    required String displayName,
+    required String password,
+    required String backupPassword,
+    required String pin,
+    required UserTier tier,
+    required String note,
+  }) async {
+    final box = Hive.box(accountsBox);
+    if (box.containsKey(username)) return;
+    final account = UserAccount(
+      username: username,
+      displayName: displayName,
+      passwordHash: EncryptionService.hashPassword(password),
+      backupPasswordHash: EncryptionService.hashPassword(backupPassword),
+      pinHash: EncryptionService.hashPin(pin),
+      tier: tier,
+      requiresPin: true,
+      createdAt: DateTime.now(),
+    );
+    await box.put(
+      account.username,
+      _encryption.encrypt(_encodeJson(account.toJson())),
+    );
+    await logAudit('BOOTSTRAP', username, note);
   }
 
   String _encodeJson(Map<String, dynamic> json) => jsonEncode(json);
@@ -194,6 +383,19 @@ class StorageService {
     await Hive.box(settingsBox).put('gameFileNumber', code);
   }
 
+  Future<void> clearGameFileNumber() async {
+    await Hive.box(settingsBox).delete('gameFileNumber');
+  }
+
+  Future<bool> getPathwayPrimed() async {
+    final raw = Hive.box(settingsBox).get('pathwayPrimed');
+    return raw == true;
+  }
+
+  Future<void> setPathwayPrimed(bool primed) async {
+    await Hive.box(settingsBox).put('pathwayPrimed', primed);
+  }
+
   /// Optional trusted public key override (per-SD/USB keyset binding). When set,
   /// signed tokens/updates are verified against this instead of the embedded key.
   Future<String?> getTrustedPublicKey() async {
@@ -223,6 +425,81 @@ class StorageService {
 
   Future<void> setPoolSeed(String seed) async {
     await Hive.box(settingsBox).put('poolSeed', seed);
+  }
+
+  /// Rotor complexity (2–6 emojis per character).
+  Future<int?> getCipherComplexity() async {
+    final raw = Hive.box(settingsBox).get('cipherComplexity');
+    return raw is int ? raw : null;
+  }
+
+  Future<void> setCipherComplexity(int value) async {
+    await Hive.box(settingsBox).put('cipherComplexity', value);
+  }
+
+  /// Reticulum bridge WebSocket URL. Defaults to the local desktop companion;
+  /// on iOS/Android point this at a bridge reachable on the LAN.
+  String getReticulumUrl() {
+    final raw = Hive.box(settingsBox).get('reticulumUrl');
+    return raw is String && raw.isNotEmpty ? raw : 'ws://127.0.0.1:8765';
+  }
+
+  Future<void> setReticulumUrl(String url) async {
+    await Hive.box(settingsBox).put('reticulumUrl', url);
+  }
+
+  /// Pool rotation window in hours (VALKYRIE sets this to 2).
+  Future<int> getPoolWindowHours() async {
+    final raw = Hive.box(settingsBox).get('poolWindowHours');
+    return raw is int ? raw : 6;
+  }
+
+  Future<void> setPoolWindowHours(int hours) async {
+    await Hive.box(settingsBox).put('poolWindowHours', hours);
+  }
+
+  /// Arcade high-score board (merged across QR pool sync).
+  Future<List<Map<String, dynamic>>> getHighScores() async {
+    final raw = Hive.box(settingsBox).get('highScores');
+    if (raw is! List) return const [];
+    return [
+      for (final e in raw)
+        if (e is Map)
+          Map<String, dynamic>.from(
+            e.map((k, v) => MapEntry(k.toString(), v)),
+          ),
+    ];
+  }
+
+  Future<void> setHighScores(List<Map<String, dynamic>> scores) async {
+    await Hive.box(settingsBox).put('highScores', scores);
+  }
+
+  Future<String?> getPlayerDisplayName() async {
+    final raw = Hive.box(settingsBox).get('playerDisplayName');
+    return raw is String && raw.trim().isNotEmpty ? raw.trim() : null;
+  }
+
+  Future<void> setPlayerDisplayName(String name) async {
+    await Hive.box(settingsBox).put('playerDisplayName', name.trim());
+  }
+
+  Future<void> deleteAccount(String username) async {
+    await Hive.box(accountsBox).delete(username.toUpperCase());
+  }
+
+  /// VALKYRIE: wipe transient network state (invites, audit, sessions) and all
+  /// non-developer accounts, so the network can be re-established from scratch.
+  Future<void> wipeNetworkState() async {
+    await Hive.box(invitesBox).clear();
+    await Hive.box(auditBox).clear();
+    await clearSession();
+    final accounts = await getAllAccounts();
+    for (final a in accounts) {
+      if (a.tier != UserTier.developer) {
+        await deleteAccount(a.username);
+      }
+    }
   }
 
   Future<void> logAudit(String action, String actor, [String? details]) async {

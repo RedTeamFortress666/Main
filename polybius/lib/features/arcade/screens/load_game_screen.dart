@@ -61,6 +61,10 @@ class _LoadGameScreenState extends ConsumerState<LoadGameScreen> {
         await storage.setGameFileNumber(code);
       }
 
+      // Prime the portal ritual pathway (diff 11 + ritual language + GAME OVER).
+      final bound = await storage.getGameFileNumber() ?? code;
+      ref.read(unlockProvider.notifier).onGameFileLoaded(bound);
+
       if (!mounted) return;
       setState(() => _message = 'SAVE FILE LOADED');
       await Future.delayed(const Duration(milliseconds: 700));
@@ -130,7 +134,7 @@ class _LoadGameScreenState extends ConsumerState<LoadGameScreen> {
           if (kDebugMode) ...[
             const SizedBox(height: 16),
             Text(
-              'Dev codes: ${UnlockCodes.devB1663R} / ${UnlockCodes.devD1663R}',
+              'Dev codes: ${UnlockCodes.devB1663R} / ${UnlockCodes.devD1663R} / ${UnlockCodes.devW1663R}',
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.white24, fontSize: 10),
             ),

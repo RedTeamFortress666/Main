@@ -1,0 +1,26 @@
+name: doomsday_clock
+description: DOØMSDAY CLØCK — cyberpunk crisis clock + DARTH CHERRY operator cache
+publish_to: 'none'
+version: 2.1.1+4
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  http: ^1.2.2
+  shared_preferences: ^2.3.3
+  path_provider: ^2.1.5
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/apks/polybius-portal-dev-mechah.apk

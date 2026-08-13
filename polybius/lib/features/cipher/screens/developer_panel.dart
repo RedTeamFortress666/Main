@@ -18,14 +18,18 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
   String? _lastInvite;
   final _pinController = TextEditingController();
   final _pubKeyController = TextEditingController();
+  final _nameController = TextEditingController();
+  final _newPasswordController = TextEditingController();
   List<AuditLogEntry> _logs = [];
   List<InviteCode> _invites = [];
   int _securityScore = 87;
   String? _loadError;
+  String? _valkyrieReveal;
 
   @override
   void initState() {
     super.initState();
+    _nameController.text = ref.read(authProvider).user?.name ?? '';
     _load();
   }
 
@@ -33,7 +37,79 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
   void dispose() {
     _pinController.dispose();
     _pubKeyController.dispose();
+    _nameController.dispose();
+    _newPasswordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _changeName() async {
+    await ref.read(authProvider.notifier).setDisplayName(_nameController.text);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Operator name updated')));
+  }
+
+  Future<void> _changePassword() async {
+    final err = await ref
+        .read(authProvider.notifier)
+        .changePassword(_newPasswordController.text);
+    if (!mounted) return;
+    _newPasswordController.clear();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(err ?? 'Password changed')),
+    );
+  }
+
+  Future<void> _runValkyrie() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: NeonTheme.surface,
+        title: const Text('⚠ OPERATION VALKYRIE ⚠',
+            style: TextStyle(
+                fontFamily: 'monospace', color: NeonTheme.dangerRed)),
+        content: const Text(
+          'Wipes network state (invites, audit, sessions, all non-developer '
+          'accounts), rotates to a fresh pool at MAXIMUM complexity (6), sets a '
+          '2-hour rotation window, and reveals the admin recovery bundle. '
+          'This cannot be undone. Proceed?',
+          style: TextStyle(color: Colors.white70, fontSize: 12),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('ABORT')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('EXECUTE',
+                  style: TextStyle(color: NeonTheme.dangerRed))),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    final storage = ref.read(storageServiceProvider);
+    await storage.wipeNetworkState();
+    await storage.setPoolWindowHours(2);
+    ref.read(unlockProvider.notifier).reset();
+    ref.read(poolSeedProvider.notifier).randomise();
+    ref.read(cipherComplexityProvider.notifier).setComplexity(6);
+    await storage.logAudit(
+      'VALKYRIE',
+      ref.read(authProvider).user?.username ?? AppConstants.adminUsername,
+        'Network wiped; max complexity; 2h window');
+
+    final poolId = ref.read(cipherEngineProvider).poolId;
+    if (!mounted) return;
+    setState(() {
+      _valkyrieReveal =
+          'RECOVERY BUNDLE (authorised admins only):\n'
+          'New pool ID $poolId · complexity 6 · 2h window.\n'
+          'Directive: re-establish the network from this pool, re-issue admin '
+          'invites (B1/D1), rotate keys, and distribute the SYNC code from the '
+          'cipher SYNC tab to trusted admins to realign.';
+    });
+    await _load();
   }
 
   Future<void> _saveTrustedKey() async {
@@ -70,9 +146,21 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
       appBar: AppBar(
         backgroundColor: NeonTheme.dangerRed.withValues(alpha: 0.2),
         title: const Text(
-          '◈ DEVELOPER ◈',
+          '◈ PØLYBÎŪS PORTAL ◈',
           style: TextStyle(fontFamily: 'monospace', color: NeonTheme.dangerRed),
         ),
+        actions: [
+          TextButton.icon(
+            onPressed: () => context.go('/menu'),
+            icon: const Icon(Icons.exit_to_app,
+                color: NeonTheme.neonYellow, size: 18),
+            label: const Text('EXIT TO ARCADE',
+                style: TextStyle(
+                    color: NeonTheme.neonYellow,
+                    fontFamily: 'monospace',
+                    fontSize: 11)),
+          ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -99,6 +187,82 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
               child: const Text('RUN PENETRATION SCAN'),
             ),
           ]),
+          _section('OPERATOR', [
+            TextField(
+              controller: _nameController,
+              style: const TextStyle(fontFamily: 'monospace'),
+              decoration: const InputDecoration(
+                labelText: 'Operator name',
+                labelStyle: TextStyle(color: NeonTheme.neonCyan),
+              ),
+            ),
+            ElevatedButton(
+                onPressed: _changeName, child: const Text('CHANGE NAME')),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _newPasswordController,
+              obscureText: true,
+              style: const TextStyle(fontFamily: 'monospace'),
+              decoration: const InputDecoration(
+                labelText: 'New password',
+                labelStyle: TextStyle(color: NeonTheme.neonPink),
+              ),
+            ),
+            ElevatedButton(
+                onPressed: _changePassword,
+                child: const Text('CHANGE PASSWORD')),
+          ]),
+          _section('CIPHER COMPLEXITY', [
+            Consumer(builder: (context, ref, _) {
+              final complexity = ref.watch(cipherComplexityProvider);
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('$complexity emojis per character',
+                      style: const TextStyle(
+                          color: NeonTheme.neonGreen, fontFamily: 'monospace')),
+                  Slider(
+                    value: complexity.toDouble(),
+                    min: 2,
+                    max: 6,
+                    divisions: 4,
+                    label: '$complexity',
+                    onChanged: (v) => ref
+                        .read(cipherComplexityProvider.notifier)
+                        .setComplexity(v.round()),
+                  ),
+                ],
+              );
+            }),
+          ]),
+          _section('OPERATION VALKYRIE', [
+            const Text(
+              'Fail-safe for a rogue developer: wipe + restart the network, '
+              'dial rotor complexity to maximum, switch to a 2-hour pool '
+              'rotation, and reveal the admin recovery bundle.',
+              style: TextStyle(color: Colors.white54, fontSize: 11),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton.icon(
+              onPressed: _runValkyrie,
+              style:
+                  ElevatedButton.styleFrom(backgroundColor: NeonTheme.dangerRed),
+              icon: const Icon(Icons.warning_amber_rounded),
+              label: const Text('ENGAGE VALKYRIE'),
+            ),
+            if (_valkyrieReveal != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: SelectableText(
+                  _valkyrieReveal!,
+                  style: const TextStyle(
+                    fontFamily: 'monospace',
+                    color: NeonTheme.neonGreen,
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+          ]),
           _section('INVITE MANAGEMENT', [
             Wrap(
               spacing: 8,
@@ -107,7 +271,8 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
                   onPressed: () async {
                     final code = await ref.read(authProvider.notifier).mintInvite(
                           tier,
-                          AppConstants.developerUsername,
+                          ref.read(authProvider).user?.username ??
+                              AppConstants.adminUsername,
                         );
                     if (!mounted) return;
                     setState(() => _lastInvite = code);
@@ -165,7 +330,8 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
                 if (_pinController.text.length == 6) {
                   await ref.read(authProvider.notifier).setAdminPin(
                         _pinController.text,
-                        AppConstants.developerUsername,
+                        ref.read(authProvider).user?.username ??
+                            AppConstants.adminUsername,
                       );
                   if (!context.mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -186,7 +352,8 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
               onPressed: () async {
                 ref.read(unlockProvider.notifier).reset();
                 await ref.read(authProvider.notifier).forcePoolReset(
-                      AppConstants.developerUsername,
+                      ref.read(authProvider).user?.username ??
+                          AppConstants.adminUsername,
                     );
                 if (!context.mounted) return;
                 Navigator.of(context).pop();
