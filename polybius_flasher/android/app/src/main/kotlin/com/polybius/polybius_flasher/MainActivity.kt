@@ -33,6 +33,7 @@ class MainActivity : FlutterFragmentActivity() {
     private var pendingUsbResult: MethodChannel.Result? = null
     private var pendingTreeResult: MethodChannel.Result? = null
     private var pendingApkResult: MethodChannel.Result? = null
+    private var pendingExtraFileResult: MethodChannel.Result? = null
     private var activeFlasher: EspFlasher? = null
     private val adbCancel = AtomicBoolean(false)
     private val r36Cancel = AtomicBoolean(false)
@@ -71,6 +72,31 @@ class MainActivity : FlutterFragmentActivity() {
                     contentResolver.openInputStream(uri)?.use { input ->
                         out.outputStream().use { output -> input.copyTo(output) }
                     } ?: throw IOException("Cannot open picked APK")
+                    mainHandler.post { result?.success(out.absolutePath) }
+                } catch (e: Exception) {
+                    mainHandler.post {
+                        result?.error("pick_failed", e.message ?: e.toString(), null)
+                    }
+                }
+            }
+        }
+
+    private val extraFilePicker =
+        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            val result = pendingExtraFileResult
+            pendingExtraFileResult = null
+            if (uri == null) {
+                result?.success(null)
+                return@registerForActivityResult
+            }
+            io.execute {
+                try {
+                    val name = uri.lastPathSegment?.substringAfterLast('/') ?: "extra.bin"
+                    val safeName = name.replace(Regex("[^A-Za-z0-9._-]"), "_")
+                    val out = File(cacheDir, "extra_$safeName")
+                    contentResolver.openInputStream(uri)?.use { input ->
+                        out.outputStream().use { output -> input.copyTo(output) }
+                    } ?: throw IOException("Cannot open picked file")
                     mainHandler.post { result?.success(out.absolutePath) }
                 } catch (e: Exception) {
                     mainHandler.post {
@@ -210,6 +236,10 @@ class MainActivity : FlutterFragmentActivity() {
                             ),
                         )
                     }
+                    "pickExtraFile" -> {
+                        pendingExtraFileResult = result
+                        extraFilePicker.launch(arrayOf("*/*"))
+                    }
                     "detectR36Paths" -> {
                         val treeUri = call.argument<String>("treeUri")
                         if (treeUri.isNullOrBlank()) {
@@ -240,6 +270,40 @@ class MainActivity : FlutterFragmentActivity() {
                             return@setMethodCallHandler
                         }
                         installR36s(zipPath, treeUri, mode, preferredHint, result)
+                    }
+                    "writeR36UsbStick" -> {
+                        val zipPath = call.argument<String>("zipPath")
+                        val treeUri = call.argument<String>("treeUri")
+                        val extraFilePath = call.argument<String>("extraFilePath")
+                        val includeZipCopy = call.argument<Boolean>("includeZipCopy") ?: true
+                        if (zipPath.isNullOrBlank() || treeUri.isNullOrBlank()) {
+                            result.error("bad_args", "zipPath and treeUri required", null)
+                            return@setMethodCallHandler
+                        }
+                        writeR36UsbStick(zipPath, treeUri, extraFilePath, includeZipCopy, result)
+                    }
+                    "probeUsbWrite" -> {
+                        val treeUri = call.argument<String>("treeUri")
+                        if (treeUri.isNullOrBlank()) {
+                            result.error("bad_args", "treeUri required", null)
+                            return@setMethodCallHandler
+                        }
+                        io.execute {
+                            val installer =
+                                R36sInstaller(
+                                    this,
+                                    onLog = {
+                                        emitter.log(it, stage = "usb_probe", target = "r36s_usb")
+                                    },
+                                    onProgress = { _, _ -> },
+                                )
+                            val probe = installer.probeStickWrite(Uri.parse(treeUri))
+                            mainHandler.post {
+                                result.success(
+                                    mapOf("ok" to probe.ok, "message" to probe.message),
+                                )
+                            }
+                        }
                     }
                     "prepareSd" -> {
                         val treeUri = call.argument<String>("treeUri")
@@ -606,6 +670,64 @@ class MainActivity : FlutterFragmentActivity() {
                         "portsPath" to installResult.portsPath,
                         "verified" to installResult.verified,
                         "detail" to installResult.detail,
+                    ),
+                )
+            }
+        }
+    }
+
+    private fun writeR36UsbStick(
+        zipPath: String,
+        treeUri: String,
+        extraFilePath: String?,
+        includeZipCopy: Boolean,
+        result: MethodChannel.Result,
+    ) {
+        emitter.currentTarget = "r36s_usb"
+        r36Cancel.set(false)
+        io.execute {
+            val extraFile =
+                extraFilePath?.takeIf { it.isNotBlank() }?.let { path ->
+                    val f = File(path)
+                    if (f.exists() && f.isFile) f else null
+                }
+            val installer =
+                R36sInstaller(
+                    context = this,
+                    onLog = { msg -> emitter.log(msg, stage = "r36s_usb", target = "r36s_usb") },
+                    onProgress = { p, msg ->
+                        emitter.progress(p, msg, stage = "r36s_usb")
+                    },
+                    cancel = r36Cancel,
+                )
+            val writeResult =
+                try {
+                    installer.writeUsbStick(
+                        zipFile = File(zipPath),
+                        treeUri = Uri.parse(treeUri),
+                        extraFile = extraFile,
+                        includeZipCopy = includeZipCopy,
+                    )
+                } catch (e: Exception) {
+                    R36sInstaller.Result(false, e.message ?: e.toString())
+                }
+            emitter.emit(
+                stage = "r36s_usb",
+                message = writeResult.message,
+                percent = if (writeResult.ok) 1.0 else null,
+                level = if (writeResult.ok) "success" else "error",
+                ok = writeResult.ok,
+                detail = writeResult.detail,
+                target = "r36s_usb",
+            )
+            mainHandler.post {
+                result.success(
+                    mapOf(
+                        "ok" to writeResult.ok,
+                        "message" to writeResult.message,
+                        "portsPath" to writeResult.portsPath,
+                        "verified" to writeResult.verified,
+                        "detail" to writeResult.detail,
                     ),
                 )
             }

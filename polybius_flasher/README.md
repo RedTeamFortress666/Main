@@ -4,7 +4,7 @@ Phone-side installer for shipping PØLYBĪUS onto handheld / MCU targets and oth
 
 | Target | What it does |
 | --- | --- |
-| **R36S** | Path detect (`roms/ports`, `roms2/ports`, …) + Direct / Autoinstall + SD prepare |
+| **R36S** | SD (SAF path detect + Direct/Autoinstall) or **USB stick** (`POLYBIUS_R36S_USB/`) + optional custom ROM |
 | **CYD / ESP32-32E** | Presets (classic / CYD2USB / 32E / generic) + manual BOOT/RESET wizard |
 | **LilyGO T-Deck** | Dedicated ESP32-S3 preset + trackball download-mode UX |
 | **Android (OTG ADB)** | Selective multi-APK over USB OTG / TCP with SHA-256 + pm error surfacing |
@@ -35,6 +35,6 @@ flutter test
 flutter build apk --release --target-platform=android-arm64
 ```
 
-Dist: `polybius/dist/polybius-flasher-1.5.1-android-arm64.apk`
+Dist: `polybius/dist/polybius-flasher-1.5.2-android-arm64.apk`
 
 See [`../polybius/docs/FLASHER.md`](../polybius/docs/FLASHER.md).

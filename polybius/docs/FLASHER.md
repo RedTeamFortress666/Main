@@ -4,14 +4,14 @@ Phone-side installer for shipping PØLYBĪUS onto handheld / MCU targets — and
 
 | Target | Action |
 | --- | --- |
-| **R36S** | Detect common ports roots, prepare/format SD (FAT write probe), Direct or PortMaster **autoinstall**, verify `Polybius.sh` + `polybius/` |
+| **R36S** | Detect common ports roots, prepare/format SD (SAF), Direct or **autoinstall**, or **write POLYBIUS_R36S_USB/ to OTG USB stick** (optional custom ROM) |
 | **CYD classic / CYD2USB / ESP32-32E / Generic ESP32** | Presets for Bruce/Launcher-friendly boards; merged `polybius-cyd.bin` @ `0x0`; guided BOOT/RESET; TEST CONNECTION; optional serial capture |
 | **LilyGO T-Deck** | `polybius-tdeck.bin` · esp32s3 · prefer Skip auto-reset · trackball download-mode wizard |
 | **Android (OTG ADB)** | Selective multi-APK install (Portal / V.1 / Darth Cherry bundled); MTP detection; per-APK `pm` errors; continue queue; optional `-d` / `--user 0` |
 
 - App source: [`../../polybius_flasher/`](../../polybius_flasher/)
 - Package id: `com.polybius.flasher`
-- Dist APK: [`../dist/polybius-flasher-1.5.1-android-arm64.apk`](../dist/polybius-flasher-1.5.1-android-arm64.apk)
+- Dist APK: [`../dist/polybius-flasher-1.5.2-android-arm64.apk`](../dist/polybius-flasher-1.5.2-android-arm64.apk)
 - Launcher icon: Fat Man–style bomb with stencil **GAME ØN**
 
 ## Hardening highlights
@@ -41,10 +41,11 @@ Check one, some, or **SELECT ALL BUNDLED** — nothing installs unless selected.
 5. Queue continues on non-fatal `pm` failures; summary shows `INCOMPATIBLE` / `VERSION_DOWNGRADE` / etc.
 
 ### R36S
-1. Prefer **Prepare SD before install**.
-2. Pick SAF folder → choose detected root (`roms/ports`, `roms2/ports`, `EASYROMS/ports`, …).
-3. Mode: **Direct** or **Autoinstall**.
-4. Verify report must show `Polybius.sh` + `polybius/`.
+1. Choose destination: **SD card (SAF)**, **USB stick**, or **Both**.
+2. **SD:** Prefer **Prepare SD before install** → pick SAF folder → choose ports root → Direct or Autoinstall.
+3. **USB stick:** Plug FAT32/exFAT stick (OTG) → **PICK USB STICK** → optional custom file → **WRITE TO USB STICK**.
+4. On the R36S: plug the stick into OTG → file manager → copy `POLYBIUS_R36S_USB/ports/` to `roms/ports/`.
+5. Verify report shows `Polybius.sh` + `polybius/`.
 
 ### CYD / ESP32-32E
 1. Read overwrite warning (full image replaces Launcher/Bruce).
