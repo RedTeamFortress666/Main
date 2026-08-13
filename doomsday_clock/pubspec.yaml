@@ -1,7 +1,7 @@
 name: doomsday_clock
 description: DOØMSDAY CLØCK — cyberpunk crisis clock + DARTH CHERRY operator cache
 publish_to: 'none'
-version: 2.1.1+4
+version: 2.2.0+5
 
 environment:
   sdk: ^3.12.2
@@ -9,11 +9,14 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  meta: ^1.18.0
   cupertino_icons: ^1.0.8
   http: ^1.2.2
   shared_preferences: ^2.3.3
   path_provider: ^2.1.5
   intl: ^0.19.0
+  qr_flutter: ^4.1.0
+  mobile_scanner: ^7.0.0
 
 dev_dependencies:
   flutter_test:

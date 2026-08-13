@@ -4,14 +4,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
+import '../app_config.dart';
 import '../data/polybius_operator_cards.dart';
+import '../models/cherry_vault_card.dart';
 import '../models/models.dart';
-import '../services/darth_probe.dart';
 import '../services/auth_service.dart';
+import '../services/cherry_vault_store.dart';
+import '../services/darth_probe.dart';
 import '../services/planner_service.dart';
+import '../services/ritual_settings_service.dart';
 import '../theme/noir_theme.dart';
 import '../widgets/matrix_chrome.dart';
 import '../widgets/operator_identity_card.dart';
+import 'qr_scan_screen.dart';
+import 'qr_share_sheet.dart';
+import 'ritual_customize_sheet.dart';
 
 class PlannerTab extends StatefulWidget {
   const PlannerTab({super.key, required this.session});
@@ -24,9 +31,13 @@ class PlannerTab extends StatefulWidget {
 
 class _PlannerTabState extends State<PlannerTab> {
   final _planner = PlannerService();
+  final _vaultStore = CherryVaultStore();
+  final _ritualSettings = RitualSettingsService();
   final _noteCtrl = TextEditingController();
   DateTime _selected = DateTime.now();
   List<PlannerNote> _notes = [];
+  List<CherryVaultCard> _vaultCards = [];
+  RitualSettings? _customRitual;
   bool _cherryCacheOpen = false;
   bool _darthActive = false;
   bool _darthInstalled = false;
@@ -38,6 +49,11 @@ class _PlannerTabState extends State<PlannerTab> {
 
   bool get _isGam3on =>
       PolybiusOperatorCards.canOpenCherryCache(widget.session.username);
+
+  bool get _showGam3onRoster => _isGam3on && AppConfig.isPrivileged;
+
+  bool get _showPersonalVault =>
+      _cherryCacheOpen && (_vaultCards.isNotEmpty || AppConfig.isAllTier);
 
   @override
   void initState() {
@@ -71,10 +87,14 @@ class _PlannerTabState extends State<PlannerTab> {
       widget.session.username,
       _selected,
     );
+    final cards = await _vaultStore.load(widget.session.username);
+    final ritual = await _ritualSettings.load(widget.session.username);
     if (!mounted) return;
     setState(() {
       _notes = notes;
       _cherryCacheOpen = open;
+      _vaultCards = cards;
+      _customRitual = ritual;
       _holdLabel = open ? 'CACHE OPEN' : 'SAVE NOTE';
     });
   }
@@ -123,6 +143,21 @@ class _PlannerTabState extends State<PlannerTab> {
     });
   }
 
+  Future<void> _maybePromptCustomRitual() async {
+    if (!AppConfig.isAllTier) return;
+    if (await _ritualSettings.wasPrompted(widget.session.username)) return;
+    await _ritualSettings.markPrompted(widget.session.username);
+    if (!mounted) return;
+    final saved = await RitualCustomizeSheet.show(
+      context,
+      initial: _customRitual,
+    );
+    if (saved != null) {
+      await _ritualSettings.save(widget.session.username, saved);
+      if (mounted) setState(() => _customRitual = saved);
+    }
+  }
+
   Future<void> _completeHold() async {
     final body = _noteCtrl.text.trim();
     final note = PlannerNote(
@@ -135,13 +170,14 @@ class _PlannerTabState extends State<PlannerTab> {
     await _planner.saveNotes(notes);
 
     var unlocked = _cherryCacheOpen;
-    if (_planner.matchesRitual(body, _selected)) {
+    if (_planner.matchesRitual(body, _selected, custom: _customRitual)) {
       await _planner.unlockCherryCacheForDay(
         widget.session.username,
         _selected,
       );
       unlocked = true;
       HapticFeedback.heavyImpact();
+      await _maybePromptCustomRitual();
     }
 
     if (!mounted) return;
@@ -164,11 +200,38 @@ class _PlannerTabState extends State<PlannerTab> {
     });
   }
 
+  Future<void> _scanQr() async {
+    final card = await Navigator.of(context).push<CherryVaultCard>(
+      MaterialPageRoute(builder: (_) => const QrScanScreen()),
+    );
+    if (card == null) return;
+    await _vaultStore.upsert(widget.session.username, card);
+    await _reload();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Stored ${card.username} in vault')),
+    );
+  }
+
+  Future<void> _removeCard(CherryVaultCard card) async {
+    await _vaultStore.remove(widget.session.username, card.id);
+    await _reload();
+  }
+
+  Future<void> _editRitual() async {
+    final saved = await RitualCustomizeSheet.show(
+      context,
+      initial: _customRitual,
+    );
+    if (saved == null) return;
+    await _ritualSettings.save(widget.session.username, saved);
+    if (mounted) setState(() => _customRitual = saved);
+  }
+
   @override
   Widget build(BuildContext context) {
     final dayKey = _planner.dayKey(_selected);
     final dayNotes = _notes.where((n) => n.dayKey == dayKey);
-    final showCherrySection = _cherryCacheOpen && _isGam3on;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
@@ -284,13 +347,32 @@ class _PlannerTabState extends State<PlannerTab> {
         const SizedBox(height: 18),
         Text('NOTES · $dayKey', style: Theme.of(context).textTheme.labelLarge),
         ...dayNotes.map((n) => Text('• ${n.body}')),
-        if (showCherrySection) ...[
-          const SizedBox(height: 20),
-          Text(
-            'DARTH CHERRY · OPERATOR CACHE',
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: _darthActive ? NoirTheme.crimson : NoirTheme.chrome,
+        if (_cherryCacheOpen) ...[
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'DARTH CHERRY · VAULT',
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: _darthActive ? NoirTheme.crimson : NoirTheme.chrome,
+                      ),
                 ),
+              ),
+              if (AppConfig.isAllTier) ...[
+                TextButton.icon(
+                  onPressed: _scanQr,
+                  icon: const Icon(Icons.qr_code_scanner, size: 18),
+                  label: const Text('SCAN QR'),
+                  style: TextButton.styleFrom(foregroundColor: NoirTheme.neonCyan),
+                ),
+                IconButton(
+                  tooltip: 'Custom unlock',
+                  onPressed: _editRitual,
+                  icon: const Icon(Icons.tune, color: NoirTheme.chrome),
+                ),
+              ],
+            ],
           ),
           const SizedBox(height: 6),
           if (!_darthInstalled)
@@ -307,32 +389,65 @@ class _PlannerTabState extends State<PlannerTab> {
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: NoirTheme.amber,
                   ),
-            )
-          else
+            ),
+          if (_showGam3onRoster) ...[
+            const SizedBox(height: 10),
             Text(
-              '${PolybiusOperatorCards.all.length} PØLYBÎŪS operator cards · '
-              'secrets unlocked',
+              '${PolybiusOperatorCards.all.length} PØLYBÎŪS operator cards',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: NoirTheme.peace,
                   ),
             ),
-          const SizedBox(height: 10),
-          ...PolybiusOperatorCards.all.map(
-            (card) => OperatorIdentityCard(
-              card: card,
-              secretsUnlocked: _darthActive,
+            const SizedBox(height: 10),
+            ...PolybiusOperatorCards.all.map(
+              (card) => OperatorIdentityCard(
+                card: card,
+                secretsUnlocked: _darthActive,
+                onShareQr: () => QrShareSheet.show(context, card),
+              ),
             ),
-          ),
-        ],
-        if (!showCherrySection && _cherryCacheOpen && !_isGam3on)
-          Padding(
-            padding: const EdgeInsets.only(top: 16),
-            child: Text(
+          ],
+          if (_showPersonalVault) ...[
+            if (_showGam3onRoster && _vaultCards.isNotEmpty)
+              const SizedBox(height: 16),
+            if (_vaultCards.isNotEmpty || AppConfig.isAllTier)
+              Text(
+                _vaultCards.isEmpty
+                    ? 'No scanned cards yet — tap SCAN QR'
+                    : '${_vaultCards.length} scanned operator card(s)',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: NoirTheme.neonCyan,
+                    ),
+              ),
+            const SizedBox(height: 10),
+            ..._vaultCards.map(
+              (vaultCard) => OperatorIdentityCard(
+                card: vaultCard.toOperatorCard(),
+                secretsUnlocked: _darthActive,
+                onShareQr: () =>
+                    QrShareSheet.show(context, vaultCard.toOperatorCard()),
+                onDelete: () => _removeCard(vaultCard),
+              ),
+            ),
+          ],
+          if (!_showGam3onRoster &&
+              !_showPersonalVault &&
+              AppConfig.isPrivileged)
+            Text(
               'Cherry cache open — operator roster is restricted to Gam3.0n.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: NoirTheme.mist.withValues(alpha: 0.5),
                   ),
             ),
+        ] else
+          Text(
+            AppConfig.isAllTier
+                ? 'VAULT SEALED — jump to your unlock date, enter secret words, '
+                    'hold SAVE NOTE 3s. Default: 5 Nov · Remember remember.'
+                : 'DARTH CHERRY cache sealed — 5 November ritual required.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: NoirTheme.mist.withValues(alpha: 0.45),
+                ),
           ),
       ],
     );

@@ -11,10 +11,14 @@ class OperatorIdentityCard extends StatelessWidget {
     super.key,
     required this.card,
     required this.secretsUnlocked,
+    this.onShareQr,
+    this.onDelete,
   });
 
   final PolybiusOperatorCard card;
   final bool secretsUnlocked;
+  final VoidCallback? onShareQr;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -90,6 +94,18 @@ class OperatorIdentityCard extends StatelessWidget {
                   ],
                 ),
               ),
+              if (onShareQr != null)
+                IconButton(
+                  tooltip: 'Share QR',
+                  onPressed: onShareQr,
+                  icon: const Icon(Icons.qr_code, color: NoirTheme.neonCyan),
+                ),
+              if (onDelete != null)
+                IconButton(
+                  tooltip: 'Remove',
+                  onPressed: onDelete,
+                  icon: const Icon(Icons.delete_outline, color: NoirTheme.crimson),
+                ),
             ],
           ),
           const SizedBox(height: 10),
