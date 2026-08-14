@@ -18,8 +18,9 @@ import { thinkAI } from './ai.js';
 import {
   Assets, Particles, drawStage, drawFighter, drawProjectile,
   drawStella, drawJoye, drawSaucer, drawHUD, drawLetterbox,
-  drawPortraitCard, fillTextWrap,
+  drawPortraitCard,
 } from './render.js';
+import { drawPixelText } from './pixel.js';
 
 const emptySnap = () => ({
   left: false, right: false, up: false, down: false,
@@ -497,6 +498,7 @@ export class Game {
 
   draw() {
     const ctx = this.ctx;
+    ctx.imageSmoothingEnabled = false;
     ctx.save();
     if (this.shake) {
       ctx.translate((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake);
@@ -587,17 +589,15 @@ export class Game {
       wins: this.wins,
       announce: this.announce,
       combo: this.mode === 'fight' && this.combo && this.combo.count > 1 ? this.combo : null,
+      round: this.round,
+      assets: this.assets,
     });
 
     if (this.paused) {
       ctx.fillStyle = 'rgba(0,0,0,0.55)';
       ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-      ctx.fillStyle = '#fff';
-      ctx.font = 'bold 48px Impact, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('PAUSED', CANVAS_W / 2, CANVAS_H / 2);
-      ctx.font = '16px sans-serif';
-      ctx.fillText('Esc to resume', CANVAS_W / 2, CANVAS_H / 2 + 36);
+      drawPixelText(ctx, 'PAUSED', CANVAS_W / 2, CANVAS_H / 2 - 16, 5, '#fff', 'center');
+      drawPixelText(ctx, 'ESC TO RESUME', CANVAS_W / 2, CANVAS_H / 2 + 28, 2, '#ddd', 'center');
     }
     ctx.restore();
   }
@@ -606,99 +606,62 @@ export class Game {
     drawStage(ctx, this.assets, 3, this.time, 0);
     ctx.fillStyle = 'rgba(0,0,0,0.55)';
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-    drawPortraitCard(ctx, this.assets.images.yoko, 80, 160, 280, 360, 'QUEEN YOKO', CHARACTERS.yoko.title);
-    drawPortraitCard(ctx, this.assets.images.morlan, CANVAS_W - 360, 160, 280, 360, 'TSAR MORLAN', CHARACTERS.morlan.title);
+    drawPortraitCard(ctx, this.assets.images.yoko, 80, 150, 280, 360, 'QUEEN YOKO', CHARACTERS.yoko.title);
+    drawPortraitCard(ctx, this.assets.images.morlan, CANVAS_W - 360, 150, 280, 360, 'TSAR MORLAN', CHARACTERS.morlan.title);
 
-    ctx.fillStyle = '#f6e27a';
-    ctx.font = 'bold 46px Impact, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.shadowColor = '#000';
-    ctx.shadowBlur = 12;
-    ctx.fillText(GAME_TITLE, CANVAS_W / 2, 88);
-    ctx.font = 'bold 26px Impact, sans-serif';
-    ctx.fillStyle = '#fff';
-    ctx.fillText(GAME_SUBTITLE, CANVAS_W / 2, 126);
-    ctx.shadowBlur = 0;
-
-    ctx.fillStyle = '#ddd';
-    ctx.font = 'italic 16px Georgia, serif';
-    ctx.fillText('A slightly mystical tea party, with claws.', CANVAS_W / 2, 600);
+    drawPixelText(ctx, GAME_TITLE, CANVAS_W / 2, 36, 4, '#ffe566', 'center');
+    drawPixelText(ctx, GAME_SUBTITLE, CANVAS_W / 2, 78, 2, '#ffffff', 'center');
+    drawPixelText(ctx, 'A SLIGHTLY MYSTICAL TEA PARTY', CANVAS_W / 2, 590, 1, '#dddddd', 'center');
 
     const blink = Math.sin(this.time * 0.12) > -0.2;
     if (blink) {
-      ctx.fillStyle = '#fff4c2';
-      ctx.font = 'bold 28px Impact, sans-serif';
-        ctx.fillText('PRESS ENTER', CANVAS_W / 2, 650);
+      drawPixelText(ctx, 'PRESS ENTER', CANVAS_W / 2, 630, 3, '#fff4c2', 'center');
     }
-    ctx.font = '12px sans-serif';
-    ctx.fillStyle = '#aaa';
-    ctx.fillText('Z, Space, or tap  ·  Esc pauses  ·  phones: on-screen pad', CANVAS_W / 2, 678);
+    drawPixelText(ctx, 'Z SPACE OR TAP  -  ESC PAUSES', CANVAS_W / 2, 678, 1, '#aaaaaa', 'center');
   }
 
   _drawMenu(ctx) {
     drawStage(ctx, this.assets, 1, this.time, 0);
     ctx.fillStyle = 'rgba(8,6,20,0.72)';
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-    ctx.fillStyle = '#f6e27a';
-    ctx.font = 'bold 42px Impact, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('CHOOSE YOUR IDEOLOGY', CANVAS_W / 2, 70);
+    drawPixelText(ctx, 'CHOOSE YOUR IDEOLOGY', CANVAS_W / 2, 36, 3, '#ffe566', 'center');
 
     const items = [
-      'VS CPU  —  challenge the Red Tsar',
-      'VS PLAYER  —  two cats, one keyboard',
-      'DOWNLOADS  —  Android APK, PC zip, iPhone',
+      'VS CPU',
+      'VS PLAYER',
+      'DOWNLOADS',
       'BACK',
     ];
     items.forEach((label, i) => {
-      const y = 140 + i * 54;
-      ctx.fillStyle = i === this.menuIndex ? '#fff4c2' : '#bbb';
-      ctx.font = i === this.menuIndex ? 'bold 28px Impact, sans-serif' : '24px Impact, sans-serif';
-      ctx.fillText((i === this.menuIndex ? '▸  ' : '   ') + label, CANVAS_W / 2, y);
+      const y = 90 + i * 40;
+      const on = i === this.menuIndex;
+      drawPixelText(ctx, (on ? '> ' : '  ') + label, CANVAS_W / 2, y, on ? 3 : 2, on ? '#fff4c2' : '#bbbbbb', 'center');
     });
 
-    ctx.textAlign = 'left';
-    ctx.fillStyle = '#f6e27a';
-    ctx.font = 'bold 20px Impact, sans-serif';
-    ctx.fillText('PLAYER 1  ·  QUEEN YOKO', 80, 330);
-    ctx.fillStyle = '#ddd';
-    ctx.font = '15px monospace';
+    drawPixelText(ctx, 'P1  QUEEN YOKO', 80, 280, 2, '#ffe566');
     const p1 = [
-      'Move     W A S D     (jump / left / crouch / right)',
-      'Block    Left Shift or hold back',
-      'Light    Z punch   F kick',
-      'Medium   X (kick-class)   G kick',
-      'Heavy    C punch   H kick',
-      'Specials quarter-circle + button   DP (fwd, down, down-fwd) + punch',
-      'Super    double QCF + punch when the gold meter is full',
+      'WASD MOVE',
+      'SHIFT BLOCK',
+      'Z X C PUNCH',
+      'F G H KICK',
+      'QCF + BUTTON SPECIAL',
+      'DOUBLE QCF SUPER',
     ];
-    p1.forEach((l, i) => ctx.fillText(l, 80, 358 + i * 22));
+    p1.forEach((l, i) => drawPixelText(ctx, l, 80, 310 + i * 18, 1, '#dddddd'));
 
-    ctx.fillStyle = '#ff8a80';
-    ctx.font = 'bold 20px Impact, sans-serif';
-    ctx.fillText('PLAYER 2  ·  TSAR MORLAN', 700, 330);
-    ctx.fillStyle = '#ddd';
-    ctx.font = '15px monospace';
+    drawPixelText(ctx, 'P2  TSAR MORLAN', 700, 280, 2, '#ff8a80');
     const p2 = [
-      'Move     Arrow keys',
-      'Block    Right Shift or hold back',
-      'Light    N punch   J kick',
-      'Medium   M (kick-class)   K kick',
-      'Heavy    , punch   L kick',
-      'Specials same motions, opposite facing',
-      'Super    double QCF + punch, full red meter',
+      'ARROWS MOVE',
+      'SHIFT BLOCK',
+      'N M , PUNCH',
+      'J K L KICK',
+      'SAME MOTIONS',
+      'FULL METER SUPER',
     ];
-    p2.forEach((l, i) => ctx.fillText(l, 700, 358 + i * 22));
+    p2.forEach((l, i) => drawPixelText(ctx, l, 700, 310 + i * 18, 1, '#dddddd'));
 
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#cbb';
-    ctx.font = 'italic 14px Georgia, serif';
-    ctx.fillText('Yoko: Royal Tuna Slap · Monarchy Meow · Capitalist Claw · Crown Dive · The Gold Standard', CANVAS_W / 2, 540);
-    ctx.fillText('Morlan: Red October Pounce · Proletariat Paw Barrage · Soviet Scratch · Hammer & Sickle Uppercut', CANVAS_W / 2, 562);
-    ctx.fillStyle = '#aaa';
-    ctx.font = '13px sans-serif';
-    ctx.fillText('Time out: Stella brings milk.  KO: Joye (walker, tuna) may revive once per cat.  Best of 3.', CANVAS_W / 2, 600);
-    ctx.fillText('Enter / Z to confirm', CANVAS_W / 2, 660);
+    drawPixelText(ctx, 'TIMEOUT: STELLA MILK   KO: JOYE TUNA REVIVE   BEST OF 3', CANVAS_W / 2, 500, 1, '#aaaaaa', 'center');
+    drawPixelText(ctx, 'ENTER / Z TO CONFIRM', CANVAS_W / 2, 640, 2, '#fff4c2', 'center');
   }
 
   _drawMatchEnd(ctx) {
@@ -706,23 +669,15 @@ export class Game {
     ctx.fillStyle = 'rgba(0,0,0,0.62)';
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
     const w = this.winner;
-    const img = this.assets.images[w];
+    const img = this.assets.images[w === 'yoko' ? 'yokoHud' : 'morlanHud'] || this.assets.images[w];
+    ctx.imageSmoothingEnabled = false;
     if (img) {
-      ctx.drawImage(img, CANVAS_W / 2 - 140, 90, 280, 360);
+      ctx.drawImage(img, CANVAS_W / 2 - 120, 80, 240, 240);
     }
-    ctx.fillStyle = '#f6e27a';
-    ctx.font = 'bold 48px Impact, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(this.announce.text || 'WINNER', CANVAS_W / 2, 490);
-    ctx.fillStyle = '#eee';
-    ctx.font = 'italic 22px Georgia, serif';
-    fillTextWrap(ctx, this.quote, CANVAS_W / 2, 530, 900, 28);
-    ctx.font = '16px sans-serif';
-    ctx.fillStyle = '#ccc';
-    ctx.fillText('Stella nods. Joye parks the walker. The tea party is adjourned.', CANVAS_W / 2, 600);
-    ctx.fillStyle = '#fff4c2';
-    ctx.font = 'bold 22px Impact, sans-serif';
-    ctx.fillText('PRESS ENTER  ·  RETURN TO TITLE', CANVAS_W / 2, 650);
+    drawPixelText(ctx, this.announce.text || 'WINNER', CANVAS_W / 2, 360, 3, '#ffe566', 'center');
+    drawPixelText(ctx, this.quote || '', CANVAS_W / 2, 410, 1, '#eeeeee', 'center');
+    drawPixelText(ctx, 'THE TEA PARTY IS ADJOURNED', CANVAS_W / 2, 560, 2, '#cccccc', 'center');
+    drawPixelText(ctx, 'PRESS ENTER', CANVAS_W / 2, 630, 3, '#fff4c2', 'center');
   }
 
   /** Demo / test hooks. */

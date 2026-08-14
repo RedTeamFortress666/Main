@@ -1,4 +1,4 @@
-const CACHE = 'yokos-tuna-brawl-v1';
+const CACHE = 'yokos-tuna-brawl-v2';
 const CORE = [
   './',
   './index.html',
@@ -10,6 +10,7 @@ const CORE = [
   './js/logic.js',
   './js/fighter.js',
   './js/render.js',
+  './js/pixel.js',
   './js/audio.js',
   './js/input.js',
   './js/ai.js',

@@ -1,6 +1,9 @@
 import {
-  CANVAS_W, CANVAS_H, GROUND_Y, MAX_HP, MAX_METER, CHARACTERS, lerp,
+  CANVAS_W, CANVAS_H, GROUND_Y, MAX_HP, MAX_METER, lerp,
 } from './logic.js';
+import {
+  drawPixelText, lifeBarWidth, drawPixelFighter, SPRITE_H, SPRITE_SCALE,
+} from './pixel.js';
 
 export class Assets {
   constructor() {
@@ -14,8 +17,10 @@ export class Assets {
       morlan: 'assets/morlan_portrait.jpg',
       stella: 'assets/stella_portrait.jpg',
       joye: 'assets/joye_portrait.jpg',
-      palace: 'assets/palace_stage.jpg',
-      russia: 'assets/russian_stage.jpg',
+      palace: 'assets/palace_stage_pixel.png',
+      russia: 'assets/russian_stage_pixel.png',
+      yokoHud: 'assets/yoko_hud.png',
+      morlanHud: 'assets/morlan_hud.png',
     };
     await Promise.all(Object.entries(files).map(([k, src]) => this._img(k, src)));
     this.ready = true;
@@ -68,9 +73,8 @@ export class Particles {
     for (const p of this.list) {
       ctx.globalAlpha = p.life / p.max;
       ctx.fillStyle = p.color;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-      ctx.fill();
+      const s = Math.max(2, (p.r | 0) * 2);
+      ctx.fillRect((p.x | 0) - s / 2, (p.y | 0) - s / 2, s, s);
     }
     ctx.globalAlpha = 1;
   }
@@ -98,12 +102,12 @@ export function drawStage(ctx, assets, round, time, flash) {
   const imgA = assets.images.palace;
   const imgB = assets.images.russia;
   ctx.save();
+  ctx.imageSmoothingEnabled = false;
   if (round <= 1 && imgA) {
     ctx.drawImage(imgA, 0, 0, CANVAS_W, CANVAS_H);
   } else if (round === 2 && imgB) {
     ctx.drawImage(imgB, 0, 0, CANVAS_W, CANVAS_H);
   } else {
-    // Round 3: Black Lodge tea-party mash — both stages breathe into each other.
     if (imgA) ctx.drawImage(imgA, 0, 0, CANVAS_W, CANVAS_H);
     if (imgB) {
       ctx.globalAlpha = 0.42 + Math.sin(time * 0.03) * 0.28;
@@ -114,19 +118,13 @@ export function drawStage(ctx, assets, round, time, flash) {
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
   }
   if (!imgA && !imgB) {
-    const g = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
-    g.addColorStop(0, round === 2 ? '#6a8cae' : '#87b7e8');
-    g.addColorStop(1, round === 2 ? '#c9d6df' : '#d4c4a8');
-    ctx.fillStyle = g;
+    ctx.fillStyle = round === 2 ? '#6a8cae' : '#5aa0d8';
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    ctx.fillStyle = '#7a7a7a';
+    ctx.fillRect(0, GROUND_Y - 20, CANVAS_W, CANVAS_H - GROUND_Y + 20);
   }
-  // Floor shadow strip so feet read clearly.
-  const fg = ctx.createLinearGradient(0, GROUND_Y - 8, 0, CANVAS_H);
-  fg.addColorStop(0, 'rgba(0,0,0,0)');
-  fg.addColorStop(0.15, 'rgba(0,0,0,0.18)');
-  fg.addColorStop(1, 'rgba(0,0,0,0.45)');
-  ctx.fillStyle = fg;
-  ctx.fillRect(0, GROUND_Y - 8, CANVAS_W, CANVAS_H - GROUND_Y + 8);
+  ctx.fillStyle = 'rgba(0,0,0,0.28)';
+  ctx.fillRect(0, GROUND_Y + 4, CANVAS_W, CANVAS_H - GROUND_Y - 4);
   if (flash > 0) {
     ctx.fillStyle = `rgba(255,255,255,${Math.min(0.85, flash / 10)})`;
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
@@ -134,304 +132,16 @@ export function drawStage(ctx, assets, round, time, flash) {
   ctx.restore();
 }
 
-function catPalette(id) {
-  if (id === 'yoko') {
-    return {
-      fur: '#161616', fur2: '#f7f4ee', gold: '#e6c35c', nose: '#f0b3c0',
-      eye: '#c9d36a', cloth: '#111', sash: '#d4b84a', inner: '#fff',
-      cheek: '#f4efe6',
-    };
-  }
-  return {
-    fur: '#8fa4b5', fur2: '#c5d2dc', gold: '#c9a227', nose: '#c98490',
-    eye: '#d7e36a', cloth: '#8b1e1e', sash: '#c0392b', inner: '#3a3a3a',
-    cheek: '#b7c5d0',
-  };
-}
-
-function fluffHalo(ctx, x, y, rx, ry, color, n = 14) {
-  ctx.fillStyle = color;
-  for (let i = 0; i < n; i++) {
-    const a = (i / n) * Math.PI * 2 + 0.2;
-    const jx = Math.cos(a) * rx;
-    const jy = Math.sin(a) * ry;
-    ctx.beginPath();
-    ctx.ellipse(x + jx, y + jy, 7 + (i % 4), 5 + (i % 3), a, 0, Math.PI * 2);
-    ctx.fill();
-  }
-}
-
 export function drawFighter(ctx, f) {
-  const p = catPalette(f.characterId);
-  const yoko = f.characterId === 'yoko';
-  const t = f.animTime;
-  const crouch = f.crouching && !f.airborne ? 0.28 : 0;
-  const bob = f.state === 'idle' ? Math.sin(t * 0.12) * 3 : 0;
-  const walk = f.state === 'walk' ? Math.sin(t * 0.42) : 0;
-  let armR = -0.35 + Math.sin(t * 0.12) * 0.08;
-  let armL = 0.25;
-  let legR = walk * 0.55;
-  let legL = -walk * 0.55;
-  let bodyRot = 0;
-  let squash = 1;
-
-  if (f.state === 'crouch') { squash = 0.78; armR = -0.1; }
-  if (f.state === 'jump' || f.airborne) { armR = -1.1; armL = 0.8; legR = -0.5; legL = 0.4; }
-  if (f.state === 'block') { armR = -1.35; armL = -1.1; bodyRot = -0.08; }
-  if (f.state === 'hit' || f.state === 'ko') { armR = 0.9; armL = -0.7; bodyRot = 0.25; }
-  if (f.state === 'knockdown' || f.state === 'ko') { bodyRot = 1.15; squash = 0.7; }
-  if (f.state === 'drink' || f.state === 'eat') { armR = 0.4; squash = 0.85; bodyRot = 0.35; }
-
-  if (f.attacking && f.attack) {
-    const a = f.attack;
-    const local = f.attackFrame;
-    const ext = local < a.startup
-      ? local / a.startup
-      : local < a.startup + a.active ? 1
-        : 1 - (local - a.startup - a.active) / Math.max(1, a.recovery);
-    if (a.id.includes('k') && !a.super) {
-      legR = -0.2 + ext * 1.4;
-      armR = -0.5;
-    } else {
-      armR = -0.2 - ext * 1.6;
-      armL = 0.4;
-    }
-    if (a.uppercut) { armR = -2.2; bodyRot = -0.4; }
-    if (a.dive) { bodyRot = 0.9; armR = -1.6; }
-    if (a.multi) { armR = -0.4 - Math.sin(local * 1.2) * 1.3; }
-  }
-
+  drawPixelFighter(ctx, f);
+  const name = f.characterId === 'yoko' ? 'QUEEN YOKO' : 'TSAR MORLAN';
+  const top = Math.round(f.y - SPRITE_H * SPRITE_SCALE - 10);
   ctx.save();
-  const jx = f.shake ? (Math.random() - 0.5) * f.shake : 0;
-  ctx.translate(f.x + jx, f.y + bob + crouch * 36);
-  ctx.scale(f.facing * 1.32, squash * 1.32);
-  ctx.shadowColor = 'rgba(0,0,0,0.85)';
-  ctx.shadowBlur = 10;
-  ctx.shadowOffsetY = 4;
-  if (f.hitFlash > 0) ctx.filter = 'brightness(2.4) saturate(0.2)';
-  ctx.rotate(bodyRot * 0.35);
-
-  // Long fluffy tail (Yoko: solid black per reference photo)
-  const tw = Math.sin(t * 0.15) * 18;
-  ctx.strokeStyle = p.fur;
-  ctx.lineCap = 'round';
-  ctx.lineWidth = 18;
-  ctx.beginPath();
-  ctx.moveTo(-16, -36);
-  ctx.quadraticCurveTo(-56, -78 + tw * 0.25, -42 + tw, -118);
-  ctx.stroke();
-  ctx.lineWidth = 12;
-  ctx.strokeStyle = yoko ? '#0d0d0d' : p.fur2;
-  ctx.beginPath();
-  ctx.moveTo(-18, -40);
-  ctx.quadraticCurveTo(-52, -74 + tw * 0.25, -40 + tw, -112);
-  ctx.stroke();
-  fluffHalo(ctx, -40 + tw, -112, 10, 8, p.fur, 8);
-
-  const paw = yoko ? p.fur2 : p.fur;
-  const drawLimb = (ang, len, thick, color, pawColor) => {
-    ctx.save();
-    ctx.rotate(ang);
-    ctx.strokeStyle = color;
-    ctx.lineCap = 'round';
-    ctx.lineWidth = thick + 4;
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(0, len);
-    ctx.stroke();
-    ctx.lineWidth = thick;
-    ctx.strokeStyle = color;
-    ctx.stroke();
-    ctx.fillStyle = pawColor;
-    ellipse(ctx, 0, len + 5, 11, 8, true);
-    ctx.restore();
-  };
-
-  ctx.save();
-  ctx.translate(-12, -26);
-  drawLimb(0.15 + legL, 34, 15, p.fur, paw);
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  const nw = name.length * 12 + 8;
+  ctx.fillRect(Math.round(f.x - nw / 2), top - 18, nw, 16);
+  drawPixelText(ctx, name, Math.round(f.x), top - 16, 2, '#ffffff', 'center');
   ctx.restore();
-  ctx.save();
-  ctx.translate(12, -26);
-  drawLimb(-0.1 + legR, 34, 15, p.fur, paw);
-  ctx.restore();
-
-  // Fluffy body under clothes
-  fluffHalo(ctx, 0, -70, 30, 42, p.fur, 16);
-  ctx.fillStyle = p.fur;
-  ellipse(ctx, 0, -72, 28, 40, true);
-
-  // Torso / clothes
-  ctx.fillStyle = p.cloth;
-  roundRect(ctx, -28, -112, 56, 88, 16);
-  ctx.fill();
-  ctx.strokeStyle = yoko ? '#e6c35c' : '#7a1515';
-  ctx.lineWidth = 2;
-  roundRect(ctx, -28, -112, 56, 88, 16);
-  ctx.stroke();
-  if (yoko) {
-    // White chest ruff — the photo's tuxedo shirt
-    ctx.fillStyle = p.fur2;
-    fluffHalo(ctx, 2, -78, 16, 22, p.fur2, 10);
-    ctx.beginPath();
-    ctx.ellipse(2, -78, 18, 26, 0, 0, Math.PI * 2);
-    ctx.fill();
-    // Shoulder white patch
-    ctx.beginPath();
-    ctx.ellipse(-22, -96, 10, 8, -0.4, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = p.sash;
-    ctx.fillRect(-26, -58, 52, 12);
-    ctx.fillStyle = p.gold;
-    ctx.beginPath();
-    ctx.arc(18, -52, 5, 0, Math.PI * 2);
-    ctx.fill();
-  } else {
-    ctx.fillStyle = p.sash;
-    ctx.beginPath();
-    ctx.moveTo(-8, -108);
-    ctx.lineTo(22, -70);
-    ctx.lineTo(8, -62);
-    ctx.lineTo(-20, -96);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = '#e74c3c';
-    ctx.beginPath();
-    star(ctx, 14, -88, 5, 9, 4);
-    ctx.fill();
-  }
-
-  // Head + cheek fluff
-  fluffHalo(ctx, 0, -132, 30, 24, p.fur, 12);
-  ctx.fillStyle = p.fur;
-  ellipse(ctx, 0, -132, 30, 26, true);
-  ctx.fillStyle = p.cheek;
-  ellipse(ctx, -18, -122, 10, 9, true);
-  ellipse(ctx, 18, -126, 9, 8, true);
-
-  // ears
-  ctx.fillStyle = p.fur;
-  ctx.beginPath();
-  ctx.moveTo(-22, -148);
-  ctx.lineTo(-34, -182);
-  ctx.lineTo(-6, -154);
-  ctx.closePath();
-  ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(22, -148);
-  ctx.lineTo(34, -182);
-  ctx.lineTo(6, -154);
-  ctx.closePath();
-  ctx.fill();
-  ctx.fillStyle = '#e7a1b0';
-  ctx.beginPath();
-  ctx.moveTo(-24, -156);
-  ctx.lineTo(-31, -174);
-  ctx.lineTo(-12, -158);
-  ctx.fill();
-
-  if (yoko) {
-    // White blaze down the face, widening at muzzle (reference photo)
-    ctx.fillStyle = p.fur2;
-    ctx.beginPath();
-    ctx.moveTo(-4, -152);
-    ctx.lineTo(4, -152);
-    ctx.lineTo(14, -118);
-    ctx.lineTo(8, -110);
-    ctx.lineTo(-10, -114);
-    ctx.closePath();
-    ctx.fill();
-    ellipse(ctx, 4, -118, 16, 13, true);
-  } else {
-    ctx.fillStyle = p.fur2;
-    ellipse(ctx, 6, -124, 16, 12, true);
-  }
-
-  ctx.fillStyle = p.nose;
-  ellipse(ctx, yoko ? 4 : 16, -122, 5, 3.6, true);
-
-  // Half-lidded arrogant eyes (Yoko) / stern (Morlan)
-  const blink = (t % 180) < 6;
-  const lid = yoko ? 0.45 : 0;
-  if (!blink) {
-    ctx.fillStyle = p.eye;
-    ellipse(ctx, -8, -136, 7, f.state === 'hit' ? 2 : 7 * (1 - lid * 0.5), true);
-    ellipse(ctx, 12, -136, 7, f.state === 'hit' ? 2 : 7 * (1 - lid * 0.5), true);
-    ctx.fillStyle = '#111';
-    ellipse(ctx, -6, -135, 3.2, 3.6, true);
-    ellipse(ctx, 14, -135, 3.2, 3.6, true);
-    ctx.fillStyle = '#fff';
-    ellipse(ctx, -8, -138, 1.6, 1.6, true);
-    ellipse(ctx, 12, -138, 1.6, 1.6, true);
-    if (yoko) {
-      ctx.strokeStyle = p.fur;
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(-16, -142); ctx.quadraticCurveTo(-8, -140, 0, -142);
-      ctx.moveTo(4, -142); ctx.quadraticCurveTo(12, -140, 20, -142);
-      ctx.stroke();
-    }
-  } else {
-    ctx.strokeStyle = '#111';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(-14, -136); ctx.lineTo(0, -136);
-    ctx.moveTo(4, -136); ctx.lineTo(20, -136);
-    ctx.stroke();
-  }
-
-  if (!yoko) {
-    ctx.strokeStyle = '#4a5560';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(-14, -148); ctx.lineTo(-2, -128);
-    ctx.moveTo(8, -122); ctx.lineTo(20, -114);
-    ctx.stroke();
-  }
-
-  if (yoko) {
-    ctx.fillStyle = p.gold;
-    ctx.beginPath();
-    ctx.moveTo(-16, -154);
-    ctx.lineTo(-10, -174);
-    ctx.lineTo(-4, -156);
-    ctx.lineTo(0, -178);
-    ctx.lineTo(4, -156);
-    ctx.lineTo(10, -174);
-    ctx.lineTo(16, -154);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = '#b8942a';
-    ctx.stroke();
-  }
-
-  ctx.save();
-  ctx.translate(16, -92);
-  drawLimb(armR, 28, 12, p.fur, paw);
-  ctx.restore();
-  ctx.save();
-  ctx.translate(-16, -92);
-  drawLimb(armL, 26, 12, p.fur, paw);
-  ctx.restore();
-
-  ctx.filter = 'none';
-  ctx.restore();
-
-  ctx.save();
-  ctx.globalAlpha = 0.25;
-  ctx.fillStyle = '#000';
-  ellipse(ctx, f.x, GROUND_Y + 8, 38, 9, true);
-  ctx.restore();
-}
-
-function star(ctx, x, y, n, r, ir) {
-  ctx.moveTo(x, y - r);
-  for (let i = 0; i < n * 2; i++) {
-    const ang = (Math.PI / n) * i - Math.PI / 2;
-    const rad = i % 2 === 0 ? r : ir;
-    ctx.lineTo(x + Math.cos(ang) * rad, y + Math.sin(ang) * rad);
-  }
-  ctx.closePath();
 }
 
 export function drawProjectile(ctx, p, time) {
@@ -654,104 +364,98 @@ export function drawSaucer(ctx, x, y, drinking) {
 }
 
 export function drawHUD(ctx, game) {
-  const { p1, p2, timer, wins, announce, combo } = game;
+  const { p1, p2, timer, wins, announce, combo, round = 1, assets } = game;
   ctx.save();
-  // bars
-  const barW = 430;
-  const barH = 26;
-  const y = 26;
-  ctx.fillStyle = 'rgba(0,0,0,0.62)';
-  roundRect(ctx, 40, y - 8, barW + 16, 56, 8); ctx.fill();
-  roundRect(ctx, CANVAS_W - 56 - barW, y - 8, barW + 16, 56, 8); ctx.fill();
+  ctx.imageSmoothingEnabled = false;
 
-  const drawBar = (x, hp, color, flip) => {
-    const cur = Number.isFinite(hp) ? hp : MAX_HP;
-    ctx.fillStyle = '#0d0d0d';
-    ctx.fillRect(x, y, barW, barH);
-    const w = Math.max(0, Math.min(barW, (cur / MAX_HP) * barW));
-    ctx.fillStyle = cur < MAX_HP * 0.22 ? '#ff3b3b' : color;
-    if (flip) ctx.fillRect(x + barW - w, y, w, barH);
-    else ctx.fillRect(x, y, w, barH);
-    ctx.strokeStyle = '#ffe566';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(x + 0.5, y + 0.5, barW - 1, barH - 1);
+  const portrait = 64;
+  const barH = 22;
+  const barY = 18;
+  const barW = 400;
+  const leftBarX = 12 + portrait + 8;
+  const rightBarX = CANVAS_W - 12 - portrait - 8 - barW;
+
+  const drawPortrait = (img, x, border) => {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(x - 3, 9, portrait + 6, portrait + 6);
+    ctx.fillStyle = border;
+    ctx.fillRect(x - 2, 10, portrait + 4, portrait + 4);
+    ctx.fillStyle = '#111';
+    ctx.fillRect(x, 12, portrait, portrait);
+    if (img) ctx.drawImage(img, x, 12, portrait, portrait);
   };
-  drawBar(48, p1.hp, '#e8c547', false);
-  drawBar(CANVAS_W - 48 - barW, p2.hp, '#c0392b', true);
+  drawPortrait(assets?.images?.yokoHud || assets?.images?.yoko, 12, '#e8c547');
+  drawPortrait(assets?.images?.morlanHud || assets?.images?.morlan, CANVAS_W - 12 - portrait, '#c0392b');
 
-  ctx.fillStyle = '#f6e6a2';
-  ctx.font = 'bold 16px Impact, sans-serif';
-  ctx.textAlign = 'left';
-  ctx.fillText(CHARACTERS.yoko.short, 52, y + 40);
-  ctx.textAlign = 'right';
-  ctx.fillText(CHARACTERS.morlan.short, CANVAS_W - 52, y + 40);
+  const drawLife = (x, hp, flip) => {
+    ctx.fillStyle = '#1a1208';
+    ctx.fillRect(x, barY, barW, barH);
+    const w = Math.round(lifeBarWidth(hp, MAX_HP, barW));
+    ctx.fillStyle = hp < MAX_HP * 0.22 ? '#e23b3b' : '#3dcc5a';
+    if (flip) ctx.fillRect(x + barW - w, barY, w, barH);
+    else ctx.fillRect(x, barY, w, barH);
+    ctx.fillStyle = '#f4e27a';
+    ctx.fillRect(x, barY, barW, 2);
+    ctx.fillRect(x, barY + barH - 2, barW, 2);
+    ctx.fillRect(x, barY, 2, barH);
+    ctx.fillRect(x + barW - 2, barY, 2, barH);
+    drawPixelText(ctx, 'LIFE', flip ? x + barW - 52 : x + 6, barY + 6, 2, '#fff8c0');
+  };
+  drawLife(leftBarX, p1.hp, false);
+  drawLife(rightBarX, p2.hp, true);
 
-  // timer
-  ctx.fillStyle = 'rgba(0,0,0,0.7)';
-  roundRect(ctx, CANVAS_W / 2 - 44, 16, 88, 54, 8); ctx.fill();
-  ctx.fillStyle = timer <= 10 ? '#ff6b6b' : '#fff';
-  ctx.font = 'bold 40px Impact, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText(String(Math.ceil(timer)).padStart(2, '0'), CANVAS_W / 2, 56);
+  const roundLabel = round >= 3 ? 'FINAL' : `ROUND ${round}`;
+  drawPixelText(ctx, roundLabel, CANVAS_W / 2, 8, 2, '#ffe566', 'center');
 
-  // round pips
+  const clock = String(Math.ceil(timer)).padStart(2, '0');
+  ctx.fillStyle = '#000';
+  ctx.fillRect(CANVAS_W / 2 - 40, 28, 80, 36);
+  drawPixelText(ctx, clock, CANVAS_W / 2, 32, 4, timer <= 10 ? '#ff4d4d' : '#ffe566', 'center');
+
   for (let i = 0; i < 2; i++) {
-    ctx.beginPath();
     ctx.fillStyle = i < wins[0] ? '#e8c547' : '#333';
-    ctx.arc(CANVAS_W / 2 - 70 - i * 18, 74, 6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
+    ctx.fillRect(CANVAS_W / 2 - 78 - i * 16, 68, 10, 10);
     ctx.fillStyle = i < wins[1] ? '#c0392b' : '#333';
-    ctx.arc(CANVAS_W / 2 + 70 + i * 18, 74, 6, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.fillRect(CANVAS_W / 2 + 68 + i * 16, 68, 10, 10);
   }
 
-  // meters
   const drawMeter = (x, meter, color, flip) => {
-    const mw = 220, mh = 10, my = CANVAS_H - 36;
-    ctx.fillStyle = 'rgba(0,0,0,0.55)';
-    roundRect(ctx, x, my, mw, mh, 4); ctx.fill();
+    const mw = 220, mh = 10, my = CANVAS_H - 28;
+    ctx.fillStyle = '#111';
+    ctx.fillRect(x, my, mw, mh);
     ctx.fillStyle = meter >= MAX_METER ? '#fff4a8' : color;
     const w = (meter / MAX_METER) * mw;
     if (flip) ctx.fillRect(x + mw - w, my, w, mh);
     else ctx.fillRect(x, my, w, mh);
-    ctx.strokeStyle = '#eee';
-    roundRect(ctx, x, my, mw, mh, 4); ctx.stroke();
     ctx.fillStyle = '#eee';
-    ctx.font = '11px sans-serif';
-    ctx.textAlign = flip ? 'right' : 'left';
-    ctx.fillText(meter >= MAX_METER ? 'SUPER READY' : 'SUPER', flip ? x + mw : x, my - 4);
+    ctx.fillRect(x, my, mw, 1);
+    ctx.fillRect(x, my + mh - 1, mw, 1);
+    drawPixelText(ctx, meter >= MAX_METER ? 'SUPER' : 'SUPER', flip ? x + mw : x, my - 12, 1, '#eee', flip ? 'right' : 'left');
   };
-  drawMeter(48, p1.meter, '#e8c547', false);
-  drawMeter(CANVAS_W - 48 - 220, p2.meter, '#c0392b', true);
+  drawMeter(12 + portrait + 8, p1.meter, '#e8c547', false);
+  drawMeter(CANVAS_W - 12 - portrait - 8 - 220, p2.meter, '#c0392b', true);
 
-  // revive icons
-  ctx.font = '12px sans-serif';
-  ctx.fillStyle = '#f6e6a2';
-  ctx.textAlign = 'left';
-  ctx.fillText(p1.revivesUsed < 1 ? '◆ Tuna revive' : '◇ revive spent', 48, CANVAS_H - 48);
-  ctx.textAlign = 'right';
-  ctx.fillText(p2.revivesUsed < 1 ? 'Tuna revive ◆' : 'revive spent ◇', CANVAS_W - 48, CANVAS_H - 48);
+  drawPixelText(ctx, p1.revivesUsed < 1 ? 'TUNA' : 'SPENT', 12 + portrait + 8, CANVAS_H - 48, 1, '#f6e6a2');
+  drawPixelText(ctx, p2.revivesUsed < 1 ? 'TUNA' : 'SPENT', CANVAS_W - 12 - portrait - 8, CANVAS_H - 48, 1, '#f6e6a2', 'right');
 
   if (combo && combo.count > 1) {
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 28px Impact, sans-serif';
-    ctx.textAlign = combo.side === 'p1' ? 'left' : 'right';
-    const cx = combo.side === 'p1' ? 60 : CANVAS_W - 60;
-    ctx.fillText(`${combo.count} HIT COMBO`, cx, 120);
+    const cx = combo.side === 'p1' ? 80 : CANVAS_W - 80;
+    drawPixelText(ctx, `${combo.count} HIT`, cx, 100, 3, '#fff', combo.side === 'p1' ? 'left' : 'right');
   }
 
   if (announce.text) {
-    ctx.fillStyle = `rgba(0,0,0,${0.45})`;
-    ctx.fillRect(0, CANVAS_H / 2 - 48, CANVAS_W, 80);
-    ctx.fillStyle = '#fff4c2';
-    ctx.font = 'bold 48px Impact, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(announce.text, CANVAS_W / 2, CANVAS_H / 2 + 10);
-    if (announce.sub) {
-      ctx.font = 'italic 18px Georgia, serif';
-      ctx.fillStyle = '#ddd';
-      ctx.fillText(announce.sub, CANVAS_W / 2, CANVAS_H / 2 + 36);
+    const fight = announce.text === 'FIGHT!';
+    if (fight) {
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      ctx.fillRect(0, CANVAS_H - 70, CANVAS_W, 48);
+      drawPixelText(ctx, 'FIGHT!', CANVAS_W / 2, CANVAS_H - 64, 6, '#ffffff', 'center');
+    } else if (!/^ROUND /.test(announce.text) && announce.text !== 'FINAL ROUND') {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(0, CANVAS_H / 2 - 40, CANVAS_W, 72);
+      drawPixelText(ctx, announce.text, CANVAS_W / 2, CANVAS_H / 2 - 24, 3, '#fff4c2', 'center');
+      if (announce.sub) {
+        drawPixelText(ctx, announce.sub, CANVAS_W / 2, CANVAS_H / 2 + 12, 1, '#dddddd', 'center');
+      }
     }
   }
   ctx.restore();
@@ -765,21 +469,16 @@ export function drawLetterbox(ctx, alpha = 0.7) {
 
 export function drawPortraitCard(ctx, img, x, y, w, h, name, title) {
   ctx.save();
-  ctx.fillStyle = 'rgba(0,0,0,0.65)';
-  roundRect(ctx, x - 8, y - 8, w + 16, h + 70, 12);
-  ctx.fill();
-  ctx.strokeStyle = '#e8c547';
-  ctx.lineWidth = 3;
-  roundRect(ctx, x - 8, y - 8, w + 16, h + 70, 12);
-  ctx.stroke();
+  ctx.imageSmoothingEnabled = false;
+  ctx.fillStyle = '#000';
+  ctx.fillRect(x - 6, y - 6, w + 12, h + 56);
+  ctx.fillStyle = '#e8c547';
+  ctx.fillRect(x - 4, y - 4, w + 8, h + 52);
+  ctx.fillStyle = '#111';
+  ctx.fillRect(x, y, w, h);
   if (img) ctx.drawImage(img, x, y, w, h);
-  ctx.fillStyle = '#fff';
-  ctx.font = 'bold 22px Impact, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText(name, x + w / 2, y + h + 28);
-  ctx.font = 'italic 13px Georgia, serif';
-  ctx.fillStyle = '#ddd';
-  ctx.fillText(title, x + w / 2, y + h + 48);
+  drawPixelText(ctx, name, x + w / 2, y + h + 10, 2, '#fff', 'center');
+  drawPixelText(ctx, title, x + w / 2, y + h + 30, 1, '#ddd', 'center');
   ctx.restore();
 }
 

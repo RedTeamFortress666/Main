@@ -25,7 +25,8 @@ html, body {
   display: block;
   width: 1280px;
   height: 720px;
-  image-rendering: auto;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 
 .scanlines {
