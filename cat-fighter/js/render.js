@@ -558,61 +558,61 @@ export function drawJoye(ctx, x, y, t, phase) {
   ctx.fillStyle = '#8b1e1e';
   ctx.fillRect(-12, 36, 14, 4);
 
-  // Body — elderly, green cardigan
+  // Body — elderly, slim green cardigan
   ctx.fillStyle = '#2e6b45';
-  roundRect(ctx, -18, -8, 36, 58, 12);
+  roundRect(ctx, -12, -8, 24, 60, 10);
   ctx.fill();
   ctx.fillStyle = '#f2d56b';
   ctx.beginPath();
-  ctx.moveTo(-10, -6); ctx.lineTo(16, 16); ctx.lineTo(8, 22); ctx.lineTo(-16, 2);
+  ctx.moveTo(-7, -6); ctx.lineTo(11, 16); ctx.lineTo(6, 20); ctx.lineTo(-11, 2);
   ctx.fill();
   ctx.fillStyle = '#6b4a32';
-  ctx.fillRect(-14, 46, 12, 22);
-  ctx.fillRect(2, 46, 12, 22);
+  ctx.fillRect(-10, 48, 8, 24);
+  ctx.fillRect(2, 48, 8, 24);
 
   // Hands on walker bar
   ctx.fillStyle = '#e8c4b0';
-  ellipse(ctx, -26, 8, 5, 4, true);
-  ellipse(ctx, 26, 8, 5, 4, true);
+  ellipse(ctx, -26, 8, 4, 3.2, true);
+  ellipse(ctx, 26, 8, 4, 3.2, true);
 
   // Head: copper-red hair a bit past the shoulders, round glasses, wrinkles
   const hair = '#c4451a';
   const hairDark = '#8f2e10';
   ctx.fillStyle = hair;
-  ellipse(ctx, 0, -44, 26, 24, true);
-  ellipse(ctx, 0, -58, 18, 12, true);
+  ellipse(ctx, 0, -46, 20, 22, true);
+  ellipse(ctx, 0, -60, 14, 11, true);
   // longer side locks
   ctx.fillStyle = hairDark;
-  ellipse(ctx, -20, -28, 9, 22, true);
-  ellipse(ctx, 20, -28, 9, 22, true);
+  ellipse(ctx, -16, -28, 6, 24, true);
+  ellipse(ctx, 16, -28, 6, 24, true);
   ctx.fillStyle = hair;
-  ellipse(ctx, -18, -22, 8, 20, true);
-  ellipse(ctx, 19, -20, 8, 22, true);
-  ellipse(ctx, -16, -8, 7, 12, true);
-  ellipse(ctx, 17, -6, 7, 14, true);
-  ellipse(ctx, -14, 6, 6, 12, true);
-  ellipse(ctx, 16, 8, 6, 14, true);
+  ellipse(ctx, -15, -22, 5.5, 22, true);
+  ellipse(ctx, 16, -20, 5.5, 24, true);
+  ellipse(ctx, -13, -6, 5, 14, true);
+  ellipse(ctx, 14, -4, 5, 16, true);
+  ellipse(ctx, -12, 8, 4.5, 12, true);
+  ellipse(ctx, 13, 10, 4.5, 14, true);
   ctx.fillStyle = '#f3c7b0';
-  ellipse(ctx, 0, -38, 15, 16, true);
+  ellipse(ctx, 0, -40, 11, 15, true);
   // wrinkles
   ctx.strokeStyle = 'rgba(140,90,80,0.45)';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(-10, -46); ctx.quadraticCurveTo(-4, -44, 2, -46);
-  ctx.moveTo(-8, -30); ctx.quadraticCurveTo(0, -28, 8, -30);
+  ctx.moveTo(-7, -48); ctx.quadraticCurveTo(-2, -46, 3, -48);
+  ctx.moveTo(-6, -32); ctx.quadraticCurveTo(0, -30, 6, -32);
   ctx.stroke();
   ctx.strokeStyle = '#222';
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.arc(-6, -40, 5.5, 0, Math.PI * 2);
-  ctx.arc(6, -40, 5.5, 0, Math.PI * 2);
-  ctx.moveTo(-0.5, -40); ctx.lineTo(0.5, -40);
+  ctx.arc(-5, -42, 4.5, 0, Math.PI * 2);
+  ctx.arc(5, -42, 4.5, 0, Math.PI * 2);
+  ctx.moveTo(-0.5, -42); ctx.lineTo(0.5, -42);
   ctx.stroke();
   ctx.fillStyle = '#5a3a28';
-  ellipse(ctx, -6, -40, 2, 2, true);
-  ellipse(ctx, 6, -40, 2, 2, true);
+  ellipse(ctx, -5, -42, 1.7, 1.7, true);
+  ellipse(ctx, 5, -42, 1.7, 1.7, true);
   ctx.fillStyle = '#c45c5c';
-  ellipse(ctx, 0, -32, 4.5, 2.2, true);
+  ellipse(ctx, 0, -34, 3.2, 1.8, true);
 
   // Tuna tin in her left hand on the walker
   ctx.fillStyle = '#cfd5da';
