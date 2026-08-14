@@ -55,6 +55,6 @@ canvas.addEventListener('pointerdown', () => {
   }
 });
 
-if ('serviceWorker' in navigator) {
+if ('serviceWorker' in navigator && !['localhost', '127.0.0.1'].includes(location.hostname)) {
   navigator.serviceWorker.register('./sw.js').catch(() => {});
 }

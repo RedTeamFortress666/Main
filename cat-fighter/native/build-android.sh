@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Copy the web game into the Android project and build a debug APK.
 set -euo pipefail
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 AND="$ROOT/native/android"
 WWW="$AND/app/src/main/assets/www"
 ICON_DIR="$AND/app/src/main/res"
