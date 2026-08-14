@@ -1,6 +1,8 @@
 # Yoko's Tuna Brawl
 
-Tekken-style 1v1 **Cat Battle** plus **Cat Car Racing**. Stella brings milk between rounds; Joye (walker, tuna) may revive a KO.
+Arcade 1v1 **Cat Battle** plus **Cat Car Racing**. On-screen Android pad: Up / Down / Left / Right, Jump, Punch, Kick, Laser Eyes. Stella brings milk between rounds; Joye may revive a KO.
+
+Joye occasionally tosses Yoko **Capitalist Chicken**. Stella occasionally tosses Morlan **Soviet Salmon**. Either pickup grants super strength, speed, and invulnerability.
 
 ## Android
 
@@ -24,26 +26,23 @@ Query flags: `?fasttimeout=1` (F9 milk, F10/F11 KO).
 
 ## Games
 
-From the title screen, **PRESS ENTER** then pick:
+From the title screen, **PRESS START** then pick:
 
-- **Cat Battle** — Tekken-style 4-limb brawler (Queen Yoko vs Tsar Morlan)
+- **Cat Battle** — Queen Yoko vs Tsar Morlan. Punch, kick, jump, laser eyes.
 - **Cat Car Racing** — 3-lap oval. Heads poke out of the cars.
 
 ### Cat Battle controls
 
-| | P1 Yoko | P2 Morlan |
+| | P1 Yoko (on-screen pad) | P2 Morlan |
 |---|---|---|
-| Move / crouch / jump | WASD | Arrows |
-| Dash / backdash | tap forward or back twice | same |
-| Block | Left Shift or hold back | Right Shift or hold back |
-| Sidestep | C | , |
-| Left Punch / Right Punch | Z / X | N / M |
-| Left Kick / Right Kick | F / G | J / K |
-| Throw | Z+X | N+M |
-| Launcher | down or down-forward + RP | same |
-| Rage Art | Z+G with full Rage | N+K with full Rage |
+| Up / Down / Left / Right | D-pad | Arrows |
+| Jump | JUMP (or Up) | P |
+| Punch | PUNCH | N |
+| Kick | KICK | M |
+| Laser eyes | LASER (charges after firing) | , |
+| Block | hold Back | hold Back |
 
-Android touch: LP RP / LK RK plus SS (sidestep), TH (throw), START.
+Laser eyes spend the LASER meter. It wears off and refills on its own.
 
 ### Cat Car Racing
 
@@ -54,4 +53,4 @@ Android touch: LP RP / LK RK plus SS (sidestep), TH (throw), START.
 | Baby (black Maine coon, white spots) | Blue Lotus |
 | Kittens (big orange Maine coon) | Red VW Beetle |
 
-P1 Yoko: W gas, S brake, A/D steer. P2 Morlan uses arrows in VS PLAYER. CPU fills the rest.
+P1 Yoko: Up gas, Down brake, Left/Right steer. P2 Morlan uses arrows in VS PLAYER. CPU fills the rest.

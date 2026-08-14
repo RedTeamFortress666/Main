@@ -10,6 +10,7 @@ import {
   MILK_HEAL, TUNA_HEAL, canMilkTimeout, canTunaRevive,
   matchOver, flavorForWin, isBlocked, gainMeter, contactVoice,
   GAME_TITLE, GAME_SUBTITLE, afterRoundEnd,
+  POWERUP_DURATION, pickupHitsFighter, sideDamageMult,
 } from './logic.js';
 import { Input } from './input.js';
 import { AudioBus } from './audio.js';
@@ -18,12 +19,13 @@ import { thinkAI } from './ai.js';
 import { createRace, updateRace, drawRace } from './race.js';
 import {
   Assets, Particles, drawStage, drawFighter, drawFighterNames, drawProjectile,
-  drawStella, drawJoye, drawSaucer, drawHUD, drawLetterbox,
+  drawPickup, drawStella, drawJoye, drawSaucer, drawHUD, drawLetterbox,
 } from './render.js';
 import { drawPixelText } from './pixel.js';
 
 const emptySnap = () => ({
   left: false, right: false, up: false, down: false,
+  jump: false, punch: false, kick: false, laser: false,
   lp: false, rp: false, lk: false, rk: false,
   mp: false, hp: false, mk: false, hk: false,
   anyPunch: false, anyKick: false, block: false, dir: 5,
@@ -56,6 +58,9 @@ export class Game {
     this.projectiles = [];
     this.announce = { text: '', sub: '', t: 0 };
     this.combo = null;
+    this.pickups = [];
+    this.chickenCd = 200;
+    this.salmonCd = 480;
     this.cutscene = null;
     this.shake = 0;
     this.flash = 0;
@@ -85,13 +90,14 @@ export class Game {
   }
 
   spawnProjectile(fighter, kind) {
-    const vx = fighter.facing * (kind === 'tuna' ? 8.5 : 0.2);
+    const laser = kind === 'laser';
+    const vx = fighter.facing * (laser ? 16 : kind === 'tuna' ? 8.5 : 0.2);
     this.projectiles.push(new Projectile({
-      x: fighter.x + fighter.facing * 50,
-      y: fighter.y - 90,
+      x: fighter.x + fighter.facing * (laser ? 70 : 50),
+      y: fighter.y - (laser ? 108 : 90),
       vx,
       owner: fighter.side,
-      kind: kind === 'meow' ? 'meow' : 'tuna',
+      kind: laser ? 'laser' : kind === 'meow' ? 'meow' : 'tuna',
     }));
     if (kind === 'meow') {
       this.projectiles[this.projectiles.length - 1].vx = fighter.facing * 3;
@@ -111,6 +117,9 @@ export class Game {
     this.p1.revivesUsed = r1;
     this.p2.revivesUsed = r2;
     this.projectiles = [];
+    this.pickups = [];
+    this.chickenCd = 180;
+    this.salmonCd = 420;
     this.milksThisRound = 0;
     this.timer = this.debug.fastTimer ? 8 : ROUND_TIME;
     this.timerAcc = 0;
@@ -279,10 +288,24 @@ export class Game {
     }
 
     const s1 = this.input.snapshot('p1', this.p1.facing);
-    const s2 = this.vsCpu
-      ? (this.time % 8 === 0 ? thinkAI(this.p2, this.p1) : this._aiHold || emptySnap())
-      : this.input.snapshot('p2', this.p2.facing);
-    if (this.vsCpu && this.time % 8 === 0) this._aiHold = s2;
+    let s2;
+    if (this.vsCpu) {
+      if (this.time % 10 === 0) this._aiHold = thinkAI(this.p2, this.p1, 0.28);
+      s2 = { ...(this._aiHold || emptySnap()) };
+      if (this.time % 10 !== 0) {
+        s2.punch = false;
+        s2.kick = false;
+        s2.laser = false;
+        s2.jump = false;
+        s2.pressedPunch = false;
+        s2.pressedKick = false;
+      }
+    } else {
+      s2 = this.input.snapshot('p2', this.p2.facing);
+    }
+
+    this.p1.damageMult = sideDamageMult('p1', this.vsCpu, this.p1.powerT > 0);
+    this.p2.damageMult = sideDamageMult('p2', this.vsCpu, this.p2.powerT > 0);
 
     const world1 = {
       frozen: false,
@@ -320,16 +343,70 @@ export class Game {
       const owner = proj.owner === 'p1' ? this.p1 : this.p2;
       const hit = collideProjectile(proj, target);
       if (hit) {
+        hit.atk.damage = Math.round(hit.atk.damage * (owner.damageMult || 1));
         this._onHit(hit, owner, target);
       }
     }
     this.projectiles = this.projectiles.filter((p) => !p.dead);
+    this._updatePickups();
     this.particles.update();
     if (this.shake > 0) this.shake -= 1;
     if (this.flash > 0) this.flash -= 1;
 
     if (this.p1.hp <= 0) this._onKo(this.p1, this.p2);
     else if (this.p2.hp <= 0) this._onKo(this.p2, this.p1);
+  }
+
+  _updatePickups() {
+    this.chickenCd -= 1;
+    this.salmonCd -= 1;
+    if (this.chickenCd <= 0) {
+      this.chickenCd = 360 + Math.floor(Math.random() * 180);
+      this.pickups.push({
+        kind: 'chicken', helper: 'joye',
+        x: 48, y: GROUND_Y - 160, vx: 5.2, vy: -2.4, life: 260,
+      });
+      this.say('JOYE TOSSES CHICKEN', 48, 'Capitalist Chicken for Yoko');
+    }
+    if (this.salmonCd <= 0) {
+      this.salmonCd = 720 + Math.floor(Math.random() * 240);
+      this.pickups.push({
+        kind: 'salmon', helper: 'stella',
+        x: CANVAS_W - 48, y: GROUND_Y - 160, vx: -5.2, vy: -2.4, life: 260,
+      });
+      this.say('STELLA TOSSES SALMON', 48, 'Soviet Salmon for Morlan');
+    }
+    for (const p of this.pickups) {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.12;
+      if (p.y > GROUND_Y - 36) {
+        p.y = GROUND_Y - 36;
+        p.vy *= -0.32;
+        p.vx *= 0.9;
+      }
+      p.life -= 1;
+    }
+    const kept = [];
+    for (const p of this.pickups) {
+      if (p.life <= 0) continue;
+      if (p.kind === 'chicken' && pickupHitsFighter(p, this.p1)) {
+        this.p1.grantPower('chicken', POWERUP_DURATION);
+        this.say('CAPITALIST CHICKEN', 80, 'Strength  speed  invulnerable');
+        this.particles.spawn(this.p1.x, this.p1.y - 80, 'super', { color: '#e8c547' });
+        this.audio.meow(true);
+        continue;
+      }
+      if (p.kind === 'salmon' && pickupHitsFighter(p, this.p2)) {
+        this.p2.grantPower('salmon', POWERUP_DURATION);
+        this.say('SOVIET SALMON', 80, 'Strength  speed  invulnerable');
+        this.particles.spawn(this.p2.x, this.p2.y - 80, 'super', { color: '#c0392b' });
+        this.audio.meow(true);
+        continue;
+      }
+      kept.push(p);
+    }
+    this.pickups = kept;
   }
 
   _idlePose() {
@@ -367,15 +444,20 @@ export class Game {
       const pulse = Math.floor(local / att.attack.multiGap);
       if (pulse < att.hasHit) return;
     }
+    const scaled = {
+      ...att.attack,
+      damage: Math.round(att.attack.damage * (att.damageMult || 1)),
+      chip: Math.round((att.attack.chip || 0) * (att.damageMult || 1)),
+    };
     const blocked = isBlocked(
-      att.attack.type,
+      scaled.type,
       def.blocking,
       def.crouching,
       def.airborne,
     );
-    const r = def.takeHit(att.attack, att.facing, blocked);
+    const r = def.takeHit(scaled, att.facing, blocked);
     att.hasHit += 1;
-    this._onHit({ ...r, hb, atk: att.attack, blocked: r.blocked }, att, def);
+    this._onHit({ ...r, hb, atk: scaled, blocked: r.blocked }, att, def);
   }
 
   _onHit(hit, att, def) {
@@ -589,9 +671,18 @@ export class Game {
     drawStage(ctx, this.assets, this.round, this.time, this.flash);
     const back = this.p1.y <= this.p2.y ? this.p1 : this.p2;
     const front = back === this.p1 ? this.p2 : this.p1;
-    drawFighter(ctx, back, this.assets);
-    drawFighter(ctx, front, this.assets);
+    drawFighter(ctx, back);
+    drawFighter(ctx, front);
     drawFighterNames(ctx, this.p1, this.p2);
+    for (const p of this.pickups) {
+      if (p.life > 210 && p.helper === 'joye') {
+        drawJoye(ctx, 70, GROUND_Y - 90, this.time, 'feed', this.assets.images.joyeSprite);
+      }
+      if (p.life > 210 && p.helper === 'stella') {
+        drawStella(ctx, CANVAS_W - 70, GROUND_Y - 90, this.time, 'place', this.assets.images.stellaSprite);
+      }
+      drawPickup(ctx, p, this.time);
+    }
     for (const p of this.projectiles) drawProjectile(ctx, p, this.time);
     this.particles.draw(ctx);
 
@@ -757,7 +848,7 @@ export class Game {
       drawPixelText(ctx, 'PRESS ENTER', CANVAS_W / 2, 620, 3, '#fff4c2', 'center');
     }
     drawPixelText(ctx, 'CAT BATTLE  OR  CAT CAR RACING', CANVAS_W / 2, 658, 1, '#ffe566', 'center');
-    drawPixelText(ctx, 'Z SPACE OR TAP  -  ESC PAUSES', CANVAS_W / 2, 678, 1, '#aaaaaa', 'center');
+    drawPixelText(ctx, 'Z SPACE START OR TAP  -  ESC PAUSES', CANVAS_W / 2, 678, 1, '#aaaaaa', 'center');
   }
 
   _drawModeSelect(ctx) {
@@ -768,7 +859,7 @@ export class Game {
     drawPixelText(ctx, 'CHOOSE YOUR GAME', CANVAS_W / 2, 88, 2, '#ffffff', 'center');
 
     const items = [
-      ['CAT BATTLE', 'TEKKEN STYLE  -  4 LIMBS  THROW  SIDESTEP  RAGE'],
+      ['CAT BATTLE', 'PUNCH  KICK  JUMP  LASER EYES  -  ON-SCREEN PAD'],
       ['CAT CAR RACING', 'YOKO ROLLS  MORLAN HEARSE  BABY LOTUS  KITTENS BEETLE'],
       ['BACK', 'RETURN TO TITLE'],
     ];
@@ -812,7 +903,7 @@ export class Game {
     ctx.fillStyle = 'rgba(8,6,20,0.72)';
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
     drawPixelText(ctx, 'CHOOSE YOUR IDEOLOGY', CANVAS_W / 2, 36, 3, '#ffe566', 'center');
-    drawPixelText(ctx, 'CAT BATTLE  -  TEKKEN STYLE', CANVAS_W / 2, 68, 1, '#aaaaaa', 'center');
+    drawPixelText(ctx, 'CAT BATTLE  -  ANDROID PAD', CANVAS_W / 2, 68, 1, '#aaaaaa', 'center');
 
     const items = [
       'VS CPU',
@@ -828,27 +919,27 @@ export class Game {
 
     drawPixelText(ctx, 'P1  QUEEN YOKO', 80, 280, 2, '#ffe566');
     const p1 = [
-      'WASD MOVE  FF DASH',
-      'SHIFT BLOCK  C SIDESTEP',
-      'Z LEFT PUNCH   X RIGHT PUNCH',
-      'F LEFT KICK    G RIGHT KICK',
-      'Z+X THROW   DF+X LAUNCHER',
-      'Z+G RAGE ART WHEN FULL',
+      'DPAD  UP DOWN LEFT RIGHT',
+      'JUMP   PUNCH   KICK   LASER',
+      'HOLD BACK TO BLOCK',
+      'LASER WEARS OFF  THEN REFILLS',
+      'JOYE THROWS CAPITALIST CHICKEN',
+      'CHICKEN = STR SPEED INVULN',
     ];
     p1.forEach((l, i) => drawPixelText(ctx, l, 80, 310 + i * 18, 1, '#dddddd'));
 
     drawPixelText(ctx, 'P2  TSAR MORLAN', 700, 280, 2, '#ff8a80');
     const p2 = [
-      'ARROWS MOVE  FF DASH',
-      'SHIFT BLOCK  , SIDESTEP',
-      'N LEFT PUNCH   M RIGHT PUNCH',
-      'J LEFT KICK    K RIGHT KICK',
-      'N+M THROW   DF+M LAUNCHER',
-      'N+K RAGE ART WHEN FULL',
+      'ARROWS MOVE  P JUMP',
+      'N PUNCH   M KICK   , LASER',
+      'HOLD BACK TO BLOCK',
+      'LASER WEARS OFF  THEN REFILLS',
+      'STELLA THROWS SOVIET SALMON',
+      'SALMON = STR SPEED INVULN',
     ];
     p2.forEach((l, i) => drawPixelText(ctx, l, 700, 310 + i * 18, 1, '#dddddd'));
 
-    drawPixelText(ctx, 'BETWEEN ROUNDS: STELLA MILK   KO: JOYE TUNA REVIVE   BEST OF 3', CANVAS_W / 2, 500, 1, '#aaaaaa', 'center');
+    drawPixelText(ctx, 'JOYE CHICKEN FOR YOKO   STELLA SALMON FOR MORLAN   BEST OF 3', CANVAS_W / 2, 500, 1, '#aaaaaa', 'center');
     drawPixelText(ctx, 'ENTER / Z TO CONFIRM', CANVAS_W / 2, 640, 2, '#fff4c2', 'center');
   }
 

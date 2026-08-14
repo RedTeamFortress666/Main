@@ -20,41 +20,30 @@ const game = new Game(canvas);
 window.CatFighter = game;
 game.start();
 
-const coarse = window.matchMedia('(pointer: coarse)').matches
-  || 'ontouchstart' in window
-  || navigator.maxTouchPoints > 0;
 const touchUi = document.getElementById('touch-ui');
-if (coarse && touchUi) {
+if (touchUi) {
   touchUi.classList.add('show');
   touchUi.setAttribute('aria-hidden', 'false');
-  for (const btn of touchUi.querySelectorAll('[data-code], [data-throw]')) {
-    const throwBtn = btn.hasAttribute('data-throw');
+  for (const btn of touchUi.querySelectorAll('[data-code]')) {
     const code = btn.getAttribute('data-code');
     const down = (e) => {
       e.preventDefault();
       btn.classList.add('held');
       game.audio.ensure();
-      if (throwBtn) {
-        game.input.setVirtual('KeyZ', true);
-        game.input.setVirtual('KeyX', true);
-      } else {
-        game.input.setVirtual(code, true);
+      game.input.setVirtual(code, true);
+      if (typeof e.pointerId === 'number' && btn.setPointerCapture) {
+        try { btn.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
       }
     };
     const up = (e) => {
       e.preventDefault();
       btn.classList.remove('held');
-      if (throwBtn) {
-        game.input.setVirtual('KeyZ', false);
-        game.input.setVirtual('KeyX', false);
-      } else {
-        game.input.setVirtual(code, false);
-      }
+      game.input.setVirtual(code, false);
     };
     btn.addEventListener('pointerdown', down);
     btn.addEventListener('pointerup', up);
     btn.addEventListener('pointercancel', up);
-    btn.addEventListener('pointerleave', up);
+    btn.addEventListener('lostpointercapture', up);
   }
 }
 

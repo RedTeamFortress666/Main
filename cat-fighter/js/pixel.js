@@ -125,7 +125,7 @@ function pal(yoko) {
       white: '#f3efe6',
       gold: '#e8c547',
       goldDk: '#b8942a',
-      cloth: '#101014',
+      cloth: '#243868',
       sash: '#d4b84a',
       eye: '#3dcc6a',
       nose: '#f0b3c0',
@@ -175,6 +175,7 @@ export function paintCatSprite(octx, yoko, pose) {
   const hit = pose.hit || 0;
   const walk = pose.walk || 0;
   const ko = pose.ko || 0;
+  const laser = pose.laser || 0;
 
   octx.clearRect(0, 0, SPRITE_W, SPRITE_H);
   const drop = Math.round(crouch * 10 + ko * 18);
@@ -182,11 +183,12 @@ export function paintCatSprite(octx, yoko, pose) {
   const cx = 22 + lean;
   const footY = SPRITE_H - 2 - Math.round(jump * 6);
 
-  // Tail
+  // Bushy tail
   const tw = Math.round(Math.sin((pose.t || 0) * 0.15) * 3);
-  rect(octx, cx - 18 + tw, footY - 42 + drop, 4, 22, p.outline);
-  rect(octx, cx - 17 + tw, footY - 41 + drop, 2, 20, p.fur);
-  rect(octx, cx - 20 + tw, footY - 48 + drop, 6, 8, p.fur);
+  rect(octx, cx - 20 + tw, footY - 46 + drop, 8, 26, p.outline);
+  rect(octx, cx - 19 + tw, footY - 45 + drop, 6, 24, p.fur);
+  rect(octx, cx - 22 + tw, footY - 52 + drop, 10, 10, p.fur);
+  rect(octx, cx - 21 + tw, footY - 51 + drop, 8, 8, p.furHi || p.fur);
 
   // Back arm
   const backArmY = footY - 48 + drop;
@@ -224,6 +226,10 @@ export function paintCatSprite(octx, yoko, pose) {
   if (yoko) {
     rect(octx, cx - 2, bodyTop + 4, 8, 16, p.white);
     rect(octx, cx - 6, bodyTop + 14, bodyW - 4, 4, p.sash);
+    rect(octx, cx - 8, bodyTop, 6, 4, p.gold);
+    rect(octx, cx + 8, bodyTop, 6, 4, p.gold);
+    rect(octx, cx - 7, bodyTop + 1, 4, 2, p.goldDk);
+    rect(octx, cx + 9, bodyTop + 1, 4, 2, p.goldDk);
     rect(octx, cx + 4, bodyTop + 8, 2, 2, p.gold);
     rect(octx, cx + 4, bodyTop + 12, 2, 2, p.gold);
     rect(octx, cx + 4, bodyTop + 16, 2, 2, p.gold);
@@ -279,16 +285,21 @@ export function paintCatSprite(octx, yoko, pose) {
   }
 
   // Eyes
-  if ((pose.t || 0) % 180 < 6) {
+  if ((pose.t || 0) % 180 < 6 && laser <= 0) {
     rect(octx, hx - 6, hy + 7, 5, 1, p.outline);
     rect(octx, hx + 3, hy + 7, 5, 1, p.outline);
   } else {
-    const eh = hit > 0.4 ? 1 : 4;
-    rect(octx, hx - 6, hy + 5, 5, eh, p.eye);
-    rect(octx, hx + 3, hy + 5, 5, eh, p.eye);
-    rect(octx, hx - 4, hy + 6, 2, 2, '#111');
-    rect(octx, hx + 5, hy + 6, 2, 2, '#111');
-    if (yoko) {
+    const eh = hit > 0.4 && laser <= 0 ? 1 : 4;
+    const eye = laser > 0 ? '#ff3a20' : p.eye;
+    rect(octx, hx - 6, hy + 5, 5, eh, eye);
+    rect(octx, hx + 3, hy + 5, 5, eh, eye);
+    rect(octx, hx - 4, hy + 6, 2, 2, laser > 0 ? '#fff4c2' : '#111');
+    rect(octx, hx + 5, hy + 6, 2, 2, laser > 0 ? '#fff4c2' : '#111');
+    if (laser > 0) {
+      rect(octx, hx + 8, hy + 6, 18, 3, '#ff6a3a');
+      rect(octx, hx + 8, hy + 7, 18, 1, '#fff4c2');
+    }
+    if (yoko && laser <= 0) {
       rect(octx, hx - 6, hy + 4, 5, 1, p.fur);
       rect(octx, hx + 3, hy + 4, 5, 1, p.fur);
     }
@@ -298,7 +309,7 @@ export function paintCatSprite(octx, yoko, pose) {
 
 export function fighterPoseFromState(f) {
   const t = f.animTime || 0;
-  const pose = { t, punch: 0, kick: 0, crouch: 0, jump: 0, block: 0, hit: 0, walk: 0, ko: 0 };
+  const pose = { t, punch: 0, kick: 0, crouch: 0, jump: 0, block: 0, hit: 0, walk: 0, ko: 0, laser: 0 };
   if (f.crouching && !f.airborne) pose.crouch = 1;
   if (f.airborne || f.state === 'jump') pose.jump = 1;
   if (f.state === 'block') pose.block = 1;
@@ -312,7 +323,8 @@ export function fighterPoseFromState(f) {
       ? local / Math.max(1, a.startup)
       : local < a.startup + a.active ? 1
         : 1 - (local - a.startup - a.active) / Math.max(1, a.recovery);
-    if (a.id && a.id.includes('k') && !a.super) pose.kick = ext;
+    if (a.id === 'laserEyes' || a.projectile === 'laser') pose.laser = ext;
+    else if (a.id && a.id.toLowerCase().includes('kick')) pose.kick = ext;
     else pose.punch = ext;
     if (a.uppercut) pose.punch = 1;
   }
@@ -321,7 +333,7 @@ export function fighterPoseFromState(f) {
 
 export const SPRITE_DRAW = 3;
 
-export function drawPixelFighter(ctx, f, sprite) {
+export function drawPixelFighter(ctx, f) {
   const pose = fighterPoseFromState(f);
   const jx = f.shake ? (Math.random() - 0.5) * f.shake : 0;
   const bob = f.state === 'idle' ? Math.sin((f.animTime || 0) * 0.12) * 3 : 0;
@@ -331,17 +343,20 @@ export function drawPixelFighter(ctx, f, sprite) {
   const sy = pose.crouch ? 0.82 : pose.ko ? 0.68 : pose.jump ? 1.05 : 1;
   const sx = (pose.punch ? 1.06 : 1) * (pose.kick ? 1.04 : 1);
   if (pose.hit) ctx.rotate(0.1 * f.facing);
+  if (f.powerT > 0) {
+    ctx.save();
+    ctx.globalAlpha = 0.35 + Math.sin((f.animTime || 0) * 0.4) * 0.15;
+    ctx.fillStyle = f.powerKind === 'salmon' ? '#c0392b' : '#e8c547';
+    ctx.fillRect(-28, -SPRITE_H * SPRITE_DRAW - 8, 56, SPRITE_H * SPRITE_DRAW + 16);
+    ctx.restore();
+  }
   ctx.scale(f.facing * SPRITE_DRAW * sx, SPRITE_DRAW * sy);
   if (f.hitFlash > 0) ctx.filter = 'brightness(2.2)';
-  if (sprite) {
-    ctx.drawImage(sprite, -sprite.width / 2, -sprite.height);
-  } else {
-    const c = sheet();
-    const octx = c.getContext('2d');
-    octx.imageSmoothingEnabled = false;
-    paintCatSprite(octx, f.characterId === 'yoko', pose);
-    ctx.drawImage(c, -SPRITE_W / 2, -SPRITE_H);
-  }
+  const c = sheet();
+  const octx = c.getContext('2d');
+  octx.imageSmoothingEnabled = false;
+  paintCatSprite(octx, f.characterId === 'yoko', pose);
+  ctx.drawImage(c, -SPRITE_W / 2, -SPRITE_H);
   ctx.filter = 'none';
   ctx.restore();
 

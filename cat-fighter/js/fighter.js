@@ -1,8 +1,7 @@
 import {
-  ATTACKS, GROUND_Y, MAX_HP, MAX_METER, CANVAS_W, CHARACTERS,
-  applyDamage, applyHeal, spendMeter,
-  detectSpecial, detectTekkenCommand, detectDash,
-  stringFollowup, canCancelAttack, LIMB_TO_NORMAL,
+  ATTACKS, GROUND_Y, MAX_HP, CANVAS_W,
+  applyDamage, applyHeal, spendLaser, regenLaser,
+  LASER_MAX, POWERUP_SPEED, canCancelAttack, detectDash,
   isBlocked, clamp,
 } from './logic.js';
 import { MotionBuffer } from './input.js';
@@ -19,9 +18,9 @@ export class Projectile {
     this.vx = vx;
     this.owner = owner;
     this.kind = kind;
-    this.w = kind === 'tuna' ? 36 : 70;
-    this.h = kind === 'tuna' ? 28 : 70;
-    this.life = kind === 'tuna' ? 90 : 18;
+    this.w = kind === 'laser' ? 96 : kind === 'tuna' ? 36 : 70;
+    this.h = kind === 'laser' ? 12 : kind === 'tuna' ? 28 : 70;
+    this.life = kind === 'laser' ? 42 : kind === 'tuna' ? 90 : 18;
     this.dead = false;
     this.hasHit = false;
   }
@@ -78,6 +77,10 @@ export class Fighter {
     this.stringPrev = '';
     this.sidestepT = 0;
     this.dashT = 0;
+    this.laser = LASER_MAX;
+    this.powerT = 0;
+    this.powerKind = '';
+    this.damageMult = 1;
   }
 
   resetRound(x) {
@@ -106,6 +109,9 @@ export class Fighter {
     this.stringPrev = '';
     this.sidestepT = 0;
     this.dashT = 0;
+    this.laser = LASER_MAX;
+    this.powerT = 0;
+    this.powerKind = '';
   }
 
   get hurtbox() {
@@ -164,85 +170,42 @@ export class Fighter {
   }
 
   pickNormals(snap) {
-    const limb = snap.limb || snap.attackId;
-    if (!limb) return null;
-    if (this.airborne) {
-      if (limb === 'lp') return 'jlp';
-      if (limb === 'rp') return 'jhp';
-      return 'jmk';
+    if (snap.punch) {
+      if (this.airborne) return 'jlp';
+      if (snap.down) return 'clp';
+      return 'simplePunch';
     }
-    if (snap.down) {
-      if (limb === 'lp' || limb === 'lk') return 'clp';
-      if (limb === 'rp' || limb === 'rk') return limb === 'rk' ? 'chk' : 'cmk';
-      return 'chk';
+    if (snap.kick) {
+      if (this.airborne) return 'jmk';
+      if (snap.down) return 'cmk';
+      return 'simpleKick';
     }
-    return LIMB_TO_NORMAL[limb] || limb;
+    return null;
   }
 
   tryAttack(snap, { cancel = false } = {}) {
-    if (!snap.attackId && !snap.buttonClass && !snap.throw && !snap.sidestep) return false;
+    if (!snap.punch && !snap.kick && !snap.laser) return false;
     if (!cancel && (this.attacking || this.hitstun || this.blockstun)) return false;
-    if (['knockdown', 'getup', 'drink', 'eat', 'ko', 'sidestep'].includes(this.state) && !cancel) return false;
+    if (['knockdown', 'getup', 'drink', 'eat', 'ko'].includes(this.state) && !cancel) return false;
 
-    const limbs = {
-      lp: !!snap.lp, rp: !!snap.rp, lk: !!snap.lk, rk: !!snap.rk, throw: !!snap.throw,
-    };
-    const cmd = detectTekkenCommand(snap.dir, limbs, this.meter, this.characterId)
-      || (this.dashT > 0 && snap.lp ? CHARACTERS[this.characterId].specials.qcf_p : null);
-    if (cmd) {
-      const def = ATTACKS[cmd];
-      if (def?.super) {
-        const spent = spendMeter(this.meter, MAX_METER);
-        if (spent.ok) {
-          this.meter = spent.meter;
-          this.startAttack(cmd);
-          this.motion.clear();
-          this.stringPrev = '';
-          return 'super';
-        }
-      } else if (cmd === 'catThrow') {
-        this.startAttack('catThrow');
-        this.stringPrev = '';
-        return 'throw';
-      } else {
-        this.startAttack(cmd);
-        this.motion.clear();
-        this.stringPrev = '';
-        return 'special';
+    if (snap.laser) {
+      const spent = spendLaser(this.laser);
+      if (spent.ok) {
+        this.laser = spent.laser;
+        this.startAttack('laserEyes');
+        return 'laser';
       }
+      return false;
     }
-
-    if (cancel && this.stringPrev && snap.limb) {
-      const follow = stringFollowup(this.stringPrev, snap.limb);
-      if (follow && ATTACKS[follow]) {
-        this.startAttack(follow);
-        this.stringPrev = follow;
-        return 'string';
-      }
-    }
-
-    const cls = snap.buttonClass || (['lk', 'rk', 'mk', 'hk'].includes(snap.attackId) ? 'k' : 'p');
-    const specialId = detectSpecial(this.motion.dirs, cls, this.meter, this.characterId);
-    if (specialId && !cancel) {
-      const def = ATTACKS[specialId];
-      if (def?.super) {
-        const spent = spendMeter(this.meter, MAX_METER);
-        if (spent.ok) {
-          this.meter = spent.meter;
-          this.startAttack(specialId);
-          this.motion.clear();
-          return 'super';
-        }
-      } else {
-        this.startAttack(specialId);
-        this.motion.clear();
-        return 'special';
-      }
+    if (cancel && this.stringPrev === 'simplePunch' && snap.kick) {
+      this.startAttack('simpleKick');
+      this.stringPrev = 'simpleKick';
+      return 'string';
     }
     const normal = this.pickNormals(snap);
     if (normal) {
       this.startAttack(normal);
-      this.stringPrev = snap.limb || normal;
+      this.stringPrev = normal;
       return 'normal';
     }
     return false;
@@ -286,6 +249,12 @@ export class Fighter {
     return r.healed;
   }
 
+  grantPower(kind, duration) {
+    this.powerKind = kind;
+    this.powerT = duration;
+    this.invuln = Math.max(this.invuln, 8);
+  }
+
   update(snap, opponent, world) {
     this.animTime += 1;
     this.stateTime += 1;
@@ -295,6 +264,13 @@ export class Fighter {
 
     this.motion.push(snap.dir);
     this.face(opponent);
+    this.laser = regenLaser(this.laser);
+    if (this.powerT > 0) {
+      this.powerT -= 1;
+      this.invuln = Math.max(this.invuln, 2);
+      if (this.powerT <= 0) this.powerKind = '';
+    }
+    const walk = WALK * (this.powerT > 0 ? POWERUP_SPEED : 1);
 
     const locked = ['drink', 'eat', 'ko', 'win', 'lose', 'intro'].includes(this.state)
       || world.frozen;
@@ -421,12 +397,12 @@ export class Fighter {
     this.blocking = false;
     this.crouching = false;
 
-    if (!this.airborne && snap.up) {
+    if (!this.airborne && snap.jump) {
       this.vy = JUMP_V;
       this.airborne = true;
       this.state = 'jump';
-      if (snap.left) this.vx = -WALK * 1.05;
-      if (snap.right) this.vx = WALK * 1.05;
+      if (snap.left) this.vx = -walk * 1.05;
+      if (snap.right) this.vx = walk * 1.05;
       this._physics(world);
       return;
     }
@@ -450,10 +426,10 @@ export class Fighter {
 
     if (!this.airborne) {
       if (snap.left) {
-        this.vx = -WALK;
+        this.vx = -walk;
         this.state = 'walk';
       } else if (snap.right) {
-        this.vx = WALK;
+        this.vx = walk;
         this.state = 'walk';
       } else {
         this.vx *= FRICTION;
@@ -522,12 +498,12 @@ export function collideProjectile(proj, defender) {
   const b = defender.hurtbox;
   if (!(a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y)) return null;
   const dummyAtk = {
-    damage: proj.kind === 'tuna' ? 70 : 55,
-    chip: 8,
-    hitstun: 14,
+    damage: proj.kind === 'laser' ? 150 : proj.kind === 'tuna' ? 70 : 55,
+    chip: proj.kind === 'laser' ? 20 : 8,
+    hitstun: 16,
     blockstun: 10,
-    knockback: 5,
-    launch: 0,
+    knockback: proj.kind === 'laser' ? 8 : 5,
+    launch: proj.kind === 'laser' ? 2 : 0,
     type: 'mid',
     meterGain: 8,
   };

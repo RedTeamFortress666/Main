@@ -57,32 +57,28 @@ export class Input {
     const up = this.held(m.up);
     const down = this.held(m.down);
     const blockHeld = this.held(m.block) || (facing >= 0 ? left && !right : right && !left);
-    const lpJ = this.just(m.lp);
-    const rpJ = this.just(m.rp);
-    const lkJ = this.just(m.lk);
-    const rkJ = this.just(m.rk);
-    const lpH = this.held(m.lp);
-    const rpH = this.held(m.rp);
-    const throwNow = (lpJ && (rpJ || rpH)) || (rpJ && lpH);
-    const limb = lpJ ? 'lp' : rpJ ? 'rp' : lkJ ? 'lk' : rkJ ? 'rk' : null;
+    const punch = this.just(m.punch) || this.just(m.lp);
+    const kick = this.just(m.kick);
+    const laser = this.just(m.laser);
+    const jump = this.just(m.jump) || this.just(m.up);
     return {
-      left, right, up, down,
-      lp: lpJ, rp: rpJ, lk: lkJ, rk: rkJ,
-      mp: rpJ, hp: this.just(m.hp), mk: rkJ, hk: this.just(m.hk),
-      anyPunch: lpJ || rpJ,
-      anyKick: lkJ || rkJ,
-      lpHeld: lpH,
-      mpHeld: rpH,
-      hpHeld: this.held(m.hp),
+      left, right, up, down, jump, punch, kick, laser,
+      lp: punch, rp: false, lk: kick, rk: false,
+      mp: kick, hp: laser, mk: kick, hk: false,
+      anyPunch: punch,
+      anyKick: kick,
+      lpHeld: this.held(m.punch) || this.held(m.lp),
+      mpHeld: this.held(m.kick),
+      hpHeld: this.held(m.laser),
       block: blockHeld,
-      sidestep: this.just(m.sidestep),
-      throw: throwNow,
+      sidestep: false,
+      throw: false,
       dir: numpadDir(left, right, up, down, facing),
-      pressedPunch: lpJ || rpJ,
-      pressedKick: lkJ || rkJ,
-      buttonClass: (lpJ || rpJ) ? 'p' : (lkJ || rkJ) ? 'k' : null,
-      attackId: limb,
-      limb,
+      pressedPunch: punch,
+      pressedKick: kick,
+      buttonClass: punch ? 'p' : kick ? 'k' : laser ? 'p' : null,
+      attackId: punch ? 'lp' : kick ? 'lk' : laser ? 'hp' : null,
+      limb: punch ? 'lp' : kick ? 'lk' : null,
     };
   }
 

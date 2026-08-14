@@ -33,6 +33,15 @@ import {
   GAME_TITLE,
   CANVAS_W,
   CANVAS_H,
+  LASER_MAX,
+  LASER_COST,
+  P1_DAMAGE_MULT,
+  CPU_DAMAGE_MULT,
+  POWERUP_DAMAGE,
+  regenLaser,
+  spendLaser,
+  sideDamageMult,
+  pickupHitsFighter,
 } from './js/logic.js';
 
 describe('title', () => {
@@ -255,5 +264,44 @@ describe('cat car racing roster', () => {
     expect(raceProgress(b)).toBe(2 * TRACK_LEN);
     const p = trackPoint(0, 0);
     expect(p.x).toBeGreaterThan(CANVAS_W / 2);
+  });
+});
+
+describe('laser eyes', () => {
+  it('spends a chunk of the meter and refuses when empty', () => {
+    const spent = spendLaser(LASER_MAX);
+    expect(spent.ok).toBe(true);
+    expect(spent.laser).toBe(LASER_MAX - LASER_COST);
+    expect(spendLaser(LASER_COST - 1).ok).toBe(false);
+  });
+
+  it('regenerates toward the cap', () => {
+    const next = regenLaser(0);
+    expect(next).toBeGreaterThan(0);
+    expect(regenLaser(LASER_MAX)).toBe(LASER_MAX);
+  });
+
+  it('defines punch kick and laser attacks', () => {
+    expect(ATTACKS.simplePunch.damage).toBeGreaterThan(50);
+    expect(ATTACKS.simpleKick.damage).toBeGreaterThan(ATTACKS.simplePunch.damage);
+    expect(ATTACKS.laserEyes.projectile).toBe('laser');
+  });
+});
+
+describe('easier Yoko vs CPU', () => {
+  it('lets Yoko hit harder than CPU Morlan', () => {
+    expect(P1_DAMAGE_MULT).toBeGreaterThan(1);
+    expect(CPU_DAMAGE_MULT).toBeLessThan(1);
+    expect(sideDamageMult('p1', true, false)).toBe(P1_DAMAGE_MULT);
+    expect(sideDamageMult('p2', true, false)).toBe(CPU_DAMAGE_MULT);
+    expect(sideDamageMult('p1', true, true)).toBeCloseTo(P1_DAMAGE_MULT * POWERUP_DAMAGE);
+  });
+});
+
+describe('power-up pickups', () => {
+  it('hits when the toss lands on a fighter', () => {
+    const fighter = { x: 340, y: 604 };
+    expect(pickupHitsFighter({ x: 340, y: 540 }, fighter)).toBe(true);
+    expect(pickupHitsFighter({ x: 900, y: 540 }, fighter)).toBe(false);
   });
 });

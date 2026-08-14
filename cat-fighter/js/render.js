@@ -1,5 +1,5 @@
 import {
-  CANVAS_W, CANVAS_H, GROUND_Y, MAX_HP, MAX_METER, lerp,
+  CANVAS_W, CANVAS_H, GROUND_Y, MAX_HP, LASER_MAX, LASER_COST, lerp,
 } from './logic.js';
 import {
   drawPixelText, lifeBarWidth, drawPixelFighter, chromaKeyMagenta, SPRITE_DRAW,
@@ -141,9 +141,8 @@ export function drawStage(ctx, assets, round, time, flash) {
   ctx.restore();
 }
 
-export function drawFighter(ctx, f, assets) {
-  const key = f.characterId === 'yoko' ? 'yokoSprite' : 'morlanSprite';
-  drawPixelFighter(ctx, f, assets?.images?.[key]);
+export function drawFighter(ctx, f) {
+  drawPixelFighter(ctx, f);
 }
 
 export function drawFighterNames(ctx, p1, p2) {
@@ -171,7 +170,16 @@ export function drawFighterNames(ctx, p1, p2) {
 export function drawProjectile(ctx, p, time) {
   ctx.save();
   ctx.translate(p.x, p.y);
-  if (p.kind === 'tuna') {
+  if (p.kind === 'laser') {
+    const dir = Math.sign(p.vx) || 1;
+    const pulse = 0.55 + Math.sin(time * 0.6) * 0.25;
+    ctx.fillStyle = `rgba(255, 80, 40, ${pulse})`;
+    ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+    ctx.fillStyle = `rgba(255, 230, 120, ${0.7 + pulse * 0.3})`;
+    ctx.fillRect(-p.w / 2, -3, p.w, 6);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(dir > 0 ? p.w / 2 - 8 : -p.w / 2, -2, 8, 4);
+  } else if (p.kind === 'tuna') {
     ctx.rotate(time * 0.2 * Math.sign(p.vx || 1));
     ctx.fillStyle = '#c0c6cc';
     roundRect(ctx, -16, -12, 32, 24, 4);
@@ -190,6 +198,35 @@ export function drawProjectile(ctx, p, time) {
     ctx.stroke();
     ctx.fillStyle = 'rgba(255,240,160,0.12)';
     ctx.fill();
+  }
+  ctx.restore();
+}
+
+export function drawPickup(ctx, p, time) {
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  ctx.translate(Math.round(p.x), Math.round(p.y + Math.sin(time * 0.2) * 3));
+  ctx.rotate(Math.sin(time * 0.12) * 0.15);
+  if (p.kind === 'chicken') {
+    ctx.fillStyle = '#c47a18';
+    ctx.fillRect(-14, -8, 28, 16);
+    ctx.fillStyle = '#e8c547';
+    ctx.fillRect(-12, -6, 24, 12);
+    ctx.fillStyle = '#fff4c2';
+    ctx.fillRect(8, -4, 10, 8);
+    ctx.fillStyle = '#8a4a12';
+    ctx.fillRect(-16, -2, 6, 4);
+    drawPixelText(ctx, 'CHKN', 0, 12, 1, '#ffe566', 'center');
+  } else {
+    ctx.fillStyle = '#c0392b';
+    ctx.fillRect(-16, -7, 32, 14);
+    ctx.fillStyle = '#f4a0a0';
+    ctx.fillRect(-14, -5, 28, 10);
+    ctx.fillStyle = '#ffe566';
+    ctx.fillRect(-2, -3, 6, 6);
+    ctx.fillStyle = '#8aa0b0';
+    ctx.fillRect(12, -2, 8, 4);
+    drawPixelText(ctx, 'SLMN', 0, 12, 1, '#ff8a80', 'center');
   }
   ctx.restore();
 }
@@ -322,29 +359,30 @@ export function drawHUD(ctx, game) {
 
   for (let i = 0; i < 2; i++) {
     ctx.fillStyle = i < wins[0] ? '#e8c547' : '#333';
-    ctx.fillRect(CANVAS_W / 2 - 78 - i * 16, 68, 10, 10);
+    ctx.fillRect(CANVAS_W / 2 - 78 - i * 16, 78, 10, 10);
     ctx.fillStyle = i < wins[1] ? '#c0392b' : '#333';
-    ctx.fillRect(CANVAS_W / 2 + 68 + i * 16, 68, 10, 10);
+    ctx.fillRect(CANVAS_W / 2 + 68 + i * 16, 78, 10, 10);
   }
 
-  const drawMeter = (x, meter, color, flip) => {
-    const mw = 220, mh = 10, my = CANVAS_H - 28;
+  const drawLaser = (x, laser, color, flip) => {
+    const mw = 220, mh = 10, my = barY + barH + 8;
+    const ready = laser >= LASER_COST;
     ctx.fillStyle = '#111';
     ctx.fillRect(x, my, mw, mh);
-    ctx.fillStyle = meter >= MAX_METER ? '#fff4a8' : color;
-    const w = (meter / MAX_METER) * mw;
+    ctx.fillStyle = ready ? color : '#5a4030';
+    const w = (Math.max(0, laser) / LASER_MAX) * mw;
     if (flip) ctx.fillRect(x + mw - w, my, w, mh);
     else ctx.fillRect(x, my, w, mh);
     ctx.fillStyle = '#eee';
     ctx.fillRect(x, my, mw, 1);
     ctx.fillRect(x, my + mh - 1, mw, 1);
-    drawPixelText(ctx, meter >= MAX_METER ? 'RAGE' : 'RAGE', flip ? x + mw : x, my - 12, 1, '#eee', flip ? 'right' : 'left');
+    drawPixelText(ctx, ready ? 'LASER' : 'CHARGING', flip ? x + mw : x, my + 14, 1, ready ? '#eee' : '#c9a27a', flip ? 'right' : 'left');
   };
-  drawMeter(12 + portrait + 8, p1.meter, '#e8c547', false);
-  drawMeter(CANVAS_W - 12 - portrait - 8 - 220, p2.meter, '#c0392b', true);
+  drawLaser(leftBarX, p1.laser, '#ff6a3a', false);
+  drawLaser(rightBarX, p2.laser, '#ff6a3a', true);
 
-  drawPixelText(ctx, p1.revivesUsed < 1 ? '+' : 'x', 12 + portrait + 8, CANVAS_H - 48, 2, '#f6e6a2');
-  drawPixelText(ctx, p2.revivesUsed < 1 ? '+' : 'x', CANVAS_W - 12 - portrait - 8, CANVAS_H - 48, 2, '#f6e6a2', 'right');
+  drawPixelText(ctx, p1.revivesUsed < 1 ? '+' : 'x', leftBarX, 68, 2, '#f6e6a2');
+  drawPixelText(ctx, p2.revivesUsed < 1 ? '+' : 'x', rightBarX + 400, 68, 2, '#f6e6a2', 'right');
 
   if (combo && combo.count > 1) {
     const cx = combo.side === 'p1' ? 80 : CANVAS_W - 80;

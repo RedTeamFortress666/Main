@@ -1,9 +1,10 @@
 /**
- * Tekken-style vs-CPU brain. Same snapshot shape as a human.
+ * Simple vs-CPU brain for punch / kick / jump / laser.
  */
-export function thinkAI(me, opp, difficulty = 0.72) {
+export function thinkAI(me, opp, difficulty = 0.28) {
   const snap = {
     left: false, right: false, up: false, down: false,
+    jump: false, punch: false, kick: false, laser: false,
     lp: false, rp: false, lk: false, rk: false,
     mp: false, hp: false, mk: false, hk: false,
     anyPunch: false, anyKick: false, block: false,
@@ -18,104 +19,65 @@ export function thinkAI(me, opp, difficulty = 0.72) {
   const dist = Math.abs(dx);
   const towardLeft = dx < 0;
   const r = Math.random();
-  const aggressive = difficulty;
 
-  if (opp.attacking && dist < 140 && r < 0.4 + aggressive * 0.2) {
-    snap.block = true;
-    if (me.facing >= 0) snap.left = true;
-    else snap.right = true;
-    if (opp.attackType === 'low') snap.down = true;
-    if (r < 0.12) snap.sidestep = true;
-    return snap;
-  }
-
-  if (me.hp < 280 && dist < 160 && r < 0.22) {
+  if (opp.attacking && dist < 140 && r < 0.08 + difficulty * 0.12) {
     snap.block = true;
     if (me.facing >= 0) snap.left = true;
     else snap.right = true;
     return snap;
   }
 
-  if (dist > 280) {
+  if (dist > 240) {
     if (towardLeft) snap.left = true;
     else snap.right = true;
-    if (r < 0.08) snap.up = true;
-    if (r < 0.16 && me.meter >= 100) {
-      snap.lp = true;
-      snap.rk = true;
-      snap.limb = 'lp';
-      snap.attackId = 'lp';
+    if (r < 0.04) snap.jump = true;
+    if (r < 0.05 && me.laser >= 34) {
+      snap.laser = true;
       snap.buttonClass = 'p';
-      snap.pressedPunch = true;
     }
     return snap;
   }
 
-  if (dist > 130) {
-    if (r < 0.55 * aggressive) {
-      if (towardLeft) snap.left = true;
-      else snap.right = true;
-    } else if (r < 0.68) {
-      snap.up = true;
+  if (dist > 120) {
+    if (r < 0.62) {
       if (towardLeft) snap.left = true;
       else snap.right = true;
     }
-    if (r > 0.86) {
-      snap.rk = true;
-      snap.limb = 'rk';
-      snap.attackId = 'rk';
-      snap.buttonClass = 'k';
+    if (r > 0.9) {
+      snap.kick = true;
+      snap.anyKick = true;
       snap.pressedKick = true;
+      snap.buttonClass = 'k';
+      snap.attackId = 'lk';
+      snap.limb = 'lk';
     }
     return snap;
   }
 
-  if (dist < 88 && r < 0.14) {
-    snap.throw = true;
-    snap.lp = true;
-    snap.rp = true;
-    snap.limb = 'lp';
-    snap.attackId = 'lp';
+  if (r < 0.32) {
+    snap.punch = true;
+    snap.anyPunch = true;
+    snap.pressedPunch = true;
     snap.buttonClass = 'p';
-    return snap;
-  }
-
-  if (r < 0.1) {
-    snap.down = true;
-    snap.rk = true;
-    snap.limb = 'rk';
-    snap.attackId = 'rk';
-    snap.buttonClass = 'k';
+    snap.attackId = 'lp';
+    snap.limb = 'lp';
+  } else if (r < 0.48) {
+    snap.kick = true;
+    snap.anyKick = true;
     snap.pressedKick = true;
-  } else if (r < 0.2) {
-    snap.down = true;
-    snap.rp = true;
-    snap.limb = 'rp';
-    snap.attackId = 'rp';
-    snap.buttonClass = 'p';
-    snap.pressedPunch = true;
-  } else if (r < 0.45) {
-    snap.lp = true;
-    snap.limb = 'lp';
-    snap.attackId = 'lp';
-    snap.buttonClass = 'p';
-    snap.pressedPunch = true;
-  } else if (r < 0.6) {
-    snap.rp = true;
-    snap.limb = 'rp';
-    snap.attackId = 'rp';
-    snap.buttonClass = 'p';
-    snap.pressedPunch = true;
-  } else if (r < 0.72) {
-    snap.lk = true;
-    snap.limb = 'lk';
+    snap.buttonClass = 'k';
     snap.attackId = 'lk';
-    snap.buttonClass = 'k';
-    snap.pressedKick = true;
-  } else if (r < 0.84) {
+    snap.limb = 'lk';
+  } else if (r < 0.54 && me.laser >= 34) {
+    snap.laser = true;
+    snap.buttonClass = 'p';
+  } else if (r < 0.62) {
+    snap.jump = true;
+    snap.up = true;
+  } else if (r < 0.82) {
     if (towardLeft) snap.left = true;
     else snap.right = true;
-  } else {
+  } else if (r < 0.9) {
     snap.block = true;
     if (me.facing >= 0) snap.left = true;
     else snap.right = true;

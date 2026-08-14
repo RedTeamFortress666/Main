@@ -35,4 +35,13 @@ describe('fighterPoseFromState', () => {
     }).punch).toBe(1);
     expect(fighterPoseFromState({ state: 'ko', animTime: 0 }).ko).toBe(1);
   });
+
+  it('fires laser-eye pose from laserEyes', () => {
+    expect(fighterPoseFromState({
+      attacking: true,
+      attack: { id: 'laserEyes', projectile: 'laser', startup: 1, active: 2, recovery: 1 },
+      attackFrame: 2,
+      animTime: 0,
+    }).laser).toBe(1);
+  });
 });

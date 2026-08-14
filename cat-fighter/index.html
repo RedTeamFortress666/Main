@@ -21,27 +21,25 @@
     </canvas>
     <div class="scanlines" aria-hidden="true"></div>
   </div>
-  <div id="touch-ui" class="touch-ui" aria-hidden="true">
+  <div id="touch-ui" class="touch-ui show" aria-hidden="false">
     <div class="touch-cluster left">
-      <button type="button" class="tbtn" data-code="KeyW">▲</button>
-      <div class="touch-row">
-        <button type="button" class="tbtn" data-code="KeyA">◀</button>
-        <button type="button" class="tbtn" data-code="KeyS">▼</button>
-        <button type="button" class="tbtn" data-code="KeyD">▶</button>
+      <div class="dpad">
+        <button type="button" class="tbtn dpad-up" data-code="KeyW">UP</button>
+        <button type="button" class="tbtn dpad-left" data-code="KeyA">LEFT</button>
+        <button type="button" class="tbtn dpad-down" data-code="KeyS">DOWN</button>
+        <button type="button" class="tbtn dpad-right" data-code="KeyD">RIGHT</button>
       </div>
     </div>
     <div class="touch-cluster right">
       <div class="touch-row">
-        <button type="button" class="tbtn punch" data-code="KeyZ">LP</button>
-        <button type="button" class="tbtn punch" data-code="KeyX">RP</button>
+        <button type="button" class="tbtn jump" data-code="Space">JUMP</button>
+        <button type="button" class="tbtn punch" data-code="KeyZ">PUNCH</button>
       </div>
       <div class="touch-row">
-        <button type="button" class="tbtn kick" data-code="KeyF">LK</button>
-        <button type="button" class="tbtn kick" data-code="KeyG">RK</button>
+        <button type="button" class="tbtn kick" data-code="KeyX">KICK</button>
+        <button type="button" class="tbtn laser" data-code="KeyC">LASER</button>
       </div>
       <div class="touch-row">
-        <button type="button" class="tbtn heavy" data-code="KeyC">SS</button>
-        <button type="button" class="tbtn throw" data-throw="1">TH</button>
         <button type="button" class="tbtn start" data-code="Enter">START</button>
       </div>
     </div>

@@ -18,6 +18,14 @@ export const ROUND_TIME = 99;
 export const ROUNDS_TO_WIN = 2;
 export const MAX_HP = 1000;
 export const MAX_METER = 100;
+export const LASER_MAX = 100;
+export const LASER_COST = 34;
+export const LASER_REGEN = 0.55;
+export const P1_DAMAGE_MULT = 1.9;
+export const CPU_DAMAGE_MULT = 0.42;
+export const POWERUP_DURATION = 300;
+export const POWERUP_DAMAGE = 2.15;
+export const POWERUP_SPEED = 1.7;
 export const MILK_HEAL = 220;
 export const TUNA_HEAL = 180;
 export const REVIVES_PER_MATCH = 1;
@@ -89,6 +97,31 @@ export const SPECIAL_MOTIONS = {
  * hitbox is relative to the fighter origin (feet-center), x in facing-space.
  */
 export const ATTACKS = {
+  simplePunch: {
+    id: 'simplePunch', name: 'Punch',
+    startup: 4, active: 4, recovery: 8,
+    damage: 72, meterGain: 8, chip: 6,
+    hitstun: 14, blockstun: 8, hitstop: 5,
+    knockback: 4.2, launch: 0, type: 'mid',
+    hitbox: { x: 28, y: -100, w: 62, h: 44 },
+  },
+  simpleKick: {
+    id: 'simpleKick', name: 'Kick',
+    startup: 6, active: 5, recovery: 10,
+    damage: 88, meterGain: 10, chip: 8,
+    hitstun: 16, blockstun: 10, hitstop: 6,
+    knockback: 6.0, launch: 1.4, type: 'mid',
+    hitbox: { x: 34, y: -80, w: 78, h: 40 },
+  },
+  laserEyes: {
+    id: 'laserEyes', name: 'Laser Eyes',
+    startup: 8, active: 6, recovery: 14,
+    damage: 150, meterGain: 0, chip: 20,
+    hitstun: 16, blockstun: 10, hitstop: 8,
+    knockback: 7.0, launch: 2.0, type: 'mid',
+    projectile: 'laser',
+    hitbox: { x: 40, y: -108, w: 90, h: 18 },
+  },
   lp: {
     id: 'lp', name: 'Left Punch',
     startup: 3, active: 3, recovery: 8,
@@ -459,19 +492,43 @@ export function flavorForWin(winnerId) {
 export const CONTROL_MAP = {
   p1: {
     left: 'KeyA', right: 'KeyD', up: 'KeyW', down: 'KeyS',
-    lp: 'KeyZ', rp: 'KeyX', lk: 'KeyF', rk: 'KeyG',
-    mp: 'KeyX', hp: 'KeyC', mk: 'KeyG', hk: 'KeyH',
+    jump: 'Space', punch: 'KeyZ', kick: 'KeyX', laser: 'KeyC',
+    lp: 'KeyZ', rp: 'KeyX', lk: 'KeyX', rk: 'KeyX',
+    mp: 'KeyX', hp: 'KeyC', mk: 'KeyX', hk: 'KeyC',
     sidestep: 'KeyC',
     block: 'ShiftLeft',
   },
   p2: {
     left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', down: 'ArrowDown',
-    lp: 'KeyN', rp: 'KeyM', lk: 'KeyJ', rk: 'KeyK',
-    mp: 'KeyM', hp: 'Comma', mk: 'KeyK', hk: 'KeyL',
+    jump: 'KeyP', punch: 'KeyN', kick: 'KeyM', laser: 'Comma',
+    lp: 'KeyN', rp: 'KeyM', lk: 'KeyM', rk: 'KeyM',
+    mp: 'KeyM', hp: 'Comma', mk: 'KeyM', hk: 'KeyL',
     sidestep: 'Comma',
     block: 'ShiftRight',
   },
 };
+
+export function regenLaser(laser, max = LASER_MAX, rate = LASER_REGEN) {
+  return clamp(laser + rate, 0, max);
+}
+
+export function spendLaser(laser, cost = LASER_COST) {
+  if (laser < cost) return { ok: false, laser };
+  return { ok: true, laser: laser - cost };
+}
+
+export function sideDamageMult(side, vsCpu, powered) {
+  let m = side === 'p1' ? P1_DAMAGE_MULT : (vsCpu ? CPU_DAMAGE_MULT : 1);
+  if (powered) m *= POWERUP_DAMAGE;
+  return m;
+}
+
+export function pickupHitsFighter(pickup, fighter) {
+  if (!pickup || !fighter) return false;
+  const dx = pickup.x - fighter.x;
+  const dy = pickup.y - (fighter.y - 70);
+  return Math.abs(dx) < 52 && Math.abs(dy) < 78;
+}
 
 /** Tekken-style 4-limb ids. rp/rk reuse the stronger mid punch/kick data. */
 export const LIMB_TO_NORMAL = { lp: 'lp', rp: 'mp', lk: 'lk', rk: 'mk' };
