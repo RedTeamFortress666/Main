@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   GAME_TITLE, HERO, LANES, makeChart, gradeDelta, findHittable,
   expireNotes, applyPlayerHit, applyMiss, applySuper, canSuper,
-  winnerOf, emptyFightState, beatAtFrame, comboMult, hitDamage,
+  winnerOf, emptyFightState,   beatAtFrame, comboMult, hitDamage, framesPerBeat,
   PERFECT_WINDOW, GOOD_WINDOW, SUPER_COST, CPU_HP, MAX_HP,
 } from './js/logic.js';
 import { FONT5, pixelTextWidth } from './js/pixel.js';
@@ -35,10 +35,10 @@ describe('chart', () => {
 });
 
 describe('timing', () => {
-  it('maps frames to beats at 120 BPM / 60 FPS', () => {
+  it('maps frames to beats using BPM', () => {
     expect(beatAtFrame(0)).toBe(0);
-    expect(beatAtFrame(30)).toBe(1);
-    expect(beatAtFrame(60)).toBe(2);
+    expect(beatAtFrame(framesPerBeat())).toBeCloseTo(1);
+    expect(beatAtFrame(framesPerBeat() * 2)).toBeCloseTo(2);
   });
 
   it('grades perfect and good windows', () => {
@@ -60,7 +60,7 @@ describe('timing', () => {
 
   it('expires late notes as misses', () => {
     const notes = [{ beat: 4, lane: 'punch', hit: false, grade: null }];
-    const missed = expireNotes(notes, 4.5);
+    const missed = expireNotes(notes, 5.0);
     expect(missed).toHaveLength(1);
     expect(notes[0].grade).toBe('miss');
   });

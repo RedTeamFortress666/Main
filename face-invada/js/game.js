@@ -175,9 +175,7 @@ export class Game {
       this.flash = 8;
       return;
     }
-    f.state = applyMiss(f.state);
-    this.facePose.hit = 1;
-    this.audio.miss();
+    this.audio.ui();
   }
 
   beginFight() {

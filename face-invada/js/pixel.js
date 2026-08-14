@@ -256,7 +256,9 @@ export function drawHighway(ctx, notes, currentBeat, y0, w) {
     ctx.fillStyle = '#1a1428';
     ctx.fillRect(40, y, w - 80, 30);
     ctx.fillStyle = LANE_COLORS[lanes[i]];
-    ctx.fillRect(hitX - 6, y, 8, 30);
+    ctx.fillRect(hitX - 8, y - 2, 12, 34);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(hitX - 3, y + 6, 4, 18);
     drawPixelText(ctx, lanes[i].toUpperCase(), 48, y + 8, 1, LANE_COLORS[lanes[i]]);
   }
   for (const n of notes) {
