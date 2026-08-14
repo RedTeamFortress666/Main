@@ -353,7 +353,7 @@ export function stepPhysics(state, jump) {
   const next = clone(state);
   let vy = next.vy || 0;
   let py = next.py || 0;
-  if (jump && py >= 0) vy = -13.5;
+  if (jump && py >= 0) vy = -16.5;
   vy += 0.7;
   py += vy;
   if (py > 0) {
