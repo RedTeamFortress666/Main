@@ -11,6 +11,7 @@
 export const GAME_TITLE = "YOKO'S TUNA BRAWL";
 export const GAME_TITLE_SHORT = 'Tuna Brawl';
 export const GAME_SUBTITLE = 'Queen Yoko vs Tsar Morlan';
+export const CANVAS_W = 1280;
 export const CANVAS_H = 720;
 export const GROUND_Y = 604;
 export const ROUND_TIME = 99;

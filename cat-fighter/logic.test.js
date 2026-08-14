@@ -20,11 +20,18 @@ import {
   ATTACKS,
   CHARACTERS,
   GAME_TITLE,
+  CANVAS_W,
+  CANVAS_H,
 } from './js/logic.js';
 
 describe('title', () => {
   it('is Yoko\'s Tuna Brawl', () => {
     expect(GAME_TITLE).toBe("YOKO'S TUNA BRAWL");
+  });
+
+  it('exports a 1280x720 stage', () => {
+    expect(CANVAS_W).toBe(1280);
+    expect(CANVAS_H).toBe(720);
   });
 });
 
