@@ -3,7 +3,7 @@ import { FONT5, pixelTextWidth, lifeBarWidth, fighterPoseFromState } from './js/
 
 describe('pixel font', () => {
   it('has glyphs for A-Z, 0-9, and FIGHT punctuation', () => {
-    const need = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?.\'-:/+*';
+    const need = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?.\'-:/+*><';
     for (const ch of need) {
       expect(FONT5[ch], ch).toBeTruthy();
       expect(FONT5[ch]).toHaveLength(7);

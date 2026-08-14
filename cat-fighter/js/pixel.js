@@ -56,6 +56,8 @@ export const FONT5 = {
   '/': [0x01, 0x02, 0x02, 0x04, 0x08, 0x08, 0x10],
   '+': [0x00, 0x04, 0x04, 0x1f, 0x04, 0x04, 0x00],
   '*': [0x00, 0x15, 0x0e, 0x1f, 0x0e, 0x15, 0x00],
+  '>': [0x02, 0x06, 0x0e, 0x1e, 0x0e, 0x06, 0x02],
+  '<': [0x08, 0x0c, 0x0e, 0x0f, 0x0e, 0x0c, 0x08],
   '◆': [0x04, 0x0e, 0x1f, 0x0e, 0x04, 0x00, 0x00],
   '◇': [0x04, 0x0a, 0x11, 0x0a, 0x04, 0x00, 0x00],
 };
@@ -94,13 +96,19 @@ export function lifeBarWidth(hp, max, barW) {
   return Math.max(0, Math.min(barW, (cur / m) * barW));
 }
 
-export function pixelateImage(img, tw, th) {
+export function chromaKeyMagenta(img) {
   const c = document.createElement('canvas');
-  c.width = tw;
-  c.height = th;
+  c.width = img.width;
+  c.height = img.height;
   const x = c.getContext('2d');
-  x.imageSmoothingEnabled = false;
-  x.drawImage(img, 0, 0, tw, th);
+  x.drawImage(img, 0, 0);
+  const d = x.getImageData(0, 0, c.width, c.height);
+  const px = d.data;
+  for (let i = 0; i < px.length; i += 4) {
+    const r = px[i], g = px[i + 1], b = px[i + 2];
+    if (r > 150 && b > 150 && g < 140) px[i + 3] = 0;
+  }
+  x.putImageData(d, 0, 0);
   return c;
 }
 
@@ -311,19 +319,29 @@ export function fighterPoseFromState(f) {
   return pose;
 }
 
-export function drawPixelFighter(ctx, f) {
-  const c = sheet();
-  const octx = c.getContext('2d');
-  octx.imageSmoothingEnabled = false;
-  paintCatSprite(octx, f.characterId === 'yoko', fighterPoseFromState(f));
+export const SPRITE_DRAW = 3;
 
+export function drawPixelFighter(ctx, f, sprite) {
+  const pose = fighterPoseFromState(f);
   const jx = f.shake ? (Math.random() - 0.5) * f.shake : 0;
+  const bob = f.state === 'idle' ? Math.sin((f.animTime || 0) * 0.12) * 3 : 0;
   ctx.save();
   ctx.imageSmoothingEnabled = false;
-  ctx.translate(Math.round(f.x + jx), Math.round(f.y));
-  ctx.scale(f.facing * SPRITE_SCALE, SPRITE_SCALE);
+  ctx.translate(Math.round(f.x + jx + (pose.punch || 0) * 10 * f.facing), Math.round(f.y + bob));
+  const sy = pose.crouch ? 0.82 : pose.ko ? 0.68 : pose.jump ? 1.05 : 1;
+  const sx = (pose.punch ? 1.06 : 1) * (pose.kick ? 1.04 : 1);
+  if (pose.hit) ctx.rotate(0.1 * f.facing);
+  ctx.scale(f.facing * SPRITE_DRAW * sx, SPRITE_DRAW * sy);
   if (f.hitFlash > 0) ctx.filter = 'brightness(2.2)';
-  ctx.drawImage(c, -Math.floor(SPRITE_W / 2), -SPRITE_H);
+  if (sprite) {
+    ctx.drawImage(sprite, -sprite.width / 2, -sprite.height);
+  } else {
+    const c = sheet();
+    const octx = c.getContext('2d');
+    octx.imageSmoothingEnabled = false;
+    paintCatSprite(octx, f.characterId === 'yoko', pose);
+    ctx.drawImage(c, -SPRITE_W / 2, -SPRITE_H);
+  }
   ctx.filter = 'none';
   ctx.restore();
 

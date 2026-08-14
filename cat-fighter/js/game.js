@@ -16,7 +16,7 @@ import { AudioBus } from './audio.js';
 import { Fighter, Projectile, collideProjectile } from './fighter.js';
 import { thinkAI } from './ai.js';
 import {
-  Assets, Particles, drawStage, drawFighter, drawProjectile,
+  Assets, Particles, drawStage, drawFighter, drawFighterNames, drawProjectile,
   drawStella, drawJoye, drawSaucer, drawHUD, drawLetterbox,
   drawPortraitCard,
 } from './render.js';
@@ -523,8 +523,9 @@ export class Game {
     drawStage(ctx, this.assets, this.round, this.time, this.flash);
     const back = this.p1.y <= this.p2.y ? this.p1 : this.p2;
     const front = back === this.p1 ? this.p2 : this.p1;
-    drawFighter(ctx, back);
-    drawFighter(ctx, front);
+    drawFighter(ctx, back, this.assets);
+    drawFighter(ctx, front, this.assets);
+    drawFighterNames(ctx, this.p1, this.p2);
     for (const p of this.projectiles) drawProjectile(ctx, p, this.time);
     this.particles.draw(ctx);
 

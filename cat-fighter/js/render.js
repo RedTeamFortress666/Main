@@ -2,7 +2,7 @@ import {
   CANVAS_W, CANVAS_H, GROUND_Y, MAX_HP, MAX_METER, lerp,
 } from './logic.js';
 import {
-  drawPixelText, lifeBarWidth, drawPixelFighter, SPRITE_H, SPRITE_SCALE,
+  drawPixelText, lifeBarWidth, drawPixelFighter, chromaKeyMagenta, SPRITE_DRAW,
 } from './pixel.js';
 
 export class Assets {
@@ -21,8 +21,12 @@ export class Assets {
       russia: 'assets/russian_stage_pixel.png',
       yokoHud: 'assets/yoko_hud.png',
       morlanHud: 'assets/morlan_hud.png',
+      yokoSprite: 'assets/yoko_sprite.png',
+      morlanSprite: 'assets/morlan_sprite.png',
     };
     await Promise.all(Object.entries(files).map(([k, src]) => this._img(k, src)));
+    if (this.images.yokoSprite) this.images.yokoSprite = chromaKeyMagenta(this.images.yokoSprite);
+    if (this.images.morlanSprite) this.images.morlanSprite = chromaKeyMagenta(this.images.morlanSprite);
     this.ready = true;
   }
 
@@ -132,16 +136,31 @@ export function drawStage(ctx, assets, round, time, flash) {
   ctx.restore();
 }
 
-export function drawFighter(ctx, f) {
-  drawPixelFighter(ctx, f);
-  const name = f.characterId === 'yoko' ? 'QUEEN YOKO' : 'TSAR MORLAN';
-  const top = Math.round(f.y - SPRITE_H * SPRITE_SCALE - 10);
-  ctx.save();
-  ctx.fillStyle = 'rgba(0,0,0,0.55)';
-  const nw = name.length * 12 + 8;
-  ctx.fillRect(Math.round(f.x - nw / 2), top - 18, nw, 16);
-  drawPixelText(ctx, name, Math.round(f.x), top - 16, 2, '#ffffff', 'center');
-  ctx.restore();
+export function drawFighter(ctx, f, assets) {
+  const key = f.characterId === 'yoko' ? 'yokoSprite' : 'morlanSprite';
+  drawPixelFighter(ctx, f, assets?.images?.[key]);
+}
+
+export function drawFighterNames(ctx, p1, p2) {
+  const h = 96 * SPRITE_DRAW;
+  const gap = Math.abs(p1.x - p2.x);
+  const items = [
+    { f: p1, name: 'QUEEN YOKO' },
+    { f: p2, name: 'TSAR MORLAN' },
+  ];
+  items.forEach(({ f, name }, i) => {
+    let x = Math.round(f.x);
+    let y = Math.round(f.y - h - 22);
+    if (gap < 230) {
+      x = i === 0 ? Math.round(Math.min(p1.x, p2.x) - 70) : Math.round(Math.max(p1.x, p2.x) + 70);
+      y -= i * 20;
+    }
+    x = Math.max(90, Math.min(CANVAS_W - 90, x));
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    const nw = name.length * 12 + 8;
+    ctx.fillRect(x - nw / 2, y - 2, nw, 16);
+    drawPixelText(ctx, name, x, y, 2, '#ffffff', 'center');
+  });
 }
 
 export function drawProjectile(ctx, p, time) {
@@ -435,8 +454,8 @@ export function drawHUD(ctx, game) {
   drawMeter(12 + portrait + 8, p1.meter, '#e8c547', false);
   drawMeter(CANVAS_W - 12 - portrait - 8 - 220, p2.meter, '#c0392b', true);
 
-  drawPixelText(ctx, p1.revivesUsed < 1 ? 'TUNA' : 'SPENT', 12 + portrait + 8, CANVAS_H - 48, 1, '#f6e6a2');
-  drawPixelText(ctx, p2.revivesUsed < 1 ? 'TUNA' : 'SPENT', CANVAS_W - 12 - portrait - 8, CANVAS_H - 48, 1, '#f6e6a2', 'right');
+  drawPixelText(ctx, p1.revivesUsed < 1 ? '+' : 'x', 12 + portrait + 8, CANVAS_H - 48, 2, '#f6e6a2');
+  drawPixelText(ctx, p2.revivesUsed < 1 ? '+' : 'x', CANVAS_W - 12 - portrait - 8, CANVAS_H - 48, 2, '#f6e6a2', 'right');
 
   if (combo && combo.count > 1) {
     const cx = combo.side === 'p1' ? 80 : CANVAS_W - 80;
