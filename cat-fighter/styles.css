@@ -68,11 +68,13 @@ html, body {
 .touch-cluster.left { left: max(12px, env(safe-area-inset-left)); }
 .touch-cluster.right {
   right: max(12px, env(safe-area-inset-right));
-  flex-direction: row;
-  flex-wrap: wrap;
-  width: 210px;
-  justify-content: flex-end;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  width: 230px;
+  align-items: flex-end;
 }
+
+.tbtn.throw { border-color: #ff8a80; color: #ff8a80; width: 64px; }
 
 .touch-row { display: flex; gap: 10px; }
 

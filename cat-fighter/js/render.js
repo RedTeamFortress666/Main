@@ -338,7 +338,7 @@ export function drawHUD(ctx, game) {
     ctx.fillStyle = '#eee';
     ctx.fillRect(x, my, mw, 1);
     ctx.fillRect(x, my + mh - 1, mw, 1);
-    drawPixelText(ctx, meter >= MAX_METER ? 'SUPER' : 'SUPER', flip ? x + mw : x, my - 12, 1, '#eee', flip ? 'right' : 'left');
+    drawPixelText(ctx, meter >= MAX_METER ? 'RAGE' : 'RAGE', flip ? x + mw : x, my - 12, 1, '#eee', flip ? 'right' : 'left');
   };
   drawMeter(12 + portrait + 8, p1.meter, '#e8c547', false);
   drawMeter(CANVAS_W - 12 - portrait - 8 - 220, p2.meter, '#c0392b', true);

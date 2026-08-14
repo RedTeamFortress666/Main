@@ -350,3 +350,152 @@ export function drawPixelFighter(ctx, f, sprite) {
   ctx.fillRect(Math.round(f.x - 22), Math.round(f.y + 2), 44, 6);
   ctx.restore();
 }
+
+function palRacer(id) {
+  if (id === 'yoko') return pal(true);
+  if (id === 'morlan') return pal(false);
+  if (id === 'baby') {
+    return {
+      fur: '#1a1614',
+      furHi: '#2c2824',
+      white: '#f3efe6',
+      gold: '#8ab4e8',
+      goldDk: '#3a7bd5',
+      cloth: '#1a1614',
+      sash: '#3a7bd5',
+      eye: '#7ad0ff',
+      nose: '#f0b3c0',
+      inner: '#e7a1b0',
+      outline: '#050505',
+    };
+  }
+  return {
+    fur: '#e07a28',
+    furHi: '#f4a04a',
+    white: '#f8d9a8',
+    gold: '#e23b3b',
+    goldDk: '#9a1c1c',
+    cloth: '#c45a18',
+    sash: '#e23b3b',
+    eye: '#3dcc6a',
+    nose: '#c98490',
+    inner: '#f0c090',
+    outline: '#2a1208',
+  };
+}
+
+/** Cat head poking out of a sunroof. Baby = black with white spots; Kittens = big orange. */
+export function paintCatHead(octx, id, ox, oy, scale = 1) {
+  const p = palRacer(id);
+  const s = scale;
+  const r = (x, y, w, h, c) => rect(octx, ox + x * s, oy + y * s, w * s, h * s, c);
+  r(-10, 0, 22, 16, p.outline);
+  r(-9, 1, 20, 14, p.fur);
+  r(-10, -7, 7, 9, p.outline);
+  r(5, -7, 7, 9, p.outline);
+  r(-9, -6, 5, 7, p.fur);
+  r(6, -6, 5, 7, p.fur);
+  r(-8, -4, 3, 3, p.inner);
+  r(7, -4, 3, 3, p.inner);
+  if (id === 'yoko') {
+    r(-2, 2, 6, 12, p.white);
+    r(-4, 8, 12, 6, p.white);
+    r(-7, -3, 16, 3, p.gold);
+    r(-1, -8, 4, 6, p.gold);
+    r(-6, -6, 3, 4, p.gold);
+    r(5, -6, 3, 4, p.gold);
+  } else if (id === 'baby') {
+    r(-3, 6, 8, 6, p.white);
+    r(-8, 3, 4, 4, p.white);
+    r(6, 8, 4, 3, p.white);
+    r(2, 2, 3, 3, p.white);
+  } else if (id === 'kittens') {
+    r(-12, -2, 26, 18, p.outline);
+    r(-11, -1, 24, 16, p.fur);
+    r(-11, -9, 8, 10, p.outline);
+    r(5, -9, 8, 10, p.outline);
+    r(-10, -8, 6, 8, p.fur);
+    r(6, -8, 6, 8, p.fur);
+    r(-4, 8, 10, 4, p.furHi);
+  } else {
+    r(-2, 8, 10, 5, p.furHi);
+  }
+  r(-6, 5, 5, 4, p.eye);
+  r(3, 5, 5, 4, p.eye);
+  r(-4, 6, 2, 2, '#111');
+  r(5, 6, 2, 2, '#111');
+  r(id === 'morlan' ? 4 : 1, 10, 3, 2, p.nose);
+}
+
+/**
+ * 3/4 view pixel car with the cat's head out the top.
+ * id: yoko gold rolls / morlan black hearse / baby blue lotus / kittens red beetle
+ */
+export function paintCatCar(octx, id, t = 0) {
+  octx.clearRect(0, 0, 72, 48);
+  const bob = Math.round(Math.sin(t * 0.25) * 1);
+  const bodyY = 22 + bob;
+  if (id === 'yoko') {
+    rect(octx, 4, bodyY, 62, 18, '#050505');
+    rect(octx, 5, bodyY + 1, 60, 16, '#e8c547');
+    rect(octx, 8, bodyY + 3, 54, 10, '#f6e27a');
+    rect(octx, 6, bodyY + 12, 58, 4, '#c9a227');
+    rect(octx, 52, bodyY + 4, 12, 8, '#8ad4ff');
+    rect(octx, 4, bodyY + 6, 6, 6, '#111');
+    rect(octx, 6, bodyY + 8, 3, 2, '#fff4c2');
+    rect(octx, 10, bodyY - 2, 8, 4, '#111');
+    rect(octx, 48, bodyY - 2, 8, 4, '#111');
+    rect(octx, 8, bodyY + 16, 10, 6, '#222');
+    rect(octx, 50, bodyY + 16, 10, 6, '#222');
+    paintCatHead(octx, 'yoko', 28, bodyY - 14, 1);
+  } else if (id === 'morlan') {
+    rect(octx, 2, bodyY, 68, 16, '#050505');
+    rect(octx, 3, bodyY + 1, 66, 14, '#1a1a1a');
+    rect(octx, 6, bodyY + 3, 60, 8, '#2a2a2a');
+    rect(octx, 4, bodyY + 11, 64, 3, '#c0392b');
+    rect(octx, 54, bodyY + 3, 12, 8, '#445');
+    rect(octx, 2, bodyY + 5, 8, 6, '#111');
+    rect(octx, 10, bodyY - 4, 14, 6, '#111');
+    rect(octx, 8, bodyY + 14, 10, 6, '#222');
+    rect(octx, 52, bodyY + 14, 10, 6, '#222');
+    paintCatHead(octx, 'morlan', 30, bodyY - 14, 1);
+  } else if (id === 'baby') {
+    rect(octx, 8, bodyY + 4, 54, 14, '#0a1a30');
+    rect(octx, 9, bodyY + 5, 52, 12, '#3a7bd5');
+    rect(octx, 14, bodyY + 7, 40, 6, '#5aa0f0');
+    rect(octx, 48, bodyY + 6, 14, 7, '#8ad4ff');
+    rect(octx, 10, bodyY + 2, 16, 4, '#3a7bd5');
+    rect(octx, 10, bodyY + 16, 9, 5, '#222');
+    rect(octx, 48, bodyY + 16, 9, 5, '#222');
+    paintCatHead(octx, 'baby', 30, bodyY - 12, 1);
+  } else {
+    rect(octx, 12, bodyY, 46, 20, '#4a1010');
+    rect(octx, 13, bodyY + 1, 44, 18, '#e23b3b');
+    rect(octx, 18, bodyY - 6, 34, 12, '#ff5a5a');
+    rect(octx, 22, bodyY - 4, 26, 8, '#e23b3b');
+    rect(octx, 44, bodyY + 4, 12, 8, '#8ad4ff');
+    rect(octx, 14, bodyY + 16, 10, 6, '#222');
+    rect(octx, 44, bodyY + 16, 10, 6, '#222');
+    paintCatHead(octx, 'kittens', 30, bodyY - 16, 1);
+  }
+}
+
+const _carSheet = { c: null };
+export function drawCatCar(ctx, id, x, y, heading, t, scale = 2.2) {
+  if (!_carSheet.c) {
+    _carSheet.c = document.createElement('canvas');
+    _carSheet.c.width = 72;
+    _carSheet.c.height = 48;
+  }
+  const c = _carSheet.c;
+  const octx = c.getContext('2d');
+  octx.imageSmoothingEnabled = false;
+  paintCatCar(octx, id, t);
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  ctx.translate(Math.round(x), Math.round(y));
+  ctx.rotate(heading);
+  ctx.scale(scale, scale);
+  ctx.drawImage(c, -36, -30);
+  ctx.restore();
+}

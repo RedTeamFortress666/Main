@@ -57,25 +57,32 @@ export class Input {
     const up = this.held(m.up);
     const down = this.held(m.down);
     const blockHeld = this.held(m.block) || (facing >= 0 ? left && !right : right && !left);
+    const lpJ = this.just(m.lp);
+    const rpJ = this.just(m.rp);
+    const lkJ = this.just(m.lk);
+    const rkJ = this.just(m.rk);
+    const lpH = this.held(m.lp);
+    const rpH = this.held(m.rp);
+    const throwNow = (lpJ && (rpJ || rpH)) || (rpJ && lpH);
+    const limb = lpJ ? 'lp' : rpJ ? 'rp' : lkJ ? 'lk' : rkJ ? 'rk' : null;
     return {
       left, right, up, down,
-      lp: this.just(m.lp),
-      mp: this.just(m.mp),
-      hp: this.just(m.hp),
-      lk: this.just(m.lk),
-      mk: this.just(m.mk),
-      hk: this.just(m.hk),
-      anyPunch: this.just(m.lp) || this.just(m.hp),
-      anyKick: this.just(m.lk) || this.just(m.mk) || this.just(m.hk) || this.just(m.mp),
-      lpHeld: this.held(m.lp),
-      mpHeld: this.held(m.mp),
+      lp: lpJ, rp: rpJ, lk: lkJ, rk: rkJ,
+      mp: rpJ, hp: this.just(m.hp), mk: rkJ, hk: this.just(m.hk),
+      anyPunch: lpJ || rpJ,
+      anyKick: lkJ || rkJ,
+      lpHeld: lpH,
+      mpHeld: rpH,
       hpHeld: this.held(m.hp),
       block: blockHeld,
+      sidestep: this.just(m.sidestep),
+      throw: throwNow,
       dir: numpadDir(left, right, up, down, facing),
-      pressedPunch: this.just(m.lp) || this.just(m.mp) || this.just(m.hp),
-      pressedKick: this.just(m.lk) || this.just(m.mk) || this.just(m.hk),
-      buttonClass: this._buttonClass(m),
-      attackId: this._attackId(m),
+      pressedPunch: lpJ || rpJ,
+      pressedKick: lkJ || rkJ,
+      buttonClass: (lpJ || rpJ) ? 'p' : (lkJ || rkJ) ? 'k' : null,
+      attackId: limb,
+      limb,
     };
   }
 

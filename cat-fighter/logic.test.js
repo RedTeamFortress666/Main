@@ -3,6 +3,16 @@ import {
   numpadDir,
   motionMatches,
   detectSpecial,
+  detectTekkenCommand,
+  detectDash,
+  stringFollowup,
+  canCancelAttack,
+  raceRanking,
+  raceProgress,
+  trackPoint,
+  TRACK_LEN,
+  RACE_LAPS,
+  RACERS,
   applyDamage,
   applyHeal,
   comboScale,
@@ -130,6 +140,12 @@ describe('block rules', () => {
     expect(isBlocked('overhead', true, false, false)).toBe(true);
   });
 
+  it('highs whiff a crouch block and throws ignore block', () => {
+    expect(isBlocked('high', true, true, false)).toBe(false);
+    expect(isBlocked('high', true, false, false)).toBe(true);
+    expect(isBlocked('throw', true, false, false)).toBe(false);
+  });
+
   it('airborne fighters cannot block', () => {
     expect(isBlocked('mid', true, false, true)).toBe(false);
   });
@@ -192,5 +208,52 @@ describe('contact voice', () => {
     expect(contactVoice(false, false)).toBe('meow');
     expect(contactVoice(true, false)).toBe('hiss');
     expect(contactVoice(false, true)).toBe('hiss');
+  });
+});
+
+describe('tekken commands', () => {
+  const limbs = (extra = {}) => ({ lp: false, rp: false, lk: false, rk: false, throw: false, ...extra });
+
+  it('maps throw, df+rp launcher, and rage art', () => {
+    expect(detectTekkenCommand(5, limbs({ throw: true }), 0, 'yoko')).toBe('catThrow');
+    expect(detectTekkenCommand(3, limbs({ rp: true }), 0, 'yoko')).toBe(CHARACTERS.yoko.specials.dp_p);
+    expect(detectTekkenCommand(2, limbs({ rp: true }), 0, 'morlan')).toBe(CHARACTERS.morlan.specials.dp_p);
+    expect(detectTekkenCommand(5, limbs({ lp: true, rk: true }), MAX_METER, 'yoko')).toBe('goldStandard');
+    expect(detectTekkenCommand(4, limbs({ rp: true }), 0, 'yoko')).toBe('monarchyMeow');
+    expect(detectTekkenCommand(3, limbs({ rk: true }), 0, 'morlan')).toBe('sovietScratch');
+  });
+
+  it('cancels jab into jab then right punch', () => {
+    expect(stringFollowup('lp', 'lp')).toBe('lp2');
+    expect(stringFollowup('lp2', 'rp')).toBe('mp');
+    expect(canCancelAttack(ATTACKS.lp, ATTACKS.lp.startup + 1, 1)).toBe(true);
+    expect(canCancelAttack(ATTACKS.lp, 0, 1)).toBe(false);
+    expect(canCancelAttack(ATTACKS.lp, 4, 0)).toBe(false);
+  });
+
+  it('detects a forward dash from 6-5-6', () => {
+    expect(detectDash([6, 5, 6], true)).toBe(true);
+    expect(detectDash([4, 5, 4], false)).toBe(true);
+    expect(detectDash([6, 6], true)).toBe(false);
+  });
+});
+
+describe('cat car racing roster', () => {
+  it('names four racers and their cars', () => {
+    expect(RACERS.yoko.car).toMatch(/Rolls/i);
+    expect(RACERS.morlan.car).toMatch(/Hearse/i);
+    expect(RACERS.baby.car).toMatch(/Lotus/i);
+    expect(RACERS.kittens.car).toMatch(/Beetle/i);
+    expect(RACE_LAPS).toBe(3);
+  });
+
+  it('ranks by laps then track position', () => {
+    const a = { id: 'yoko', laps: 1, s: 10 };
+    const b = { id: 'baby', laps: 2, s: 0 };
+    const c = { id: 'kittens', laps: 1, s: 400 };
+    expect(raceRanking([a, b, c]).map((r) => r.id)).toEqual(['baby', 'kittens', 'yoko']);
+    expect(raceProgress(b)).toBe(2 * TRACK_LEN);
+    const p = trackPoint(0, 0);
+    expect(p.x).toBeGreaterThan(CANVAS_W / 2);
   });
 });

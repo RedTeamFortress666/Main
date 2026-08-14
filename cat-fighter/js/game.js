@@ -15,6 +15,7 @@ import { Input } from './input.js';
 import { AudioBus } from './audio.js';
 import { Fighter, Projectile, collideProjectile } from './fighter.js';
 import { thinkAI } from './ai.js';
+import { createRace, updateRace, drawRace } from './race.js';
 import {
   Assets, Particles, drawStage, drawFighter, drawFighterNames, drawProjectile,
   drawStella, drawJoye, drawSaucer, drawHUD, drawLetterbox,
@@ -23,9 +24,11 @@ import { drawPixelText } from './pixel.js';
 
 const emptySnap = () => ({
   left: false, right: false, up: false, down: false,
-  lp: false, mp: false, hp: false, lk: false, mk: false, hk: false,
+  lp: false, rp: false, lk: false, rk: false,
+  mp: false, hp: false, mk: false, hk: false,
   anyPunch: false, anyKick: false, block: false, dir: 5,
   pressedPunch: false, pressedKick: false, buttonClass: null, attackId: null,
+  limb: null, throw: false, sidestep: false,
 });
 
 export class Game {
@@ -37,9 +40,12 @@ export class Game {
     this.assets = new Assets();
     this.particles = new Particles();
     this.mode = 'boot';
+    this.product = 'battle';
     this.vsCpu = true;
     this.menuIndex = 0;
+    this.modeSelectIndex = 0;
     this.menuCooldown = 0;
+    this.race = null;
     this.round = 1;
     this.wins = [0, 0];
     this.timer = ROUND_TIME;
@@ -151,9 +157,22 @@ export class Game {
         this.audio.ensure();
         this.audio.ui();
         this.audio.setThemeScene('menu');
-        this.mode = 'menu';
-        this.menuCooldown = 28;
+        this.mode = 'modeSelect';
+        this.modeSelectIndex = 0;
+        this.menuCooldown = 20;
       }
+      return;
+    }
+    if (this.mode === 'modeSelect') {
+      this._updateModeSelect();
+      return;
+    }
+    if (this.mode === 'raceMenu') {
+      this._updateRaceMenu();
+      return;
+    }
+    if (this.mode === 'race') {
+      this._updateRace();
       return;
     }
     if (this.mode === 'menu') {
@@ -169,7 +188,8 @@ export class Game {
       if (this.menuCooldown <= 0 && (this.input.just('Enter') || this.input.just('Space') || this.input.just('KeyZ'))) {
         this.audio.meow(true);
         if (this.menuIndex === 3) {
-          this.mode = 'title';
+          this.mode = 'modeSelect';
+          this.menuCooldown = 16;
           return;
         }
         if (this.menuIndex === 2) {
@@ -321,6 +341,19 @@ export class Game {
 
   _resolveCombat(att, def) {
     if (def.invuln > 0) return;
+    if (def.state === 'sidestep' && att.attack?.type !== 'low') return;
+    if (att.attack?.type === 'throw' && def.attack?.type === 'throw') {
+      att.vx = -att.facing * 7;
+      def.vx = -def.facing * 7;
+      att.attacking = false;
+      def.attacking = false;
+      att.attack = null;
+      def.attack = null;
+      att.state = 'idle';
+      def.state = 'idle';
+      this.say('THROW BREAK', 40);
+      return;
+    }
     const hb = att.currentHitbox();
     if (!hb || !att.attack) return;
     const hurt = def.hurtbox;
@@ -527,6 +560,21 @@ export class Game {
       ctx.restore();
       return;
     }
+    if (this.mode === 'modeSelect') {
+      this._drawModeSelect(ctx);
+      ctx.restore();
+      return;
+    }
+    if (this.mode === 'raceMenu') {
+      this._drawRaceMenu(ctx);
+      ctx.restore();
+      return;
+    }
+    if (this.mode === 'race') {
+      drawRace(ctx, this.race);
+      ctx.restore();
+      return;
+    }
     if (this.mode === 'menu') {
       this._drawMenu(ctx);
       ctx.restore();
@@ -613,6 +661,75 @@ export class Game {
     ctx.restore();
   }
 
+  _updateModeSelect() {
+    if (this.menuCooldown > 0) this.menuCooldown -= 1;
+    if (this.input.just('ArrowUp') || this.input.just('KeyW')) {
+      this.modeSelectIndex = (this.modeSelectIndex + 2) % 3;
+      this.audio.ui();
+    }
+    if (this.input.just('ArrowDown') || this.input.just('KeyS')) {
+      this.modeSelectIndex = (this.modeSelectIndex + 1) % 3;
+      this.audio.ui();
+    }
+    if (this.menuCooldown <= 0 && (this.input.just('Enter') || this.input.just('Space') || this.input.just('KeyZ'))) {
+      this.audio.meow(true);
+      if (this.modeSelectIndex === 2) {
+        this.mode = 'title';
+        return;
+      }
+      if (this.modeSelectIndex === 0) {
+        this.product = 'battle';
+        this.mode = 'menu';
+        this.menuIndex = 0;
+        this.menuCooldown = 16;
+        return;
+      }
+      this.product = 'race';
+      this.mode = 'raceMenu';
+      this.menuIndex = 0;
+      this.menuCooldown = 16;
+    }
+  }
+
+  _updateRaceMenu() {
+    if (this.menuCooldown > 0) this.menuCooldown -= 1;
+    if (this.input.just('ArrowUp') || this.input.just('KeyW')) {
+      this.menuIndex = (this.menuIndex + 2) % 3;
+      this.audio.ui();
+    }
+    if (this.input.just('ArrowDown') || this.input.just('KeyS')) {
+      this.menuIndex = (this.menuIndex + 1) % 3;
+      this.audio.ui();
+    }
+    if (this.menuCooldown <= 0 && (this.input.just('Enter') || this.input.just('Space') || this.input.just('KeyZ'))) {
+      this.audio.meow(true);
+      if (this.menuIndex === 2) {
+        this.mode = 'modeSelect';
+        this.menuCooldown = 16;
+        return;
+      }
+      this.vsCpu = this.menuIndex === 0;
+      this.race = createRace(this.vsCpu);
+      this.mode = 'race';
+      this.audio.ensure();
+      this.say('3 LAPS', 80, 'Heads out the sunroof.');
+    }
+  }
+
+  _updateRace() {
+    if (this.input.just('Escape')) {
+      this.mode = 'modeSelect';
+      this.menuCooldown = 16;
+      return;
+    }
+    const p1 = this.input.snapshot('p1', 1);
+    const p2 = this.vsCpu ? emptySnap() : this.input.snapshot('p2', 1);
+    updateRace(this.race, p1, p2);
+    if (this.race.done && (this.input.just('Enter') || this.input.just('Space') || this.input.just('KeyZ'))) {
+      this.mode = 'title';
+    }
+  }
+
   _drawTitle(ctx) {
     const lineup = this.assets.images.titleLineup;
     ctx.imageSmoothingEnabled = false;
@@ -639,7 +756,55 @@ export class Game {
     if (blink) {
       drawPixelText(ctx, 'PRESS ENTER', CANVAS_W / 2, 620, 3, '#fff4c2', 'center');
     }
+    drawPixelText(ctx, 'CAT BATTLE  OR  CAT CAR RACING', CANVAS_W / 2, 658, 1, '#ffe566', 'center');
     drawPixelText(ctx, 'Z SPACE OR TAP  -  ESC PAUSES', CANVAS_W / 2, 678, 1, '#aaaaaa', 'center');
+  }
+
+  _drawModeSelect(ctx) {
+    drawStage(ctx, this.assets, 1, this.time, 0);
+    ctx.fillStyle = 'rgba(8,6,20,0.72)';
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    drawPixelText(ctx, GAME_TITLE, CANVAS_W / 2, 36, 4, '#ffe566', 'center');
+    drawPixelText(ctx, 'CHOOSE YOUR GAME', CANVAS_W / 2, 88, 2, '#ffffff', 'center');
+
+    const items = [
+      ['CAT BATTLE', 'TEKKEN STYLE  -  4 LIMBS  THROW  SIDESTEP  RAGE'],
+      ['CAT CAR RACING', 'YOKO ROLLS  MORLAN HEARSE  BABY LOTUS  KITTENS BEETLE'],
+      ['BACK', 'RETURN TO TITLE'],
+    ];
+    items.forEach(([label, sub], i) => {
+      const y = 180 + i * 90;
+      const on = i === this.modeSelectIndex;
+      drawPixelText(ctx, (on ? '> ' : '  ') + label, CANVAS_W / 2, y, on ? 4 : 3, on ? '#fff4c2' : '#bbbbbb', 'center');
+      drawPixelText(ctx, sub, CANVAS_W / 2, y + 40, 1, on ? '#ffe566' : '#888888', 'center');
+    });
+    drawPixelText(ctx, 'W S TO MOVE   ENTER TO CONFIRM', CANVAS_W / 2, 640, 2, '#fff4c2', 'center');
+  }
+
+  _drawRaceMenu(ctx) {
+    drawStage(ctx, this.assets, 3, this.time, 0);
+    ctx.fillStyle = 'rgba(8,6,20,0.72)';
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    drawPixelText(ctx, 'CAT CAR RACING', CANVAS_W / 2, 36, 4, '#ffe566', 'center');
+    drawPixelText(ctx, '3 LAPS  -  HEADS OUT THE SUNROOF', CANVAS_W / 2, 84, 2, '#ffffff', 'center');
+
+    const items = ['VS CPU', 'VS PLAYER', 'BACK'];
+    items.forEach((label, i) => {
+      const y = 160 + i * 48;
+      const on = i === this.menuIndex;
+      drawPixelText(ctx, (on ? '> ' : '  ') + label, CANVAS_W / 2, y, on ? 3 : 2, on ? '#fff4c2' : '#bbbbbb', 'center');
+    });
+
+    const roster = [
+      ['YOKO', 'GOLD ROLLS ROYCE', '#e8c547'],
+      ['MORLAN', 'BLACK HEARSE', '#ff8a80'],
+      ['BABY', 'BLUE LOTUS', '#8ad4ff'],
+      ['KITTENS', 'RED VW BEETLE', '#ff6b6b'],
+    ];
+    roster.forEach(([n, car, col], i) => {
+      drawPixelText(ctx, `${n}  -  ${car}`, CANVAS_W / 2, 360 + i * 28, 2, col, 'center');
+    });
+    drawPixelText(ctx, 'P1 YOKO  WASD    P2 MORLAN  ARROWS', CANVAS_W / 2, 640, 2, '#fff4c2', 'center');
   }
 
   _drawMenu(ctx) {
@@ -647,6 +812,7 @@ export class Game {
     ctx.fillStyle = 'rgba(8,6,20,0.72)';
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
     drawPixelText(ctx, 'CHOOSE YOUR IDEOLOGY', CANVAS_W / 2, 36, 3, '#ffe566', 'center');
+    drawPixelText(ctx, 'CAT BATTLE  -  TEKKEN STYLE', CANVAS_W / 2, 68, 1, '#aaaaaa', 'center');
 
     const items = [
       'VS CPU',
@@ -662,23 +828,23 @@ export class Game {
 
     drawPixelText(ctx, 'P1  QUEEN YOKO', 80, 280, 2, '#ffe566');
     const p1 = [
-      'WASD MOVE',
-      'SHIFT BLOCK',
-      'Z X C PUNCH',
-      'F G H KICK',
-      'QCF + BUTTON SPECIAL',
-      'DOUBLE QCF SUPER',
+      'WASD MOVE  FF DASH',
+      'SHIFT BLOCK  C SIDESTEP',
+      'Z LEFT PUNCH   X RIGHT PUNCH',
+      'F LEFT KICK    G RIGHT KICK',
+      'Z+X THROW   DF+X LAUNCHER',
+      'Z+G RAGE ART WHEN FULL',
     ];
     p1.forEach((l, i) => drawPixelText(ctx, l, 80, 310 + i * 18, 1, '#dddddd'));
 
     drawPixelText(ctx, 'P2  TSAR MORLAN', 700, 280, 2, '#ff8a80');
     const p2 = [
-      'ARROWS MOVE',
-      'SHIFT BLOCK',
-      'N M , PUNCH',
-      'J K L KICK',
-      'SAME MOTIONS',
-      'FULL METER SUPER',
+      'ARROWS MOVE  FF DASH',
+      'SHIFT BLOCK  , SIDESTEP',
+      'N LEFT PUNCH   M RIGHT PUNCH',
+      'J LEFT KICK    K RIGHT KICK',
+      'N+M THROW   DF+M LAUNCHER',
+      'N+K RAGE ART WHEN FULL',
     ];
     p2.forEach((l, i) => drawPixelText(ctx, l, 700, 310 + i * 18, 1, '#dddddd'));
 

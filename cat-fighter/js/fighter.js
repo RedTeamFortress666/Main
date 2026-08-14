@@ -1,7 +1,9 @@
 import {
-  ATTACKS, GROUND_Y, MAX_HP, MAX_METER, CANVAS_W,
+  ATTACKS, GROUND_Y, MAX_HP, MAX_METER, CANVAS_W, CHARACTERS,
   applyDamage, applyHeal, spendMeter,
-  detectSpecial, isBlocked, clamp,
+  detectSpecial, detectTekkenCommand, detectDash,
+  stringFollowup, canCancelAttack, LIMB_TO_NORMAL,
+  isBlocked, clamp,
 } from './logic.js';
 import { MotionBuffer } from './input.js';
 
@@ -73,6 +75,9 @@ export class Fighter {
     this.wonRound = false;
     this.lastSpecial = '';
     this.shake = 0;
+    this.stringPrev = '';
+    this.sidestepT = 0;
+    this.dashT = 0;
   }
 
   resetRound(x) {
@@ -98,6 +103,9 @@ export class Fighter {
     this.blocking = false;
     this.wonRound = false;
     this.lastSpecial = '';
+    this.stringPrev = '';
+    this.sidestepT = 0;
+    this.dashT = 0;
   }
 
   get hurtbox() {
@@ -156,34 +164,70 @@ export class Fighter {
   }
 
   pickNormals(snap) {
-    if (!snap.attackId) return null;
+    const limb = snap.limb || snap.attackId;
+    if (!limb) return null;
     if (this.airborne) {
-      if (snap.attackId === 'lp' || snap.attackId === 'lk') return 'jlp';
-      if (snap.attackId === 'mk' || snap.attackId === 'mp') return 'jmk';
-      return 'jhp';
+      if (limb === 'lp') return 'jlp';
+      if (limb === 'rp') return 'jhp';
+      return 'jmk';
     }
     if (snap.down) {
-      if (snap.attackId === 'lp' || snap.attackId === 'lk') return 'clp';
-      if (snap.attackId === 'mp' || snap.attackId === 'mk') return 'cmk';
+      if (limb === 'lp' || limb === 'lk') return 'clp';
+      if (limb === 'rp' || limb === 'rk') return limb === 'rk' ? 'chk' : 'cmk';
       return 'chk';
     }
-    return snap.attackId;
+    return LIMB_TO_NORMAL[limb] || limb;
   }
 
-  tryAttack(snap) {
-    if (!snap.attackId && !snap.buttonClass) return false;
-    if (this.attacking || this.hitstun || this.blockstun) return false;
-    if (['knockdown', 'getup', 'drink', 'eat', 'ko'].includes(this.state)) return false;
+  tryAttack(snap, { cancel = false } = {}) {
+    if (!snap.attackId && !snap.buttonClass && !snap.throw && !snap.sidestep) return false;
+    if (!cancel && (this.attacking || this.hitstun || this.blockstun)) return false;
+    if (['knockdown', 'getup', 'drink', 'eat', 'ko', 'sidestep'].includes(this.state) && !cancel) return false;
 
-    const cls = snap.buttonClass || (['lk', 'mk', 'hk', 'mp'].includes(snap.attackId) ? 'k' : 'p');
+    const limbs = {
+      lp: !!snap.lp, rp: !!snap.rp, lk: !!snap.lk, rk: !!snap.rk, throw: !!snap.throw,
+    };
+    const cmd = detectTekkenCommand(snap.dir, limbs, this.meter, this.characterId)
+      || (this.dashT > 0 && snap.lp ? CHARACTERS[this.characterId].specials.qcf_p : null);
+    if (cmd) {
+      const def = ATTACKS[cmd];
+      if (def?.super) {
+        const spent = spendMeter(this.meter, MAX_METER);
+        if (spent.ok) {
+          this.meter = spent.meter;
+          this.startAttack(cmd);
+          this.motion.clear();
+          this.stringPrev = '';
+          return 'super';
+        }
+      } else if (cmd === 'catThrow') {
+        this.startAttack('catThrow');
+        this.stringPrev = '';
+        return 'throw';
+      } else {
+        this.startAttack(cmd);
+        this.motion.clear();
+        this.stringPrev = '';
+        return 'special';
+      }
+    }
+
+    if (cancel && this.stringPrev && snap.limb) {
+      const follow = stringFollowup(this.stringPrev, snap.limb);
+      if (follow && ATTACKS[follow]) {
+        this.startAttack(follow);
+        this.stringPrev = follow;
+        return 'string';
+      }
+    }
+
+    const cls = snap.buttonClass || (['lk', 'rk', 'mk', 'hk'].includes(snap.attackId) ? 'k' : 'p');
     const specialId = detectSpecial(this.motion.dirs, cls, this.meter, this.characterId);
-    if (specialId) {
+    if (specialId && !cancel) {
       const def = ATTACKS[specialId];
       if (def?.super) {
         const spent = spendMeter(this.meter, MAX_METER);
-        if (!spent.ok) {
-          // fall through to a special-strength heavy
-        } else {
+        if (spent.ok) {
           this.meter = spent.meter;
           this.startAttack(specialId);
           this.motion.clear();
@@ -198,6 +242,7 @@ export class Fighter {
     const normal = this.pickNormals(snap);
     if (normal) {
       this.startAttack(normal);
+      this.stringPrev = snap.limb || normal;
       return 'normal';
     }
     return false;
@@ -267,7 +312,7 @@ export class Fighter {
       this._physics(world);
       return;
     }
-    this.comboHits = 0;
+    if (!this.airborne) this.comboHits = 0;
 
     if (this.blockstun > 0) {
       this.blockstun -= 1;
@@ -305,6 +350,14 @@ export class Fighter {
         this._shot = true;
         world.spawnProjectile(this, a.projectile);
       }
+      if (canCancelAttack(a, this.attackFrame, this.hasHit > 0)
+        && (snap.limb || snap.throw || snap.buttonClass)) {
+        const started = this.tryAttack(snap, { cancel: true });
+        if (started) {
+          this._physics(world);
+          return;
+        }
+      }
       const total = a.startup + a.active + a.recovery;
       if (this.attackFrame >= total) {
         this.attacking = false;
@@ -316,6 +369,48 @@ export class Fighter {
       return;
     }
     this._shot = false;
+
+    if (this.state === 'sidestep') {
+      this.sidestepT -= 1;
+      this.invuln = 2;
+      this.x += this.facing * 0.4;
+      if (this.sidestepT <= 0) this.state = 'idle';
+      this._physics(world);
+      return;
+    }
+    if (this.dashT > 0) {
+      this.dashT -= 1;
+      this.state = 'walk';
+      this._physics(world);
+      return;
+    }
+
+    if (snap.sidestep && !this.airborne) {
+      this.state = 'sidestep';
+      this.sidestepT = 16;
+      this.invuln = 12;
+      this.vx = this.facing * -1.2;
+      this._physics(world);
+      return;
+    }
+
+    if (!this.airborne && detectDash(this.motion.dirs, true)) {
+      this.dashT = 12;
+      this.vx = this.facing * 9.2;
+      this.state = 'walk';
+      this.motion.clear();
+      this._physics(world);
+      return;
+    }
+    if (!this.airborne && detectDash(this.motion.dirs, false)) {
+      this.dashT = 10;
+      this.vx = this.facing * -8.4;
+      this.invuln = 8;
+      this.state = 'walk';
+      this.motion.clear();
+      this._physics(world);
+      return;
+    }
 
     const started = this.tryAttack(snap);
     if (started) {

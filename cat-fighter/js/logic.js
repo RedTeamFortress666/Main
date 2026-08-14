@@ -90,15 +90,31 @@ export const SPECIAL_MOTIONS = {
  */
 export const ATTACKS = {
   lp: {
-    id: 'lp', name: 'Jab',
-    startup: 4, active: 3, recovery: 9,
-    damage: 28, meterGain: 6, chip: 2,
-    hitstun: 12, blockstun: 8, hitstop: 6,
-    knockback: 3.2, launch: 0, type: 'mid',
+    id: 'lp', name: 'Left Punch',
+    startup: 3, active: 3, recovery: 8,
+    damage: 26, meterGain: 6, chip: 2,
+    hitstun: 13, blockstun: 7, hitstop: 5,
+    knockback: 2.8, launch: 0, type: 'high',
     hitbox: { x: 28, y: -92, w: 52, h: 36 },
   },
+  lp2: {
+    id: 'lp2', name: 'Left Punch 2',
+    startup: 3, active: 3, recovery: 7,
+    damage: 30, meterGain: 6, chip: 2,
+    hitstun: 14, blockstun: 8, hitstop: 5,
+    knockback: 3.0, launch: 0, type: 'high',
+    hitbox: { x: 30, y: -94, w: 56, h: 36 },
+  },
+  catThrow: {
+    id: 'catThrow', name: 'Cat Throw',
+    startup: 5, active: 4, recovery: 26,
+    damage: 145, meterGain: 10, chip: 0,
+    hitstun: 18, blockstun: 0, hitstop: 12,
+    knockback: 10, launch: 7, type: 'throw', knockdown: true,
+    hitbox: { x: 8, y: -110, w: 54, h: 100 },
+  },
   mp: {
-    id: 'mp', name: 'Strong',
+    id: 'mp', name: 'Right Punch',
     startup: 7, active: 4, recovery: 14,
     damage: 52, meterGain: 9, chip: 4,
     hitstun: 16, blockstun: 12, hitstop: 8,
@@ -114,7 +130,7 @@ export const ATTACKS = {
     hitbox: { x: 34, y: -108, w: 78, h: 48 },
   },
   lk: {
-    id: 'lk', name: 'Short',
+    id: 'lk', name: 'Left Kick',
     startup: 5, active: 3, recovery: 11,
     damage: 32, meterGain: 6, chip: 2,
     hitstun: 12, blockstun: 8, hitstop: 6,
@@ -122,7 +138,7 @@ export const ATTACKS = {
     hitbox: { x: 36, y: -70, w: 58, h: 32 },
   },
   mk: {
-    id: 'mk', name: 'Forward Kick',
+    id: 'mk', name: 'Right Kick',
     startup: 8, active: 4, recovery: 16,
     damage: 58, meterGain: 9, chip: 5,
     hitstun: 17, blockstun: 13, hitstop: 8,
@@ -396,9 +412,11 @@ export function spendMeter(meter, cost = MAX_METER) {
 }
 
 export function isBlocked(attackType, blocking, crouching, airborne) {
+  if (attackType === 'throw') return false;
   if (!blocking || airborne) return false;
   if (attackType === 'low') return crouching;
   if (attackType === 'overhead') return !crouching;
+  if (attackType === 'high' && crouching) return false;
   return true;
 }
 
@@ -441,14 +459,112 @@ export function flavorForWin(winnerId) {
 export const CONTROL_MAP = {
   p1: {
     left: 'KeyA', right: 'KeyD', up: 'KeyW', down: 'KeyS',
-    lp: 'KeyZ', mp: 'KeyX', hp: 'KeyC',
-    lk: 'KeyF', mk: 'KeyG', hk: 'KeyH',
+    lp: 'KeyZ', rp: 'KeyX', lk: 'KeyF', rk: 'KeyG',
+    mp: 'KeyX', hp: 'KeyC', mk: 'KeyG', hk: 'KeyH',
+    sidestep: 'KeyC',
     block: 'ShiftLeft',
   },
   p2: {
     left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', down: 'ArrowDown',
-    lp: 'KeyN', mp: 'KeyM', hp: 'Comma',
-    lk: 'KeyJ', mk: 'KeyK', hk: 'KeyL',
+    lp: 'KeyN', rp: 'KeyM', lk: 'KeyJ', rk: 'KeyK',
+    mp: 'KeyM', hp: 'Comma', mk: 'KeyK', hk: 'KeyL',
+    sidestep: 'Comma',
     block: 'ShiftRight',
   },
 };
+
+/** Tekken-style 4-limb ids. rp/rk reuse the stronger mid punch/kick data. */
+export const LIMB_TO_NORMAL = { lp: 'lp', rp: 'mp', lk: 'lk', rk: 'mk' };
+
+/**
+ * Command throw, rage art, launchers and while-standing specials.
+ * limbs: { lp, rp, lk, rk } just-pressed (throw also allows held partner).
+ */
+export function detectTekkenCommand(dir, limbs, meter, characterId) {
+  const ch = CHARACTERS[characterId];
+  if (!ch) return null;
+  if (limbs.throw) return 'catThrow';
+  if (meter >= MAX_METER && ((limbs.lp && limbs.rk) || (limbs.rp && limbs.lk))) {
+    return ch.specials.super;
+  }
+  if ((dir === 3 || dir === 2) && limbs.rp) return ch.specials.dp_p;
+  if (dir === 4 && limbs.rp) return ch.specials.qcb_p;
+  if (dir === 3 && limbs.rk) return ch.specials.qcf_k;
+  return null;
+}
+
+/** Cancel a confirmed hit into the next limb as a string. */
+export function stringFollowup(prevId, nextLimb) {
+  if (!nextLimb) return null;
+  if (prevId === 'lp' && nextLimb === 'lp') return 'lp2';
+  if ((prevId === 'lp' || prevId === 'lp2') && nextLimb === 'rp') return 'mp';
+  if (prevId === 'lk' && nextLimb === 'rk') return 'hk';
+  if (prevId === 'rp' && nextLimb === 'rk') return 'hk';
+  if (prevId === 'mp' && nextLimb === 'rk') return 'hk';
+  return LIMB_TO_NORMAL[nextLimb] || nextLimb;
+}
+
+export function canCancelAttack(attack, frame, hasHit) {
+  if (!attack || !hasHit) return false;
+  const start = attack.startup;
+  const end = attack.startup + attack.active + Math.min(10, attack.recovery);
+  return frame >= start && frame < end;
+}
+
+/** Double-tap forward (6) or back (4) in the recent numpad buffer. */
+export function detectDash(dirs, forward = true, window = 12) {
+  const want = forward ? 6 : 4;
+  const slice = dirs.slice(-window);
+  let last = -1;
+  for (let i = slice.length - 1; i >= 0; i--) {
+    if (slice[i] !== 5) { last = i; break; }
+  }
+  if (last < 0 || slice[last] !== want) return false;
+  let sawNeutral = false;
+  for (let i = last - 1; i >= 0; i--) {
+    if (slice[i] === 5) { sawNeutral = true; continue; }
+    return sawNeutral && slice[i] === want;
+  }
+  return false;
+}
+
+export const TRACK_LEN = 2400;
+export const RACE_LAPS = 3;
+
+export const RACERS = {
+  yoko: {
+    id: 'yoko', name: 'Queen Yoko', short: 'YOKO',
+    car: 'Gold Rolls Royce', color: '#e8c547', accent: '#111111',
+  },
+  morlan: {
+    id: 'morlan', name: 'Tsar Morlan', short: 'MORLAN',
+    car: 'Black Hearse', color: '#1a1a1a', accent: '#c0392b',
+  },
+  baby: {
+    id: 'baby', name: 'Baby', short: 'BABY',
+    car: 'Blue Lotus', color: '#3a7bd5', accent: '#f3efe6',
+  },
+  kittens: {
+    id: 'kittens', name: 'Kittens', short: 'KITTENS',
+    car: 'Red VW Beetle', color: '#e23b3b', accent: '#f4a04a',
+  },
+};
+
+export function raceProgress(racer) {
+  return (racer.laps || 0) * TRACK_LEN + (racer.s || 0);
+}
+
+export function raceRanking(racers) {
+  return [...racers].sort((a, b) => raceProgress(b) - raceProgress(a));
+}
+
+export function trackPoint(s, lane = 0) {
+  const t = ((s % TRACK_LEN) / TRACK_LEN) * Math.PI * 2;
+  const rx = 470 + lane;
+  const ry = 230 + lane * 0.55;
+  return {
+    x: CANVAS_W / 2 + Math.cos(t) * rx,
+    y: CANVAS_H / 2 + 18 + Math.sin(t) * ry,
+    heading: t + Math.PI / 2,
+  };
+}

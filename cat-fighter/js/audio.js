@@ -166,7 +166,7 @@ export class AudioBus {
     let v = 0.28;
     if (mode === 'fight' || mode === 'intro') v = 0.1;
     else if (mode === 'timeout' || mode === 'revive') v = 0.06;
-    else if (mode === 'matchEnd') v = 0.2;
+    else if (mode === 'matchEnd' || mode === 'race') v = 0.2;
     this.themeGain.gain.cancelScheduledValues(t);
     this.themeGain.gain.linearRampToValueAtTime(v * this.master * 4, t + 0.25);
   }
