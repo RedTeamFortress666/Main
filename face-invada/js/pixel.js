@@ -121,72 +121,88 @@ export function paintFaceInvada(ctx, pose = {}) {
   const kick = pose.kick || 0;
   const blade = pose.blade || 0;
   const hit = pose.hit || 0;
+  const walk = pose.walk || 0;
   const t = pose.t || 0;
   ctx.clearRect(0, 0, SPRITE_W, SPRITE_H);
   const cx = 28 + Math.round(punch * 3 - hit * 3);
   const foot = SPRITE_H - 2;
+  const step = Math.round(Math.sin(walk) * 4);
 
-  const skin = '#c48a6a';
-  const skinDk = '#9a6248';
-  const jacket = '#141418';
-  const scarf = '#6ec8ff';
-  const cap = '#6a6a72';
-  const jean = '#1c2430';
-  const outline = '#050508';
+  const skin = '#e6c4a8';
+  const skinSh = '#c9a288';
+  const hair = '#1a1410';
+  const jacket = '#1a1a1e';
+  const jacketHi = '#2c2c32';
+  const shirt = '#6a7380';
+  const scarf = '#8ec4e8';
+  const cap = '#3a3a40';
+  const capHi = '#5a5a62';
+  const pant = '#141418';
+  const outline = '#0a0808';
+  const rim = '#b8b8c0';
+  const lens = '#1a1a1c';
+  const stache = '#2a221c';
 
-  // legs
   const kExt = Math.round(kick * 12);
-  rect(ctx, cx - 10, foot - 22, 9, 20, outline);
-  rect(ctx, cx - 9, foot - 21, 7, 18, jean);
-  rect(ctx, cx + 2 + kExt, foot - 22, 9, 20, outline);
-  rect(ctx, cx + 3 + kExt, foot - 21, 7, 18, jean);
-  rect(ctx, cx - 11, foot - 6, 11, 6, '#111');
-  rect(ctx, cx + 2 + kExt, foot - 6, 11, 6, '#111');
-  rect(ctx, cx - 9, foot - 12, 6, 4, '#3a3a40'); // knee pad
-  rect(ctx, cx + 4 + kExt, foot - 12, 6, 4, '#3a3a40');
-  rect(ctx, cx + 8, foot - 20, 5, 8, '#2a2018'); // holster
+  const lLeg = step;
+  const rLeg = -step + kExt;
 
-  // torso / jacket
-  rect(ctx, cx - 12, foot - 50, 24, 30, outline);
-  rect(ctx, cx - 11, foot - 49, 22, 28, jacket);
-  rect(ctx, cx - 6, foot - 48, 12, 10, scarf);
-  rect(ctx, cx - 4, foot - 46, 8, 14, scarf);
-  rect(ctx, cx + 6, foot - 44, 4, 16, '#0a0a0c');
-  rect(ctx, cx - 10, foot - 36, 4, 4, '#3a3a44');
+  rect(ctx, cx - 11, foot - 24 + Math.max(0, lLeg), 10, 20, outline);
+  rect(ctx, cx - 10, foot - 23 + Math.max(0, lLeg), 8, 18, pant);
+  rect(ctx, cx + 2, foot - 24 + Math.max(0, rLeg), 10, 20, outline);
+  rect(ctx, cx + 3, foot - 23 + Math.max(0, rLeg), 8, 18, pant);
+  rect(ctx, cx - 12, foot - 6 + Math.max(0, lLeg), 12, 6, '#0c0c0e');
+  rect(ctx, cx + 2, foot - 6 + Math.max(0, rLeg), 12, 6, '#0c0c0e');
 
-  // back arm + karambit
-  const bx = cx - 16;
-  rect(ctx, bx, foot - 46, 7, 16, outline);
-  rect(ctx, bx + 1, foot - 45, 5, 14, jacket);
-  rect(ctx, bx - 1, foot - 32, 6, 6, skin);
-  const bladeX = bx - 6 - Math.round(blade * 10);
-  rect(ctx, bladeX, foot - 34, 10, 3, '#c0c8d0');
-  rect(ctx, bladeX - 2, foot - 36, 6, 3, '#e8eef4');
-  rect(ctx, bladeX + 6, foot - 33, 3, 3, '#8a2018');
+  rect(ctx, cx - 13, foot - 52, 26, 30, outline);
+  rect(ctx, cx - 12, foot - 51, 24, 28, jacket);
+  rect(ctx, cx - 10, foot - 49, 8, 24, jacketHi);
+  rect(ctx, cx - 4, foot - 48, 10, 22, shirt);
+  rect(ctx, cx - 7, foot - 51, 16, 8, scarf);
+  rect(ctx, cx - 3, foot - 46, 7, 16, scarf);
+  rect(ctx, cx + 2, foot - 44, 3, 12, '#7ab0d4');
 
-  // punch arm
-  const ax = cx + 10 + Math.round(punch * 14);
-  const ay = foot - 48 - Math.round(punch * 2);
-  rect(ctx, ax, ay, 7, 16, outline);
-  rect(ctx, ax + 1, ay + 1, 5, 14, jacket);
-  rect(ctx, ax + 2, ay + 14, 7, 6, skin);
-  rect(ctx, ax + 3, ay + 16, 2, 2, '#1a1a1a'); // knuckle tattoo
+  const bx = cx - 18 - Math.round(blade * 8);
+  rect(ctx, bx, foot - 48, 8, 16, outline);
+  rect(ctx, bx + 1, foot - 47, 6, 14, jacket);
+  rect(ctx, bx - 1, foot - 34, 7, 6, skin);
+  const b1 = bx - 7 - Math.round(blade * 6);
+  rect(ctx, b1, foot - 36, 11, 3, '#d8dee4');
+  rect(ctx, b1 - 2, foot - 38, 6, 3, '#f0f4f8');
+  rect(ctx, b1 + 7, foot - 35, 3, 3, '#8a2018');
+  rect(ctx, b1 + 1, foot - 32, 9, 2, '#c8d0d8');
+  rect(ctx, b1 + 6, foot - 31, 3, 2, '#8a2018');
 
-  // head
+  const ax = cx + 11 + Math.round(punch * 14);
+  const ay = foot - 50 - Math.round(punch * 2);
+  rect(ctx, ax, ay, 8, 17, outline);
+  rect(ctx, ax + 1, ay + 1, 6, 15, jacket);
+  rect(ctx, ax + 2, ay + 15, 8, 6, skin);
+  rect(ctx, ax + 3, ay + 16, 2, 2, '#111');
+  rect(ctx, ax + 6, ay + 16, 2, 2, '#111');
+
   const hx = cx;
-  const hy = foot - 66;
-  rect(ctx, hx - 10, hy, 20, 18, outline);
-  rect(ctx, hx - 9, hy + 1, 18, 16, skin);
-  rect(ctx, hx - 7, hy + 10, 14, 8, skinDk); // beard
-  rect(ctx, hx - 2, hy + 8, 6, 4, skinDk); // mustache
-  rect(ctx, hx - 11, hy - 6, 22, 8, outline); // cap
-  rect(ctx, hx - 10, hy - 5, 20, 6, cap);
-  rect(ctx, hx - 8, hy - 8, 16, 4, cap);
-  rect(ctx, hx - 8, hy + 4, 16, 4, '#111'); // shades
-  rect(ctx, hx - 7, hy + 5, 5, 2, '#3df0ff');
-  rect(ctx, hx + 2, hy + 5, 5, 2, '#ff4ad2');
-  if ((t | 0) % 40 < 3) {
-    rect(ctx, hx - 4, hy + 14, 3, 2, '#8a4030');
+  const hy = foot - 70;
+  rect(ctx, hx - 10, hy + 2, 20, 18, outline);
+  rect(ctx, hx - 9, hy + 3, 18, 16, skin);
+  rect(ctx, hx - 8, hy + 14, 16, 4, skinSh);
+  rect(ctx, hx - 6, hy + 10, 12, 3, stache);
+  rect(ctx, hx - 5, hy + 11, 10, 2, stache);
+  rect(ctx, hx - 1, hy + 13, 3, 3, stache);
+  rect(ctx, hx - 11, hy - 5, 22, 10, outline);
+  rect(ctx, hx - 10, hy - 4, 20, 8, cap);
+  rect(ctx, hx - 8, hy - 7, 16, 4, capHi);
+  rect(ctx, hx - 11, hy + 2, 22, 3, cap);
+  rect(ctx, hx - 9, hy + 4, 18, 6, rim);
+  rect(ctx, hx - 8, hy + 5, 7, 4, lens);
+  rect(ctx, hx + 1, hy + 5, 7, 4, lens);
+  rect(ctx, hx - 1, hy + 6, 2, 2, rim);
+  rect(ctx, hx - 7, hy + 6, 2, 1, '#3a3a44');
+  rect(ctx, hx + 4, hy + 6, 2, 1, '#3a3a44');
+  rect(ctx, hx - 8, hy, 4, 3, hair);
+  rect(ctx, hx + 5, hy, 4, 3, hair);
+  if ((t | 0) % 50 < 3) {
+    rect(ctx, hx - 3, hy + 16, 2, 1, '#b08070');
   }
 }
 
@@ -258,24 +274,24 @@ export function drawHighway(ctx, notes, currentBeat, y0, w) {
   const hitX = 220;
   const pxPerBeat = 90;
   const lanes = ['punch', 'kick', 'blade', 'bass'];
-  ctx.fillStyle = 'rgba(0,0,0,0.55)';
-  ctx.fillRect(0, y0, w, 168);
+  ctx.fillStyle = 'rgba(0,0,0,0.62)';
+  ctx.fillRect(0, y0, w, 148);
   for (let i = 0; i < 4; i++) {
-    const y = y0 + 12 + i * 38;
+    const y = y0 + 10 + i * 34;
     ctx.fillStyle = '#1a1428';
-    ctx.fillRect(40, y, w - 80, 30);
+    ctx.fillRect(40, y, w - 80, 26);
     ctx.fillStyle = LANE_COLORS[lanes[i]];
-    ctx.fillRect(hitX - 8, y - 2, 12, 34);
+    ctx.fillRect(hitX - 8, y - 2, 12, 30);
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(hitX - 3, y + 6, 4, 18);
-    drawPixelText(ctx, lanes[i].toUpperCase(), 48, y + 8, 1, LANE_COLORS[lanes[i]]);
+    ctx.fillRect(hitX - 3, y + 4, 4, 16);
+    drawPixelText(ctx, lanes[i].toUpperCase(), 48, y + 6, 1, LANE_COLORS[lanes[i]]);
   }
   for (const n of notes) {
     if (n.hit && n.grade !== 'miss') continue;
     const x = hitX + (n.beat - currentBeat) * pxPerBeat;
     if (x < 30 || x > w - 20) continue;
     const li = lanes.indexOf(n.lane);
-    const y = y0 + 12 + li * 38;
+    const y = y0 + 10 + li * 34;
     ctx.fillStyle = n.grade === 'miss' ? '#442222' : LANE_COLORS[n.lane];
     ctx.fillRect(x | 0, y + 4, 22, 22);
     ctx.fillStyle = '#fff';
@@ -291,63 +307,69 @@ export function lifeBarWidth(hp, max, barW) {
 
 const ROOM_FURNITURE = {
   lobby: [
-    [48, 90, 200, 140, '#14301c'],
-    [48, 280, 360, 170, '#2a2010'],
-    [820, 140, 400, 320, '#1a3048'],
+    [48, 140, 200, 110, '#14301c'],
+    [48, 300, 360, 160, '#2a2010'],
+    [820, 170, 400, 280, '#1a3048'],
   ],
   hall: [
-    [48, 90, 240, 100, '#243838'],
-    [360, 140, 200, 280, '#3a2030'],
-    [920, 170, 280, 250, '#2a1820'],
-    [80, 430, 1080, 90, '#4a2030'],
+    [48, 140, 240, 90, '#243838'],
+    [360, 180, 200, 250, '#3a2030'],
+    [920, 200, 280, 230, '#2a1820'],
+    [80, 450, 1080, 80, '#4a2030'],
   ],
   room101: [
-    [48, 90, 360, 140, '#1a3040'],
-    [48, 280, 520, 200, '#3a2840'],
-    [600, 300, 220, 150, '#1a1a28'],
-    [980, 140, 220, 320, '#202838'],
+    [48, 140, 360, 120, '#1a3040'],
+    [48, 300, 520, 180, '#3a2840'],
+    [600, 320, 220, 140, '#1a1a28'],
+    [980, 170, 220, 280, '#202838'],
   ],
   maid: [
-    [48, 180, 300, 280, '#c8b8a8'],
-    [780, 240, 400, 200, '#2a2a20'],
+    [48, 200, 300, 250, '#c8b8a8'],
+    [780, 260, 400, 180, '#2a2a20'],
   ],
   vent: [
-    [48, 90, 320, 150, '#3a5048'],
-    [460, 210, 360, 160, '#2a4850'],
-    [80, 400, 1120, 110, '#1a2418'],
+    [48, 140, 320, 130, '#3a5048'],
+    [460, 230, 360, 150, '#2a4850'],
+    [80, 420, 1120, 100, '#1a2418'],
   ],
   bath: [
-    [360, 90, 560, 130, '#8aa0b0'],
-    [440, 340, 400, 160, '#1a2830'],
+    [360, 140, 560, 110, '#8aa0b0'],
+    [440, 350, 400, 140, '#1a2830'],
   ],
   kitchen: [
-    [48, 150, 300, 340, '#203040'],
-    [420, 280, 360, 180, '#304050'],
-    [860, 200, 320, 200, '#402010'],
+    [48, 170, 300, 300, '#203040'],
+    [420, 300, 360, 160, '#304050'],
+    [860, 220, 320, 180, '#402010'],
   ],
   cctv: [
-    [80, 90, 1120, 220, '#102018'],
-    [48, 340, 320, 160, '#1a1010'],
+    [80, 140, 1120, 180, '#102018'],
+    [48, 350, 320, 140, '#1a1010'],
   ],
   penthouse: [
-    [420, 90, 440, 150, '#4a1838'],
-    [48, 320, 320, 160, '#2a1810'],
-    [960, 140, 240, 340, '#181018'],
+    [420, 140, 440, 130, '#4a1838'],
+    [48, 330, 320, 150, '#2a1810'],
+    [960, 170, 240, 300, '#181018'],
   ],
   closet: [
-    [48, 130, 320, 360, '#201818'],
-    [440, 220, 380, 180, '#8a9098'],
-    [880, 380, 320, 110, '#141414'],
+    [48, 160, 320, 320, '#201818'],
+    [440, 240, 380, 160, '#8a9098'],
+    [880, 390, 320, 100, '#141414'],
   ],
   roof: [
-    [40, 80, 1200, 110, '#0a1028'],
-    [360, 210, 640, 250, '#3a3020'],
+    [40, 130, 1200, 90, '#0a1028'],
+    [360, 230, 640, 220, '#3a3020'],
   ],
 };
 
-export function drawMysteryRoom(ctx, room, t, verb) {
+export function drawMysteryRoom(ctx, room, t) {
   ctx.fillStyle = room.color || '#0b1020';
-  ctx.fillRect(0, 70, 1280, 470);
+  ctx.fillRect(0, 118, 1280, 422);
+  ctx.fillStyle = '#12101a';
+  ctx.fillRect(0, 500, 1280, 40);
+  ctx.fillStyle = '#2a2040';
+  ctx.fillRect(0, 498, 1280, 4);
+  drawPixelText(ctx, '<< WALK', 16, 508, 1, '#ffe566');
+  drawPixelText(ctx, 'WALK >>', 1160, 508, 1, '#ffe566');
   const pulse = 0.45 + Math.sin(t * 0.12) * 0.12;
   const furniture = ROOM_FURNITURE[room.id] || [];
   for (const [x, y, w, h, c] of furniture) {
@@ -361,5 +383,4 @@ export function drawMysteryRoom(ctx, room, t, verb) {
     ctx.fillRect(hs.x + 6, hs.y + 6, Math.min(hs.w - 12, 240), 22);
     drawPixelText(ctx, hs.label, hs.x + 10, hs.y + 10, 1, '#3df0ff');
   }
-  drawPixelText(ctx, verb.toUpperCase(), 24, 78, 2, '#ffe566');
 }

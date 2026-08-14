@@ -35,7 +35,7 @@ export const HERO = {
   name: 'FACE INVADA',
   title: 'SUPER POWER DJ BRAH',
   country: 'ITALY',
-  age: 46,
+  age: 37,
   style: 'SILAT & BLADE',
   bio: 'THE SUPER POWER DJ BRAH BRINGS A DEADLY PRECISE COMBAT STYLE. MASTERING HIDDEN BLADES WITH BASS-DRIVEN ENERGY.',
   combo: 'H. BLADE  > > + 1 2',

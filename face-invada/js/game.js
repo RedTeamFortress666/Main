@@ -15,9 +15,10 @@ import {
   drawMysteryRoom,
 } from './pixel.js';
 import {
-  emptyMysteryState, setVerb, cycleRoom, tapAt, canFight, allBeaten,
+  emptyMysteryState, setVerb, tapAt, canFight, allBeaten,
   markBeaten, advanceDay, dayMeta, enemyOf, currentRoom, DAYS, ENEMIES,
   ITEM_NAMES, INV_X, INV_Y, INV_SLOT_W, INV_SLOT_H, INV_GAP,
+  stepWalk, interactNearest,
 } from './mystery.js';
 
 const VERB_KEYS = { KeyZ: 'look', KeyX: 'talk', KeyC: 'take', KeyV: 'use' };
@@ -178,12 +179,17 @@ export class Game {
           this.audio.ui();
         }
       }
-      if (this.input.just('KeyA') || this.input.just('ArrowLeft')) {
-        this.mystery = cycleRoom(this.mystery, -1);
-        this.audio.ui();
-      }
-      if (this.input.just('KeyD') || this.input.just('ArrowRight')) {
-        this.mystery = cycleRoom(this.mystery, 1);
+      const left = this.input.held('KeyA') || this.input.held('ArrowLeft');
+      const right = this.input.held('KeyD') || this.input.held('ArrowRight');
+      const dir = (right ? 1 : 0) - (left ? 1 : 0);
+      const before = this.mystery;
+      this.mystery = stepWalk(this.mystery, dir);
+      if (dir) this.facePose.walk = this.time * 0.4;
+      else if (this.mystery.walkTarget != null) this.facePose.walk = this.time * 0.4;
+      else this.facePose.walk = 0;
+      if (this.mystery.room !== before.room) this.audio.ui();
+      if (this.input.just('KeyS') || this.input.just('ArrowDown')) {
+        this.mystery = interactNearest(this.mystery);
         this.audio.ui();
       }
       if (this.input.just('KeyW') || this.input.just('ArrowUp')) {
@@ -300,11 +306,11 @@ export class Game {
     drawPixelText(ctx, '5 DAYS A STRANGER', CANVAS_W / 2, 150, 4, '#ffe566', 'center');
     drawPixelText(ctx, GAME_TITLE, CANVAS_W / 2, 210, 2, '#3df0ff', 'center');
     drawPixelText(ctx, GAME_SUBTITLE, CANVAS_W / 2, 250, 2, '#e878ff', 'center');
-    drawFighter(ctx, 'face', 640, 560, 1, { t: this.time, punch: Math.max(0, Math.sin(this.time * 0.08)) }, 4.2);
+    drawFighter(ctx, 'face', 640, 540, 1, { t: this.time, punch: Math.max(0, Math.sin(this.time * 0.08)), blade: 0.35 }, 4.8);
     if (Math.sin(this.time * 0.12) > -0.2) {
-      drawPixelText(ctx, 'PRESS START', CANVAS_W / 2, 620, 3, '#ffffff', 'center');
+      drawPixelText(ctx, 'PRESS START', CANVAS_W / 2, 580, 3, '#ffffff', 'center');
     }
-    drawPixelText(ctx, 'SOLVE THEN FIGHT   TAP HOTSPOTS', CANVAS_W / 2, 680, 1, '#bbbbbb', 'center');
+    drawPixelText(ctx, 'ITALY  37  SILAT AND BLADE', CANVAS_W / 2, 620, 1, '#bbbbbb', 'center');
   }
 
   _drawBriefing(ctx) {
@@ -319,8 +325,8 @@ export class Game {
     drawPixelText(ctx, 'THEN FIGHT', CANVAS_W / 2, 380, 2, '#ff4ad2', 'center');
     drawPixelText(ctx, enemy.name, CANVAS_W / 2, 420, 3, '#ffffff', 'center');
     drawPixelText(ctx, enemy.blurb.toUpperCase(), CANVAS_W / 2, 470, 1, '#bbbbbb', 'center');
-    drawFighter(ctx, enemy.id, 640, 640, -1, { t: this.time }, 2.6);
-    drawPixelText(ctx, 'START TO INVESTIGATE', CANVAS_W / 2, 670, 2, '#fff4c2', 'center');
+    drawFighter(ctx, enemy.id, 640, 580, -1, { t: this.time }, 2.4);
+    drawPixelText(ctx, 'START TO INVESTIGATE', CANVAS_W / 2, 610, 2, '#fff4c2', 'center');
   }
 
   _drawMystery(ctx) {
@@ -328,47 +334,43 @@ export class Game {
     const m = this.mystery;
     const day = dayMeta(m);
     const room = currentRoom(m);
-    drawMysteryRoom(ctx, room, this.time, m.verb);
+    drawMysteryRoom(ctx, room, this.time);
 
     const npc = room.hotspots.find((h) => ['bellhop', 'kara', 'widow', 'rivet', 'stranger'].includes(h.id));
     if (npc) {
       const who = npc.id === 'bellhop' ? 'vinyl' : npc.id;
-      drawFighter(ctx, who, npc.x + npc.w / 2, npc.y + npc.h - 8, 1, { t: this.time }, 2.2);
+      drawFighter(ctx, who, npc.x + npc.w / 2, npc.y + npc.h - 4, 1, { t: this.time }, 2.1);
     }
-    drawFighter(ctx, 'face', 1180, 520, 1, { t: this.time }, 1.8);
+    const px = m.px ?? 260;
+    drawFighter(ctx, 'face', px, 518, m.facing || 1, {
+      t: this.time,
+      walk: this.facePose.walk || 0,
+      blade: 0.25,
+    }, 2.6);
 
-    ctx.fillStyle = 'rgba(0,0,0,0.72)';
-    ctx.fillRect(0, 0, CANVAS_W, 70);
-    drawPixelText(ctx, `NIGHT ${day.day}  ${day.title}`, 24, 16, 2, '#ffe566');
-    drawPixelText(ctx, room.name, 24, 44, 2, '#3df0ff');
-    drawPixelText(ctx, 'LEFT/RIGHT ROOM   UP JOURNAL', 700, 20, 1, '#aaaaaa');
-    if (canFight(m)) {
-      drawPixelText(ctx, 'START FIGHT', 900, 44, 2, '#ff4ad2');
-    }
+    ctx.fillStyle = 'rgba(6,4,14,0.92)';
+    ctx.fillRect(0, 0, CANVAS_W, 118);
+    drawPixelText(ctx, `NIGHT ${day.day}  ${day.title}`, 16, 8, 2, '#ffe566');
+    drawPixelText(ctx, `${room.name}   ${m.verb.toUpperCase()}`, 16, 36, 2, '#3df0ff');
+    this._wrap(ctx, m.log, 16, 62, 590, 1, '#ffffff');
+    if (canFight(m)) drawPixelText(ctx, 'START FIGHT', 400, 36, 2, '#ff4ad2');
 
-    ctx.fillStyle = 'rgba(0,0,0,0.78)';
-    ctx.fillRect(0, 540, CANVAS_W, 80);
-    drawPixelText(ctx, m.log.toUpperCase(), 24, 558, 2, '#ffffff');
-    drawPixelText(ctx, `VERB ${m.verb.toUpperCase()}`, 24, 592, 1, '#ffe566');
-
-    ctx.fillStyle = 'rgba(8,6,16,0.92)';
-    ctx.fillRect(0, 618, CANVAS_W, 102);
-    drawPixelText(ctx, 'INVENTORY  TAP TO SELECT', 24, 600, 1, '#888888');
+    drawPixelText(ctx, 'BAG', INV_X - 50, INV_Y + 8, 1, '#888888');
     for (let i = 0; i < 5; i++) {
       const x = INV_X + i * (INV_SLOT_W + INV_GAP);
       const id = m.inv[i];
       const on = id && m.selected === id;
-      ctx.fillStyle = on ? '#ff4ad2' : '#22202c';
-      ctx.fillRect(x - 3, INV_Y - 3, INV_SLOT_W + 6, INV_SLOT_H + 6);
-      ctx.fillStyle = '#141018';
+      ctx.fillStyle = on ? '#ff4ad2' : '#2a2438';
+      ctx.fillRect(x - 2, INV_Y - 2, INV_SLOT_W + 4, INV_SLOT_H + 4);
+      ctx.fillStyle = '#100c18';
       ctx.fillRect(x, INV_Y, INV_SLOT_W, INV_SLOT_H);
-      drawPixelText(ctx, id ? ITEM_NAMES[id] || id : '---', x + 12, INV_Y + 26, 2, id ? '#fff4c2' : '#444');
+      drawPixelText(ctx, id ? ITEM_NAMES[id] || id : '--', x + 8, INV_Y + 10, 1, id ? '#fff4c2' : '#444');
     }
 
     if (this.announce.text) {
       ctx.fillStyle = 'rgba(0,0,0,0.45)';
-      ctx.fillRect(0, 300, CANVAS_W, 64);
-      drawPixelText(ctx, this.announce.text, CANVAS_W / 2, 312, 4, '#ffffff', 'center');
+      ctx.fillRect(0, 200, CANVAS_W, 48);
+      drawPixelText(ctx, this.announce.text, CANVAS_W / 2, 210, 3, '#ffffff', 'center');
     }
   }
 
@@ -378,7 +380,7 @@ export class Game {
     ctx.fillRect(80, 40, 1120, 640);
     drawPixelText(ctx, 'CASE JOURNAL', CANVAS_W / 2, 70, 4, '#e878ff', 'center');
     DAYS.forEach((d, i) => {
-      const y = 150 + i * 80;
+      const y = 130 + i * 48;
       let status = 'LOCKED';
       let col = '#666';
       if (this.mystery.beaten[i]) {
@@ -395,9 +397,15 @@ export class Game {
         col = '#3df0ff';
       }
       drawPixelText(ctx, `NIGHT ${d.day}  ${d.title}`, 120, y, 2, '#ffffff');
-      drawPixelText(ctx, status, 900, y, 2, col);
+      drawPixelText(ctx, status, 860, y, 2, col);
     });
-    drawPixelText(ctx, 'START TO CLOSE JOURNAL', CANVAS_W / 2, 620, 2, '#fff4c2', 'center');
+    drawPixelText(ctx, 'CLUES', 120, 390, 2, '#3df0ff');
+    const clues = this.mystery.clues || [];
+    if (!clues.length) drawPixelText(ctx, 'WALK. LOOK. TALK. TAKE. USE.', 120, 430, 1, '#888');
+    clues.slice(-4).forEach((c, i) => {
+      drawPixelText(ctx, c.toUpperCase(), 120, 430 + i * 22, 1, '#fff4c2');
+    });
+    drawPixelText(ctx, 'START TO CLOSE JOURNAL', CANVAS_W / 2, 600, 2, '#fff4c2', 'center');
   }
 
   _drawFight(ctx) {
@@ -420,12 +428,12 @@ export class Game {
     drawPixelText(ctx, st.bass >= SUPER_COST ? 'BASS READY' : 'BASS', 24, 84, 1, '#eee');
 
     const pulse = 1 + Math.sin(beat * Math.PI * 2) * 0.04;
-    drawFighter(ctx, 'face', 300, 470, 1, this.facePose, 3.4 * pulse);
-    drawFighter(ctx, enemy.id, 980, 470, -1, this.rivetPose, 3.4);
-    drawPixelText(ctx, 'FACE INVADA', 300, 490, 1, '#fff', 'center');
-    drawPixelText(ctx, enemy.handle, 980, 490, 1, '#fff', 'center');
+    drawFighter(ctx, 'face', 300, 330, 1, this.facePose, 3.2 * pulse);
+    drawFighter(ctx, enemy.id, 980, 330, -1, this.rivetPose, 3.2);
+    drawPixelText(ctx, 'FACE INVADA', 300, 344, 1, '#fff', 'center');
+    drawPixelText(ctx, enemy.handle, 980, 344, 1, '#fff', 'center');
 
-    drawHighway(ctx, this.fight.notes, beat, 530, CANVAS_W);
+    drawHighway(ctx, this.fight.notes, beat, 360, CANVAS_W);
 
     if (st.combo > 1) {
       drawPixelText(ctx, `${st.combo} HIT`, 640, 100, 3, '#fff', 'center');

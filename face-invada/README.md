@@ -1,14 +1,14 @@
 # FACE INVADA — 5 Days a Stranger
 
-Android-first motel mystery. **Face Invada** (Italy, 46, Silat & Blade) is trapped in the Neon Arms. Each night is a LOOK / TALK / TAKE / USE case in the spirit of classic adventure games (original plot — not a remake). Close the case, then beat-box fight that night's enemy.
+Android-first motel mystery. **Face Invada** (Italy, 37, Silat & Blade) — flat cap, round shades, periwinkle scarf, dual karambits — is trapped in the Neon Arms. Walk the rooms, close a LOOK / TALK / TAKE / USE case each night, then beat-box fight that night's enemy.
 
 | Night | Mystery | Enemy |
 |---|---|---|
-| 1 | Locked lobby | THE BELLHOP (Vinyl) |
-| 2 | Missing mixtape | KARA DROP |
-| 3 | Bloody bassline | BASS WIDOW |
-| 4 | Silent witness | MC RIVET |
-| 5 | The Stranger | THE STRANGER |
+| 1 | Distract Vinyl with hall wax, steal the keycard, PIN 333 | THE BELLHOP |
+| 2 | Kara's driver, unscrew the vent, play the tape last | KARA DROP |
+| 3 | Hook the ring, read MARCO on the mirror | BASS WIDOW |
+| 4 | Thaw the receipt, stamp 3:33 on the cameras | MC RIVET |
+| 5 | Diary password THROUGH, speak it, open the sigil | THE STRANGER |
 
 ## Play (web)
 
@@ -28,25 +28,22 @@ ANDROID_HOME=$HOME/android-sdk ./native/build-android.sh
 
 APK: `downloads/FaceInvadaBeatBoxing.apk`.
 
-## Controls (on-screen pad always shown)
+## Controls
 
-**Mystery**
-
-| Button | Action |
-|---|---|
-| LOOK | Inspect a tapped hotspot (Z) |
-| TALK | Speak to a person (X) |
-| TAKE | Pick up after LOOK (C) |
-| USE | Use the selected inventory item (V) |
-| LEFT / RIGHT | Change rooms |
-| UP | Case journal |
-| START | Fight if the case is closed, else journal |
-| Tap canvas | Apply the current verb to a hotspot / select inventory |
-
-**Fight** (after the case is closed)
+**Mystery** — log and inventory sit at the **top** so the pad does not cover them.
 
 | Button | Action |
 |---|---|
-| PUNCH / KICK / BLADE / BASS | Hit that lane on the beat |
-| BASS (meter full) | Beat Box Drop super |
+| WALK (LEFT/RIGHT) | Walk Face Invada. Walk off an edge to change rooms |
+| DO (DOWN) | Act on the nearest hotspot |
+| FILE (UP) | Case journal + clues |
+| LOOK / TALK / TAKE / USE | Verbs (Z X C V) |
+| Tap a hotspot | Walk there, then apply the current verb |
+| START | Fight only after the case is closed |
 
+**Fight**
+
+| Button | Action |
+|---|---|
+| PUNCH / KICK / BLADE / BASS | Hit that lane |
+| BASS (meter full) | Beat Box Drop |

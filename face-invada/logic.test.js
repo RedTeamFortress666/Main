@@ -9,7 +9,7 @@ import { FONT5, pixelTextWidth } from './js/pixel.js';
 import {
   emptyMysteryState, setVerb, applyVerb, tapInventory, tapAt,
   canFight, advanceDay, cycleRoom, hasItem, hitHotspot, hitInventoryIndex,
-  DAYS, ENEMIES, INV_X, INV_Y, currentRoom, enemyOf,
+  DAYS, ENEMIES, INV_X, INV_Y, currentRoom, enemyOf, stepWalk, PX_MAX,
 } from './js/mystery.js';
 
 describe('title and hero', () => {
@@ -17,7 +17,7 @@ describe('title and hero', () => {
     expect(GAME_TITLE).toBe("FACE INVADA'S BEAT BOXING");
     expect(HERO.name).toBe('FACE INVADA');
     expect(HERO.country).toBe('ITALY');
-    expect(HERO.age).toBe(46);
+    expect(HERO.age).toBe(37);
     expect(HERO.style).toMatch(/SILAT/);
   });
 });
@@ -143,35 +143,44 @@ describe('5 days a stranger', () => {
     expect(ENEMIES.stranger.id).toBe('stranger');
   });
 
-  it('refuses TAKE before LOOK on night 1', () => {
-    let s = emptyMysteryState();
-    s = setVerb(s, 'take');
-    s = applyVerb(s, 'desk');
-    expect(hasItem(s, 'keycard')).toBe(false);
-    expect(canFight(s)).toBe(false);
-  });
-
-  it('solves night 1: LOOK desk, TAKE keycard, USE on door', () => {
+  it('refuses the keycard while Vinyl is watching', () => {
     let s = emptyMysteryState();
     s = solveDay(s, [
       { verb: 'look', hotspot: 'desk' },
       { verb: 'take', hotspot: 'desk' },
+    ]);
+    expect(hasItem(s, 'keycard')).toBe(false);
+    expect(canFight(s)).toBe(false);
+  });
+
+  it('solves night 1 by distracting Vinyl, then PIN 333', () => {
+    let s = emptyMysteryState();
+    s = solveDay(s, [
+      { verb: 'look', hotspot: 'plant' },
+      { verb: 'look', hotspot: 'desk' },
+      { verb: 'look', hotspot: 'carpet' },
+      { verb: 'take', hotspot: 'carpet' },
+      { verb: 'use', hotspot: 'bellhop' },
+      { verb: 'take', hotspot: 'desk' },
       { verb: 'use', hotspot: 'door' },
     ]);
+    expect(hasItem(s, 'vinyl')).toBe(true);
     expect(hasItem(s, 'keycard')).toBe(true);
     expect(s.solved[0]).toBe(true);
     expect(canFight(s)).toBe(true);
     expect(enemyOf(s).id).toBe('vinyl');
   });
 
-  it('cycles rooms on the current night', () => {
+  it('walks Face Invada and changes rooms at the edge', () => {
     let s = emptyMysteryState();
-    s = cycleRoom(s, 1);
+    const start = s.px;
+    s = stepWalk(s, 1);
+    expect(s.px).toBeGreaterThan(start);
+    s.px = PX_MAX + 1;
+    s = stepWalk(s, 1);
     expect(s.room).toBe('hall');
     s = cycleRoom(s, 1);
     expect(s.room).toBe('room101');
-    s = cycleRoom(s, 1);
-    expect(s.room).toBe('lobby');
   });
 
   it('solves nights 2-5 then advances', () => {
@@ -182,6 +191,9 @@ describe('5 days a stranger', () => {
     expect(s.room).toBe('hall');
     s = solveDay(s, [
       { verb: 'talk', hotspot: 'kara' },
+      { verb: 'look', hotspot: 'linens' },
+      { verb: 'take', hotspot: 'linens' },
+      { verb: 'use', hotspot: 'ventgrate' },
       { verb: 'take', hotspot: 'tape' },
       { verb: 'use', hotspot: 'deck' },
     ]);
@@ -192,8 +204,11 @@ describe('5 days a stranger', () => {
     s = advanceDay(s);
     expect(s.day).toBe(3);
     s = solveDay(s, [
+      { verb: 'look', hotspot: 'mirror' },
+      { verb: 'look', hotspot: 'bed' },
+      { verb: 'take', hotspot: 'bed' },
       { verb: 'look', hotspot: 'drain' },
-      { verb: 'take', hotspot: 'drain' },
+      { verb: 'use', hotspot: 'drain' },
       { verb: 'use', hotspot: 'widow' },
     ]);
     expect(s.solved[2]).toBe(true);
@@ -202,7 +217,10 @@ describe('5 days a stranger', () => {
     s = advanceDay(s);
     expect(s.day).toBe(4);
     s = solveDay(s, [
+      { verb: 'look', hotspot: 'coffee' },
+      { verb: 'take', hotspot: 'coffee' },
       { verb: 'look', hotspot: 'fridge' },
+      { verb: 'use', hotspot: 'fridge' },
       { verb: 'take', hotspot: 'fridge' },
       { verb: 'use', hotspot: 'monitors' },
     ]);
@@ -214,6 +232,7 @@ describe('5 days a stranger', () => {
     s = solveDay(s, [
       { verb: 'look', hotspot: 'diary' },
       { verb: 'take', hotspot: 'blade' },
+      { verb: 'talk', hotspot: 'stranger' },
       { verb: 'use', hotspot: 'sigilbig' },
     ]);
     expect(s.solved[4]).toBe(true);

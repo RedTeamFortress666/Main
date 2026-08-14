@@ -89,3 +89,18 @@ body.mode-mystery .tbtn.punch { border-color: #3df0ff; color: #3df0ff; }
 body.mode-mystery .tbtn.kick { border-color: #ffe566; color: #ffe566; }
 body.mode-mystery .tbtn.blade { border-color: #ff6a3a; color: #ff6a3a; }
 body.mode-mystery .tbtn.bass { border-color: #e878ff; color: #e878ff; }
+
+body.mode-mystery .tbtn,
+body.mode-briefing .tbtn,
+body.mode-journal .tbtn {
+  width: 64px;
+  height: 64px;
+  font-size: 12px;
+}
+body.mode-mystery .tbtn.start,
+body.mode-briefing .tbtn.start,
+body.mode-journal .tbtn.start { width: 140px; height: 46px; }
+body.mode-mystery .dpad {
+  grid-template-columns: 64px 64px 64px;
+  grid-template-rows: 64px 64px;
+}
