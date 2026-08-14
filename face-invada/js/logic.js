@@ -204,17 +204,17 @@ export function applySuper(state) {
   };
 }
 
-export function winnerOf(playerHp, cpuHp) {
+export function winnerOf(playerHp, cpuHp, enemyId = 'rivet') {
   if (cpuHp <= 0 && playerHp <= 0) return 'draw';
   if (cpuHp <= 0) return 'face';
-  if (playerHp <= 0) return 'rivet';
+  if (playerHp <= 0) return enemyId;
   return null;
 }
 
-export function emptyFightState() {
+export function emptyFightState(cpuHp = CPU_HP) {
   return {
     playerHp: MAX_HP,
-    cpuHp: CPU_HP,
+    cpuHp,
     bass: 0,
     combo: 0,
     maxCombo: 0,

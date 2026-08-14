@@ -20,6 +20,24 @@ const game = new Game(canvas);
 window.FaceInvada = game;
 game.start();
 
+function syncPad(mode) {
+  const mysteryModes = ['title', 'briefing', 'mystery', 'journal', 'credits'];
+  const mystery = mysteryModes.includes(mode);
+  document.body.classList.toggle('mode-mystery', mystery && mode !== 'title');
+  document.body.classList.toggle('mode-fight', mode === 'fight');
+  for (const btn of document.querySelectorAll('[data-mystery][data-fight]')) {
+    btn.textContent = mystery ? btn.getAttribute('data-mystery') : btn.getAttribute('data-fight');
+  }
+  const start = document.querySelector('.tbtn.start');
+  if (start) {
+    if (mode === 'mystery') start.textContent = 'START';
+    else if (mode === 'fight') start.textContent = 'START';
+    else start.textContent = 'START';
+  }
+}
+game.onModeChange = syncPad;
+syncPad(game.mode);
+
 const touchUi = document.getElementById('touch-ui');
 if (touchUi) {
   for (const btn of touchUi.querySelectorAll('[data-code]')) {
@@ -45,9 +63,23 @@ if (touchUi) {
   }
 }
 
-canvas.addEventListener('pointerdown', () => {
+function canvasToGame(e) {
+  const r = canvas.getBoundingClientRect();
+  return {
+    x: ((e.clientX - r.left) / r.width) * CANVAS_W,
+    y: ((e.clientY - r.top) / r.height) * CANVAS_H,
+  };
+}
+
+canvas.addEventListener('pointerdown', (e) => {
   game.audio.ensure();
-  if (game.mode === 'title' || game.mode === 'select' || game.mode === 'result') {
+  const pt = canvasToGame(e);
+  if (game.mode === 'mystery') {
+    game.tapCanvas(pt.x, pt.y);
+    return;
+  }
+  if (game.mode === 'title' || game.mode === 'briefing' || game.mode === 'journal'
+      || game.mode === 'result' || game.mode === 'credits') {
     game.input.setVirtual('Enter', true);
     setTimeout(() => game.input.setVirtual('Enter', false), 80);
   }

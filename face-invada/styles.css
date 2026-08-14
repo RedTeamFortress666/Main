@@ -84,3 +84,8 @@ html, body {
 .tbtn.blade { border-color: #c0c8d0; color: #c0c8d0; }
 .tbtn.bass { border-color: #b44cff; color: #e878ff; }
 .tbtn.start { width: 162px; height: 52px; font-size: 16px; }
+
+body.mode-mystery .tbtn.punch { border-color: #3df0ff; color: #3df0ff; }
+body.mode-mystery .tbtn.kick { border-color: #ffe566; color: #ffe566; }
+body.mode-mystery .tbtn.blade { border-color: #ff6a3a; color: #ff6a3a; }
+body.mode-mystery .tbtn.bass { border-color: #e878ff; color: #e878ff; }

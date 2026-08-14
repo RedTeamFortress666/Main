@@ -6,6 +6,11 @@ import {
   PERFECT_WINDOW, GOOD_WINDOW, SUPER_COST, CPU_HP, MAX_HP,
 } from './js/logic.js';
 import { FONT5, pixelTextWidth } from './js/pixel.js';
+import {
+  emptyMysteryState, setVerb, applyVerb, tapInventory, tapAt,
+  canFight, advanceDay, cycleRoom, hasItem, hitHotspot, hitInventoryIndex,
+  DAYS, ENEMIES, INV_X, INV_Y, currentRoom, enemyOf,
+} from './js/mystery.js';
 
 describe('title and hero', () => {
   it('is FACE INVADA\'s BEAT BOXING', () => {
@@ -99,7 +104,14 @@ describe('combat math', () => {
   it('declares Face Invada the winner when Rivet hits 0', () => {
     expect(winnerOf(100, 0)).toBe('face');
     expect(winnerOf(0, 100)).toBe('rivet');
+    expect(winnerOf(0, 100, 'vinyl')).toBe('vinyl');
     expect(winnerOf(50, 50)).toBe(null);
+  });
+
+  it('builds a fight with custom enemy HP', () => {
+    const s = emptyFightState(88);
+    expect(s.cpuHp).toBe(88);
+    expect(s.playerHp).toBe(MAX_HP);
   });
 });
 
@@ -110,5 +122,110 @@ describe('pixel font', () => {
       expect(FONT5[ch], ch).toBeTruthy();
     }
     expect(pixelTextWidth('FACE', 2)).toBe(4 * 6 * 2);
+  });
+});
+
+function solveDay(state, steps) {
+  let s = state;
+  for (const step of steps) {
+    if (step.verb) s = setVerb(s, step.verb);
+    if (step.hotspot) s = applyVerb(s, step.hotspot);
+    if (typeof step.inv === 'number') s = tapInventory(s, step.inv);
+  }
+  return s;
+}
+
+describe('5 days a stranger', () => {
+  it('has five original nights and five enemies', () => {
+    expect(DAYS).toHaveLength(5);
+    expect(DAYS[0].title).toBe('LOCKED LOBBY');
+    expect(ENEMIES.vinyl.name).toMatch(/BELLHOP/);
+    expect(ENEMIES.stranger.id).toBe('stranger');
+  });
+
+  it('refuses TAKE before LOOK on night 1', () => {
+    let s = emptyMysteryState();
+    s = setVerb(s, 'take');
+    s = applyVerb(s, 'desk');
+    expect(hasItem(s, 'keycard')).toBe(false);
+    expect(canFight(s)).toBe(false);
+  });
+
+  it('solves night 1: LOOK desk, TAKE keycard, USE on door', () => {
+    let s = emptyMysteryState();
+    s = solveDay(s, [
+      { verb: 'look', hotspot: 'desk' },
+      { verb: 'take', hotspot: 'desk' },
+      { verb: 'use', hotspot: 'door' },
+    ]);
+    expect(hasItem(s, 'keycard')).toBe(true);
+    expect(s.solved[0]).toBe(true);
+    expect(canFight(s)).toBe(true);
+    expect(enemyOf(s).id).toBe('vinyl');
+  });
+
+  it('cycles rooms on the current night', () => {
+    let s = emptyMysteryState();
+    s = cycleRoom(s, 1);
+    expect(s.room).toBe('hall');
+    s = cycleRoom(s, 1);
+    expect(s.room).toBe('room101');
+    s = cycleRoom(s, 1);
+    expect(s.room).toBe('lobby');
+  });
+
+  it('solves nights 2-5 then advances', () => {
+    let s = emptyMysteryState();
+    s.solved[0] = true;
+    s = advanceDay(s);
+    expect(s.day).toBe(2);
+    expect(s.room).toBe('hall');
+    s = solveDay(s, [
+      { verb: 'talk', hotspot: 'kara' },
+      { verb: 'take', hotspot: 'tape' },
+      { verb: 'use', hotspot: 'deck' },
+    ]);
+    expect(s.solved[1]).toBe(true);
+    expect(canFight(s)).toBe(true);
+
+    s.beaten[1] = true;
+    s = advanceDay(s);
+    expect(s.day).toBe(3);
+    s = solveDay(s, [
+      { verb: 'look', hotspot: 'drain' },
+      { verb: 'take', hotspot: 'drain' },
+      { verb: 'use', hotspot: 'widow' },
+    ]);
+    expect(s.solved[2]).toBe(true);
+
+    s.beaten[2] = true;
+    s = advanceDay(s);
+    expect(s.day).toBe(4);
+    s = solveDay(s, [
+      { verb: 'look', hotspot: 'fridge' },
+      { verb: 'take', hotspot: 'fridge' },
+      { verb: 'use', hotspot: 'monitors' },
+    ]);
+    expect(s.solved[3]).toBe(true);
+
+    s.beaten[3] = true;
+    s = advanceDay(s);
+    expect(s.day).toBe(5);
+    s = solveDay(s, [
+      { verb: 'look', hotspot: 'diary' },
+      { verb: 'take', hotspot: 'blade' },
+      { verb: 'use', hotspot: 'sigilbig' },
+    ]);
+    expect(s.solved[4]).toBe(true);
+    expect(enemyOf(s).id).toBe('stranger');
+  });
+
+  it('maps canvas taps to hotspots and inventory', () => {
+    const s = emptyMysteryState();
+    const desk = currentRoom(s).hotspots.find((h) => h.id === 'desk');
+    expect(hitHotspot(s, desk.x + 10, desk.y + 10).id).toBe('desk');
+    expect(hitInventoryIndex(INV_X + 10, INV_Y + 10)).toBe(0);
+    const after = tapAt(s, desk.x + 10, desk.y + 10);
+    expect(after.flags.deskLook).toBe(true);
   });
 });

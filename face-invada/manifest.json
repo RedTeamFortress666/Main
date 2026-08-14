@@ -1,7 +1,7 @@
 {
-  "name": "FACE INVADA's BEAT BOXING",
-  "short_name": "BEAT BOXING",
-  "description": "Neon rhythm fighter. Face Invada vs MC Rivet.",
+  "name": "FACE INVADA 5 Days a Stranger",
+  "short_name": "FACE INVADA",
+  "description": "Android mystery: solve each night at the Neon Arms, then beat-box fight that day's enemy.",
   "start_url": "./index.html",
   "display": "fullscreen",
   "orientation": "landscape",

@@ -190,20 +190,29 @@ export function paintFaceInvada(ctx, pose = {}) {
   }
 }
 
-export function paintRival(ctx, pose = {}) {
+export const ENEMY_PALETTES = {
+  rivet: { coat: '#8a1230', hair: '#1a1018', skin: '#d2a07a', accent: '#f0e8ff' },
+  vinyl: { coat: '#2a4a8a', hair: '#e8d080', skin: '#c49a72', accent: '#3df0ff' },
+  kara: { coat: '#3a1840', hair: '#f0c0d0', skin: '#d8b090', accent: '#ff4ad2' },
+  widow: { coat: '#101018', hair: '#f0f0f8', skin: '#c8b8b0', accent: '#b44cff' },
+  stranger: { coat: '#1a1028', hair: '#080810', skin: '#6a6080', accent: '#ffe566' },
+};
+
+export function paintRival(ctx, pose = {}, enemyId = 'rivet') {
   const punch = pose.punch || 0;
   const hit = pose.hit || 0;
   ctx.clearRect(0, 0, SPRITE_W, SPRITE_H);
+  const pal = ENEMY_PALETTES[enemyId] || ENEMY_PALETTES.rivet;
   const cx = 28 - Math.round(punch * 3 + hit * 4);
   const foot = SPRITE_H - 2;
-  const skin = '#d2a07a';
-  const coat = '#8a1230';
-  const hair = '#1a1018';
+  const skin = pal.skin;
+  const coat = pal.coat;
+  const hair = pal.hair;
   rect(ctx, cx - 9, foot - 22, 8, 20, '#1a1020');
   rect(ctx, cx + 3, foot - 22, 8, 20, '#1a1020');
   rect(ctx, cx - 11, foot - 50, 24, 30, '#050508');
   rect(ctx, cx - 10, foot - 49, 22, 28, coat);
-  rect(ctx, cx - 6, foot - 46, 12, 8, '#f0e8ff');
+  rect(ctx, cx - 6, foot - 46, 12, 8, pal.accent);
   const ax = cx - 16 - Math.round(punch * 12);
   rect(ctx, ax, foot - 46, 8, 16, coat);
   rect(ctx, ax, foot - 32, 7, 6, skin);
@@ -229,7 +238,7 @@ export function drawFighter(ctx, who, x, y, facing, pose, scale = 3) {
   if (!octx) return;
   octx.imageSmoothingEnabled = false;
   if (who === 'face') paintFaceInvada(octx, pose);
-  else paintRival(octx, pose);
+  else paintRival(octx, pose, who);
   ctx.save();
   ctx.imageSmoothingEnabled = false;
   ctx.translate(Math.round(x), Math.round(y));
@@ -278,4 +287,79 @@ export function lifeBarWidth(hp, max, barW) {
   const cur = Number.isFinite(hp) ? hp : max;
   const m = max > 0 ? max : 1;
   return Math.max(0, Math.min(barW, (cur / m) * barW));
+}
+
+const ROOM_FURNITURE = {
+  lobby: [
+    [48, 90, 200, 140, '#14301c'],
+    [48, 280, 360, 170, '#2a2010'],
+    [820, 140, 400, 320, '#1a3048'],
+  ],
+  hall: [
+    [48, 90, 240, 100, '#243838'],
+    [360, 140, 200, 280, '#3a2030'],
+    [920, 170, 280, 250, '#2a1820'],
+    [80, 430, 1080, 90, '#4a2030'],
+  ],
+  room101: [
+    [48, 90, 360, 140, '#1a3040'],
+    [48, 280, 520, 200, '#3a2840'],
+    [600, 300, 220, 150, '#1a1a28'],
+    [980, 140, 220, 320, '#202838'],
+  ],
+  maid: [
+    [48, 180, 300, 280, '#c8b8a8'],
+    [780, 240, 400, 200, '#2a2a20'],
+  ],
+  vent: [
+    [48, 90, 320, 150, '#3a5048'],
+    [460, 210, 360, 160, '#2a4850'],
+    [80, 400, 1120, 110, '#1a2418'],
+  ],
+  bath: [
+    [360, 90, 560, 130, '#8aa0b0'],
+    [440, 340, 400, 160, '#1a2830'],
+  ],
+  kitchen: [
+    [48, 150, 300, 340, '#203040'],
+    [420, 280, 360, 180, '#304050'],
+    [860, 200, 320, 200, '#402010'],
+  ],
+  cctv: [
+    [80, 90, 1120, 220, '#102018'],
+    [48, 340, 320, 160, '#1a1010'],
+  ],
+  penthouse: [
+    [420, 90, 440, 150, '#4a1838'],
+    [48, 320, 320, 160, '#2a1810'],
+    [960, 140, 240, 340, '#181018'],
+  ],
+  closet: [
+    [48, 130, 320, 360, '#201818'],
+    [440, 220, 380, 180, '#8a9098'],
+    [880, 380, 320, 110, '#141414'],
+  ],
+  roof: [
+    [40, 80, 1200, 110, '#0a1028'],
+    [360, 210, 640, 250, '#3a3020'],
+  ],
+};
+
+export function drawMysteryRoom(ctx, room, t, verb) {
+  ctx.fillStyle = room.color || '#0b1020';
+  ctx.fillRect(0, 70, 1280, 470);
+  const pulse = 0.45 + Math.sin(t * 0.12) * 0.12;
+  const furniture = ROOM_FURNITURE[room.id] || [];
+  for (const [x, y, w, h, c] of furniture) {
+    rect(ctx, x, y, w, h, c);
+  }
+  for (const hs of room.hotspots) {
+    ctx.strokeStyle = `rgba(61, 240, 255, ${pulse})`;
+    ctx.lineWidth = 3;
+    ctx.strokeRect(hs.x + 2, hs.y + 2, hs.w - 4, hs.h - 4);
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(hs.x + 6, hs.y + 6, Math.min(hs.w - 12, 240), 22);
+    drawPixelText(ctx, hs.label, hs.x + 10, hs.y + 10, 1, '#3df0ff');
+  }
+  drawPixelText(ctx, verb.toUpperCase(), 24, 78, 2, '#ffe566');
 }
