@@ -1,12 +1,16 @@
 /**
- * Tiny Web Audio synth. No sample files — punches, meows, milk, and a
- * Twin Peaks-ish sting are all oscillators + noise.
+ * Tiny Web Audio synth. Punches, meows, hisses, milk, and a looping
+ * cartoon theme — no sample files required.
  */
 export class AudioBus {
   constructor() {
     this.ctx = null;
     this.enabled = true;
     this.master = 0.22;
+    this.themeOn = false;
+    this.themeGain = null;
+    this._themeTimer = null;
+    this._themeStart = 0;
   }
 
   ensure() {
@@ -15,6 +19,7 @@ export class AudioBus {
     if (!AC) return null;
     if (!this.ctx) this.ctx = new AC();
     if (this.ctx.state === 'suspended') this.ctx.resume();
+    this.startTheme();
     return this.ctx;
   }
 
@@ -43,7 +48,7 @@ export class AudioBus {
   noise(dur = 0.08, vol = 0.5, hp = 400) {
     const ctx = this.ensure();
     if (!ctx) return;
-    const n = ctx.sampleRate * dur;
+    const n = Math.max(1, Math.floor(ctx.sampleRate * dur));
     const buf = ctx.createBuffer(1, n, ctx.sampleRate);
     const data = buf.getChannelData(0);
     for (let i = 0; i < n; i++) data[i] = Math.random() * 2 - 1;
@@ -60,9 +65,17 @@ export class AudioBus {
   }
 
   meow(high = false) {
-    const f = high ? 520 : 340;
-    this.tone(f, 0.18, 'sawtooth', 0.35, f * 0.55);
-    this.tone(f * 1.5, 0.12, 'triangle', 0.12, f * 0.8);
+    const f = high ? 560 : 360;
+    this.tone(f, 0.22, 'sawtooth', 0.42, f * 0.52);
+    this.tone(f * 1.48, 0.14, 'triangle', 0.16, f * 0.78);
+    this.tone(f * 0.5, 0.1, 'sine', 0.08, f * 0.35);
+  }
+
+  /** Spitty cat hiss — used when the fighters bump during an attack. */
+  hiss() {
+    this.noise(0.16, 0.55, 1800);
+    this.tone(920, 0.14, 'sawtooth', 0.18, 180);
+    this.tone(1400, 0.08, 'square', 0.08, 400);
   }
 
   punch() {
@@ -106,7 +119,6 @@ export class AudioBus {
     this.tone(110, 0.5, 'triangle', 0.22, 40);
   }
 
-  /** Twin Peaks-adjacent: two low, slightly sour notes. */
   sting() {
     this.tone(55, 0.7, 'sine', 0.35);
     this.tone(82.4, 0.85, 'triangle', 0.22);
@@ -132,5 +144,78 @@ export class AudioBus {
 
   ui() {
     this.tone(520, 0.06, 'square', 0.16);
+  }
+
+  /**
+   * Catchy 16-beat cartoon loop in C major. Duck it during fights so
+   * meows and hits stay readable.
+   */
+  startTheme() {
+    const ctx = this.ctx;
+    if (!ctx || this.themeOn) return;
+    this.themeOn = true;
+    this.themeGain = ctx.createGain();
+    this.themeGain.gain.value = 0.28;
+    this.themeGain.connect(ctx.destination);
+    this._scheduleTheme(ctx.currentTime + 0.05);
+  }
+
+  setThemeScene(mode) {
+    if (!this.themeGain || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    let v = 0.28;
+    if (mode === 'fight' || mode === 'intro') v = 0.1;
+    else if (mode === 'timeout' || mode === 'revive') v = 0.06;
+    else if (mode === 'matchEnd') v = 0.2;
+    this.themeGain.gain.cancelScheduledValues(t);
+    this.themeGain.gain.linearRampToValueAtTime(v * this.master * 4, t + 0.25);
+  }
+
+  _scheduleTheme(start) {
+    if (!this.themeOn || !this.ctx || !this.themeGain) return;
+    const beat = 60 / 128;
+    const loop = 16 * beat;
+    const melody = [
+      [0, 76, 0.45], [0.5, 79, 0.45], [1, 84, 0.45], [1.5, 79, 0.45],
+      [2, 76, 0.45], [2.5, 72, 0.45], [3, 74, 0.45], [3.5, 76, 0.9],
+      [4.5, 79, 0.45], [5, 84, 0.45], [5.5, 86, 0.45], [6, 84, 0.45],
+      [6.5, 79, 0.45], [7, 76, 0.9],
+      [8, 72, 0.45], [8.5, 76, 0.45], [9, 79, 0.45], [9.5, 84, 0.9],
+      [10.5, 83, 0.45], [11, 81, 0.45], [11.5, 79, 0.45],
+      [12, 77, 0.45], [12.5, 76, 0.45], [13, 74, 0.45], [13.5, 72, 0.45],
+      [14, 71, 0.45], [14.5, 72, 0.45], [15, 76, 0.9],
+    ];
+    const bass = [
+      [0, 48, 1.9], [2, 43, 1.9], [4, 45, 1.9], [6, 47, 1.9],
+      [8, 48, 1.9], [10, 41, 1.9], [12, 43, 1.9], [14, 48, 1.9],
+    ];
+    const sparkle = [
+      [1, 96, 0.2], [3, 91, 0.2], [5, 96, 0.2], [7, 88, 0.2],
+      [9, 96, 0.2], [11, 93, 0.2], [13, 91, 0.2], [15, 88, 0.3],
+    ];
+    for (const n of melody) this._themeNote(start, n, 'triangle', 0.22);
+    for (const n of bass) this._themeNote(start, n, 'sine', 0.16);
+    for (const n of sparkle) this._themeNote(start, n, 'square', 0.045);
+    const next = start + loop;
+    const wait = Math.max(40, (next - 0.12 - this.ctx.currentTime) * 1000);
+    this._themeTimer = setTimeout(() => this._scheduleTheme(next), wait);
+  }
+
+  _themeNote(loopStart, [beat, midi, durBeats], type, vol) {
+    const ctx = this.ctx;
+    const t0 = loopStart + beat * (60 / 128);
+    const dur = durBeats * (60 / 128);
+    if (t0 < ctx.currentTime - 0.02) return;
+    const freq = 440 * (2 ** ((midi - 69) / 12));
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t0);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(vol, t0 + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(g).connect(this.themeGain);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.03);
   }
 }

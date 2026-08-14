@@ -7,6 +7,9 @@ html, body {
   overflow: hidden;
   font-family: Georgia, "Times New Roman", serif;
   color: #f6e27a;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 #wrap {
@@ -38,3 +41,54 @@ html, body {
   );
   mix-blend-mode: overlay;
 }
+
+.touch-ui {
+  display: none;
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.touch-ui.show {
+  display: block;
+}
+
+.touch-cluster {
+  position: absolute;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+.touch-cluster.left { left: max(12px, env(safe-area-inset-left)); }
+.touch-cluster.right {
+  right: max(12px, env(safe-area-inset-right));
+  flex-direction: row;
+  flex-wrap: wrap;
+  width: 210px;
+  justify-content: flex-end;
+}
+
+.touch-row { display: flex; gap: 10px; }
+
+.tbtn {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  border: 2px solid #e8c547;
+  background: rgba(8, 6, 16, 0.72);
+  color: #f6e27a;
+  font: bold 18px Impact, sans-serif;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tbtn:active, .tbtn.held { background: rgba(232, 197, 71, 0.45); }
+.tbtn.punch { border-color: #f6e27a; }
+.tbtn.kick { border-color: #c0392b; color: #ff8a80; }
+.tbtn.heavy { border-color: #fff; }
+.tbtn.start { width: 96px; font-size: 14px; }

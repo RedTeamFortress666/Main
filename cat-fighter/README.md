@@ -2,9 +2,11 @@
 
 A single-page Street Fighter-style 1v1 with cats, milk, and tuna.
 
-Queen Yoko (black-and-white tuxedo capitalist tuna queen) versus Tsar Morlan (Russian Blue revolutionary). When the clock dies, **Stella** arrives with a log and milk. When a cat is KO'd, **Joye** may revive them with a tin of tuna — once per cat per match.
+Queen Yoko (black-and-white tuxedo capitalist tuna queen) versus Tsar Morlan (Russian Blue revolutionary). When the clock dies, **Stella** arrives with a log and milk. When a cat is KO'd, **Joye** — an older woman with a walker and a tin of tuna — may revive them once per cat per match.
 
-## Play
+A looping cartoon theme plays after the first key/tap. Cats **meow** when they bump and **hiss** if they collide during an attack.
+
+## Play (PC)
 
 Serve the folder over HTTP (ES modules):
 
@@ -14,6 +16,14 @@ python3 -m http.server 4173
 ```
 
 Then open `http://localhost:4173`.
+
+## Android, iPhone, PWA
+
+Same game, three wrappers. See [`native/README.md`](native/README.md).
+
+- **Android APK:** `./native/build-android.sh` (needs Android SDK 34). Sideload `native/CatFighter-debug.apk`.
+- **iPhone:** Safari → Share → Add to Home Screen (PWA), or open `native/ios` in Xcode with a `www` folder copy of this game.
+- **Touch:** phones get an on-screen pad (move / punch / kick / heavy / start).
 
 Query flags:
 

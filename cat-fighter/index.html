@@ -2,8 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Cat Fighter" />
+  <meta name="theme-color" content="#05040a" />
   <title>Cat Fighter: Tuna vs Blue</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="assets/icon-192.png" />
+  <link rel="apple-touch-icon" href="assets/icon-192.png" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -12,6 +20,22 @@
       Your browser needs canvas support to host this tea party.
     </canvas>
     <div class="scanlines" aria-hidden="true"></div>
+  </div>
+  <div id="touch-ui" class="touch-ui" aria-hidden="true">
+    <div class="touch-cluster left">
+      <button type="button" class="tbtn" data-code="KeyW">▲</button>
+      <div class="touch-row">
+        <button type="button" class="tbtn" data-code="KeyA">◀</button>
+        <button type="button" class="tbtn" data-code="KeyS">▼</button>
+        <button type="button" class="tbtn" data-code="KeyD">▶</button>
+      </div>
+    </div>
+    <div class="touch-cluster right">
+      <button type="button" class="tbtn punch" data-code="KeyZ">P</button>
+      <button type="button" class="tbtn kick" data-code="KeyX">K</button>
+      <button type="button" class="tbtn heavy" data-code="KeyC">H</button>
+      <button type="button" class="tbtn start" data-code="Enter">START</button>
+    </div>
   </div>
   <script type="module" src="js/main.js"></script>
 </body>

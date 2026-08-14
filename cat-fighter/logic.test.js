@@ -11,6 +11,7 @@ import {
   matchOver,
   canMilkTimeout,
   canTunaRevive,
+  contactVoice,
   gainMeter,
   spendMeter,
   MAX_HP,
@@ -161,5 +162,13 @@ describe('roster', () => {
     }
     expect(ATTACKS.royalTunaSlap.name).toMatch(/Tuna/);
     expect(ATTACKS.hammerSickle.name).toMatch(/Hammer/);
+  });
+});
+
+describe('contact voice', () => {
+  it('meows on a peaceful bump and hisses during an attack', () => {
+    expect(contactVoice(false, false)).toBe('meow');
+    expect(contactVoice(true, false)).toBe('hiss');
+    expect(contactVoice(false, true)).toBe('hiss');
   });
 });

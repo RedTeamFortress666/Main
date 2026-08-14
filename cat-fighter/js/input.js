@@ -21,6 +21,16 @@ export class Input {
     if (e.key === ',') this.down.add('Comma');
   }
 
+  setVirtual(code, isDown) {
+    if (isDown) {
+      if (!this.down.has(code)) this.pressed.add(code);
+      this.down.add(code);
+    } else {
+      this.down.delete(code);
+      this.released.add(code);
+    }
+  }
+
   _keyup(e) {
     this.down.delete(e.code);
     this.released.add(e.code);

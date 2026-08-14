@@ -8,7 +8,7 @@
 import {
   CANVAS_W, CANVAS_H, GROUND_Y, ROUND_TIME,
   CHARACTERS, MILK_HEAL, TUNA_HEAL, canMilkTimeout, canTunaRevive,
-  matchOver, flavorForWin, isBlocked, gainMeter,
+  matchOver, flavorForWin, isBlocked, gainMeter, contactVoice,
 } from './logic.js';
 import { Input } from './input.js';
 import { AudioBus } from './audio.js';
@@ -57,6 +57,8 @@ export class Game {
     this.time = 0;
     this.quote = '';
     this.winner = null;
+    this.contactCd = 0;
+    this.wasTouching = false;
     this.debug = {
       fastTimer: /[?&]fasttimeout=1/.test(location.search),
       debug: /[?&]debug=1/.test(location.search),
@@ -136,6 +138,10 @@ export class Game {
   }
 
   update() {
+    if (this._themeMode !== this.mode) {
+      this._themeMode = this.mode;
+      this.audio.setThemeScene(this.mode);
+    }
     if (this.announce.t > 0) this.announce.t -= 1;
     else this.announce.text = '';
 
@@ -143,6 +149,7 @@ export class Game {
       if (this.input.just('Enter') || this.input.just('Space') || this.input.just('KeyZ')) {
         this.audio.ensure();
         this.audio.ui();
+        this.audio.setThemeScene('menu');
         this.mode = 'menu';
         this.menuCooldown = 28;
       }
@@ -264,7 +271,15 @@ export class Game {
 
     this.p1.update(s1, this.p2, world1);
     this.p2.update(s2, this.p1, world2);
-    Fighter.separate(this.p1, this.p2);
+    const touching = Fighter.separate(this.p1, this.p2) === true;
+    if (this.contactCd > 0) this.contactCd -= 1;
+    if (touching && !this.wasTouching && this.contactCd <= 0) {
+      const voice = contactVoice(this.p1.attacking, this.p2.attacking);
+      if (voice === 'hiss') this.audio.hiss();
+      else this.audio.meow(this.p1.attacking || Math.random() < 0.5);
+      this.contactCd = 32;
+    }
+    this.wasTouching = touching;
     if (this.combo) {
       this.combo.t -= 1;
       if (this.combo.t <= 0) this.combo = null;
@@ -410,7 +425,7 @@ export class Game {
       this.cutscene = { kind: 'joye', t: 0, target: koFighter, other: winner };
       this.audio.sting();
       this.audio.tuna();
-      this.say('TUNA FOR THE FALLEN!', 100, 'Joye refuses to let ideology end the tea party.');
+      this.say('TUNA FOR THE FALLEN!', 100, 'Joye shuffles in with her walker and a tin of tuna.');
       koFighter.state = 'ko';
       koFighter.attacking = false;
       return;
@@ -556,7 +571,7 @@ export class Game {
         ctx.fillText('Joye', CANVAS_W - 50, 396);
         ctx.fillStyle = '#ddd';
         ctx.font = '13px Georgia, serif';
-        ctx.fillText('Tuna for the fallen!', CANVAS_W - 50, 416);
+        ctx.fillText('Tuna for the fallen, dears.', CANVAS_W - 50, 416);
       }
     }
 
@@ -608,11 +623,11 @@ export class Game {
     if (blink) {
       ctx.fillStyle = '#fff4c2';
       ctx.font = 'bold 28px Impact, sans-serif';
-      ctx.fillText('PRESS ENTER', CANVAS_W / 2, 650);
+        ctx.fillText('PRESS ENTER', CANVAS_W / 2, 650);
     }
     ctx.font = '12px sans-serif';
     ctx.fillStyle = '#aaa';
-    ctx.fillText('Z or Space also start  ·  Esc pauses a match', CANVAS_W / 2, 678);
+    ctx.fillText('Z, Space, or tap  ·  Esc pauses  ·  phones: on-screen pad', CANVAS_W / 2, 678);
   }
 
   _drawMenu(ctx) {
@@ -676,7 +691,7 @@ export class Game {
     ctx.fillText('Morlan: Red October Pounce · Proletariat Paw Barrage · Soviet Scratch · Hammer & Sickle Uppercut', CANVAS_W / 2, 562);
     ctx.fillStyle = '#aaa';
     ctx.font = '13px sans-serif';
-    ctx.fillText('Time out: Stella brings milk.  KO: Joye may revive with tuna (once per cat per match).  Best of 3.', CANVAS_W / 2, 600);
+    ctx.fillText('Time out: Stella brings milk.  KO: Joye (walker, tuna) may revive once per cat.  Best of 3.', CANVAS_W / 2, 600);
     ctx.fillText('Enter / Z to confirm', CANVAS_W / 2, 660);
   }
 
@@ -698,7 +713,7 @@ export class Game {
     fillTextWrap(ctx, this.quote, CANVAS_W / 2, 530, 900, 28);
     ctx.font = '16px sans-serif';
     ctx.fillStyle = '#ccc';
-    ctx.fillText('Stella nods. Joye packs the tin. The tea party is adjourned.', CANVAS_W / 2, 600);
+    ctx.fillText('Stella nods. Joye parks the walker. The tea party is adjourned.', CANVAS_W / 2, 600);
     ctx.fillStyle = '#fff4c2';
     ctx.font = 'bold 22px Impact, sans-serif';
     ctx.fillText('PRESS ENTER  ·  RETURN TO TITLE', CANVAS_W / 2, 650);

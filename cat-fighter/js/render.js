@@ -137,18 +137,33 @@ export function drawStage(ctx, assets, round, time, flash) {
 function catPalette(id) {
   if (id === 'yoko') {
     return {
-      fur: '#1a1a1a', fur2: '#f4f1ea', gold: '#e6c35c', nose: '#e7a1b0',
-      eye: '#f0c94d', cloth: '#111', sash: '#d4b84a', inner: '#fff',
+      fur: '#161616', fur2: '#f7f4ee', gold: '#e6c35c', nose: '#f0b3c0',
+      eye: '#c9d36a', cloth: '#111', sash: '#d4b84a', inner: '#fff',
+      cheek: '#f4efe6',
     };
   }
   return {
     fur: '#8fa4b5', fur2: '#c5d2dc', gold: '#c9a227', nose: '#c98490',
     eye: '#d7e36a', cloth: '#8b1e1e', sash: '#c0392b', inner: '#3a3a3a',
+    cheek: '#b7c5d0',
   };
+}
+
+function fluffHalo(ctx, x, y, rx, ry, color, n = 14) {
+  ctx.fillStyle = color;
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2 + 0.2;
+    const jx = Math.cos(a) * rx;
+    const jy = Math.sin(a) * ry;
+    ctx.beginPath();
+    ctx.ellipse(x + jx, y + jy, 7 + (i % 4), 5 + (i % 3), a, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }
 
 export function drawFighter(ctx, f) {
   const p = catPalette(f.characterId);
+  const yoko = f.characterId === 'yoko';
   const t = f.animTime;
   const crouch = f.crouching && !f.airborne ? 0.28 : 0;
   const bob = f.state === 'idle' ? Math.sin(t * 0.12) * 3 : 0;
@@ -189,69 +204,81 @@ export function drawFighter(ctx, f) {
   ctx.save();
   const jx = f.shake ? (Math.random() - 0.5) * f.shake : 0;
   ctx.translate(f.x + jx, f.y + bob + crouch * 36);
-  ctx.scale(f.facing * 1.28, squash * 1.28);
+  ctx.scale(f.facing * 1.32, squash * 1.32);
   ctx.shadowColor = 'rgba(0,0,0,0.85)';
   ctx.shadowBlur = 10;
   ctx.shadowOffsetY = 4;
   if (f.hitFlash > 0) ctx.filter = 'brightness(2.4) saturate(0.2)';
   ctx.rotate(bodyRot * 0.35);
 
-  // Tail
+  // Long fluffy tail (Yoko: solid black per reference photo)
+  const tw = Math.sin(t * 0.15) * 18;
   ctx.strokeStyle = p.fur;
-  ctx.lineWidth = 10;
   ctx.lineCap = 'round';
+  ctx.lineWidth = 18;
+  ctx.beginPath();
+  ctx.moveTo(-16, -36);
+  ctx.quadraticCurveTo(-56, -78 + tw * 0.25, -42 + tw, -118);
+  ctx.stroke();
+  ctx.lineWidth = 12;
+  ctx.strokeStyle = yoko ? '#0d0d0d' : p.fur2;
   ctx.beginPath();
   ctx.moveTo(-18, -40);
-  const tw = Math.sin(t * 0.15) * 16;
-  ctx.quadraticCurveTo(-48, -70 + tw * 0.2, -38 + tw, -96);
+  ctx.quadraticCurveTo(-52, -74 + tw * 0.25, -40 + tw, -112);
   ctx.stroke();
-  if (f.characterId === 'yoko') {
-    ctx.strokeStyle = p.fur2;
-    ctx.lineWidth = 8;
-    ctx.beginPath();
-    ctx.moveTo(-36 + tw, -90);
-    ctx.lineTo(-38 + tw, -96);
-    ctx.stroke();
-  }
+  fluffHalo(ctx, -40 + tw, -112, 10, 8, p.fur, 8);
 
-  const drawLimb = (ang, len, thick, color, paw) => {
+  const paw = yoko ? p.fur2 : p.fur;
+  const drawLimb = (ang, len, thick, color, pawColor) => {
     ctx.save();
     ctx.rotate(ang);
     ctx.strokeStyle = color;
-    ctx.lineWidth = thick;
+    ctx.lineCap = 'round';
+    ctx.lineWidth = thick + 4;
     ctx.beginPath();
     ctx.moveTo(0, 0);
     ctx.lineTo(0, len);
     ctx.stroke();
-    ctx.fillStyle = paw;
-    ellipse(ctx, 0, len + 4, 9, 7, true);
+    ctx.lineWidth = thick;
+    ctx.strokeStyle = color;
+    ctx.stroke();
+    ctx.fillStyle = pawColor;
+    ellipse(ctx, 0, len + 5, 11, 8, true);
     ctx.restore();
   };
 
   ctx.save();
-  ctx.translate(-10, -28);
-  drawLimb(0.15 + legL, 32, 13, p.fur, f.characterId === 'yoko' ? p.fur2 : p.fur);
+  ctx.translate(-12, -26);
+  drawLimb(0.15 + legL, 34, 15, p.fur, paw);
   ctx.restore();
   ctx.save();
-  ctx.translate(10, -28);
-  drawLimb(-0.1 + legR, 32, 13, p.fur, f.characterId === 'yoko' ? p.fur2 : p.fur);
+  ctx.translate(12, -26);
+  drawLimb(-0.1 + legR, 34, 15, p.fur, paw);
   ctx.restore();
+
+  // Fluffy body under clothes
+  fluffHalo(ctx, 0, -70, 30, 42, p.fur, 16);
+  ctx.fillStyle = p.fur;
+  ellipse(ctx, 0, -72, 28, 40, true);
 
   // Torso / clothes
   ctx.fillStyle = p.cloth;
-  roundRect(ctx, -28, -112, 56, 92, 16);
+  roundRect(ctx, -28, -112, 56, 88, 16);
   ctx.fill();
-  ctx.strokeStyle = f.characterId === 'yoko' ? '#e6c35c' : '#7a1515';
+  ctx.strokeStyle = yoko ? '#e6c35c' : '#7a1515';
   ctx.lineWidth = 2;
-  roundRect(ctx, -28, -112, 56, 92, 16);
+  roundRect(ctx, -28, -112, 56, 88, 16);
   ctx.stroke();
-  if (f.characterId === 'yoko') {
+  if (yoko) {
+    // White chest ruff — the photo's tuxedo shirt
     ctx.fillStyle = p.fur2;
+    fluffHalo(ctx, 2, -78, 16, 22, p.fur2, 10);
     ctx.beginPath();
-    ctx.moveTo(0, -108);
-    ctx.lineTo(16, -48);
-    ctx.lineTo(-16, -48);
-    ctx.closePath();
+    ctx.ellipse(2, -78, 18, 26, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Shoulder white patch
+    ctx.beginPath();
+    ctx.ellipse(-22, -96, 10, 8, -0.4, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = p.sash;
     ctx.fillRect(-26, -58, 52, 12);
@@ -274,58 +301,86 @@ export function drawFighter(ctx, f) {
     ctx.fill();
   }
 
-  // Head
+  // Head + cheek fluff
+  fluffHalo(ctx, 0, -132, 30, 24, p.fur, 12);
   ctx.fillStyle = p.fur;
-  ellipse(ctx, 0, -132, 28, 24, true);
+  ellipse(ctx, 0, -132, 30, 26, true);
+  ctx.fillStyle = p.cheek;
+  ellipse(ctx, -18, -122, 10, 9, true);
+  ellipse(ctx, 18, -126, 9, 8, true);
+
   // ears
+  ctx.fillStyle = p.fur;
   ctx.beginPath();
-  ctx.moveTo(-22, -146);
-  ctx.lineTo(-32, -176);
-  ctx.lineTo(-6, -152);
+  ctx.moveTo(-22, -148);
+  ctx.lineTo(-34, -182);
+  ctx.lineTo(-6, -154);
   ctx.closePath();
   ctx.fill();
   ctx.beginPath();
-  ctx.moveTo(22, -146);
-  ctx.lineTo(32, -176);
-  ctx.lineTo(6, -152);
+  ctx.moveTo(22, -148);
+  ctx.lineTo(34, -182);
+  ctx.lineTo(6, -154);
   ctx.closePath();
   ctx.fill();
   ctx.fillStyle = '#e7a1b0';
   ctx.beginPath();
-  ctx.moveTo(-24, -154);
-  ctx.lineTo(-30, -170);
-  ctx.lineTo(-12, -156);
+  ctx.moveTo(-24, -156);
+  ctx.lineTo(-31, -174);
+  ctx.lineTo(-12, -158);
   ctx.fill();
 
-  // muzzle
-  ctx.fillStyle = p.fur2;
-  ellipse(ctx, 6, -124, 16, 12, true);
-  ctx.fillStyle = p.nose;
-  ellipse(ctx, 16, -126, 5, 3.5, true);
+  if (yoko) {
+    // White blaze down the face, widening at muzzle (reference photo)
+    ctx.fillStyle = p.fur2;
+    ctx.beginPath();
+    ctx.moveTo(-4, -152);
+    ctx.lineTo(4, -152);
+    ctx.lineTo(14, -118);
+    ctx.lineTo(8, -110);
+    ctx.lineTo(-10, -114);
+    ctx.closePath();
+    ctx.fill();
+    ellipse(ctx, 4, -118, 16, 13, true);
+  } else {
+    ctx.fillStyle = p.fur2;
+    ellipse(ctx, 6, -124, 16, 12, true);
+  }
 
-  // eyes
-  ctx.fillStyle = '#111';
+  ctx.fillStyle = p.nose;
+  ellipse(ctx, yoko ? 4 : 16, -122, 5, 3.6, true);
+
+  // Half-lidded arrogant eyes (Yoko) / stern (Morlan)
   const blink = (t % 180) < 6;
+  const lid = yoko ? 0.45 : 0;
   if (!blink) {
     ctx.fillStyle = p.eye;
-    ellipse(ctx, -6, -136, 6, f.state === 'hit' ? 2 : 7, true);
-    ellipse(ctx, 10, -136, 6, f.state === 'hit' ? 2 : 7, true);
+    ellipse(ctx, -8, -136, 7, f.state === 'hit' ? 2 : 7 * (1 - lid * 0.5), true);
+    ellipse(ctx, 12, -136, 7, f.state === 'hit' ? 2 : 7 * (1 - lid * 0.5), true);
     ctx.fillStyle = '#111';
-    ellipse(ctx, -4, -135, 3, 4, true);
-    ellipse(ctx, 12, -135, 3, 4, true);
+    ellipse(ctx, -6, -135, 3.2, 3.6, true);
+    ellipse(ctx, 14, -135, 3.2, 3.6, true);
     ctx.fillStyle = '#fff';
-    ellipse(ctx, -6, -138, 1.6, 1.6, true);
-    ellipse(ctx, 10, -138, 1.6, 1.6, true);
+    ellipse(ctx, -8, -138, 1.6, 1.6, true);
+    ellipse(ctx, 12, -138, 1.6, 1.6, true);
+    if (yoko) {
+      ctx.strokeStyle = p.fur;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(-16, -142); ctx.quadraticCurveTo(-8, -140, 0, -142);
+      ctx.moveTo(4, -142); ctx.quadraticCurveTo(12, -140, 20, -142);
+      ctx.stroke();
+    }
   } else {
     ctx.strokeStyle = '#111';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(-12, -136); ctx.lineTo(0, -136);
-    ctx.moveTo(4, -136); ctx.lineTo(16, -136);
+    ctx.moveTo(-14, -136); ctx.lineTo(0, -136);
+    ctx.moveTo(4, -136); ctx.lineTo(20, -136);
     ctx.stroke();
   }
 
-  if (f.characterId === 'morlan') {
+  if (!yoko) {
     ctx.strokeStyle = '#4a5560';
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -334,15 +389,15 @@ export function drawFighter(ctx, f) {
     ctx.stroke();
   }
 
-  if (f.characterId === 'yoko') {
+  if (yoko) {
     ctx.fillStyle = p.gold;
     ctx.beginPath();
     ctx.moveTo(-16, -154);
-    ctx.lineTo(-10, -172);
+    ctx.lineTo(-10, -174);
     ctx.lineTo(-4, -156);
-    ctx.lineTo(0, -176);
+    ctx.lineTo(0, -178);
     ctx.lineTo(4, -156);
-    ctx.lineTo(10, -172);
+    ctx.lineTo(10, -174);
     ctx.lineTo(16, -154);
     ctx.closePath();
     ctx.fill();
@@ -350,24 +405,22 @@ export function drawFighter(ctx, f) {
     ctx.stroke();
   }
 
-  // Arms
   ctx.save();
   ctx.translate(16, -92);
-  drawLimb(armR, 28, 11, p.fur, f.characterId === 'yoko' ? p.fur2 : p.fur);
+  drawLimb(armR, 28, 12, p.fur, paw);
   ctx.restore();
   ctx.save();
   ctx.translate(-16, -92);
-  drawLimb(armL, 26, 11, p.fur, f.characterId === 'yoko' ? p.fur2 : p.fur);
+  drawLimb(armL, 26, 12, p.fur, paw);
   ctx.restore();
 
   ctx.filter = 'none';
   ctx.restore();
 
-  // Ground blob shadow
   ctx.save();
   ctx.globalAlpha = 0.25;
   ctx.fillStyle = '#000';
-  ellipse(ctx, f.x, GROUND_Y + 8, 34, 8, true);
+  ellipse(ctx, f.x, GROUND_Y + 8, 38, 9, true);
   ctx.restore();
 }
 
@@ -466,49 +519,107 @@ export function drawStella(ctx, x, y, t, phase) {
 export function drawJoye(ctx, x, y, t, phase) {
   ctx.save();
   ctx.translate(x, y);
-  const bounce = Math.abs(Math.sin(t * 0.2)) * 3;
-  ctx.translate(0, -bounce);
+  const shuffle = Math.sin(t * 0.08) * 1.5;
+  ctx.translate(shuffle, 0);
+
+  // Walker (Zimmer frame) — behind / around her
+  ctx.strokeStyle = '#c5ccd4';
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  const legs = [[-28, 8], [28, 8], [-22, 18], [22, 18]];
+  for (const [lx, top] of legs) {
+    ctx.beginPath();
+    ctx.moveTo(lx, top);
+    ctx.lineTo(lx, 78);
+    ctx.stroke();
+    ctx.fillStyle = '#4a4a4a';
+    ctx.beginPath();
+    ctx.arc(lx, 82, 6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.beginPath();
+  ctx.moveTo(-28, 8); ctx.lineTo(28, 8);
+  ctx.moveTo(-22, 28); ctx.lineTo(22, 28);
+  ctx.stroke();
+  // basket
+  ctx.fillStyle = '#9aa3ad';
+  roundRect(ctx, -16, 30, 22, 16, 2);
+  ctx.fill();
+  ctx.strokeStyle = '#6d757e';
+  ctx.lineWidth = 1.5;
+  roundRect(ctx, -16, 30, 22, 16, 2);
+  ctx.stroke();
+
+  // Extra tuna in the basket
+  ctx.fillStyle = '#cfd5da';
+  roundRect(ctx, -12, 33, 14, 10, 2);
+  ctx.fill();
+  ctx.fillStyle = '#8b1e1e';
+  ctx.fillRect(-12, 36, 14, 4);
+
+  // Body — elderly, green cardigan
   ctx.fillStyle = '#2e6b45';
-  roundRect(ctx, -20, -20, 40, 70, 12);
+  roundRect(ctx, -18, -8, 36, 58, 12);
   ctx.fill();
   ctx.fillStyle = '#f2d56b';
   ctx.beginPath();
-  ctx.moveTo(-8, -18); ctx.lineTo(22, 10); ctx.lineTo(10, 16); ctx.lineTo(-18, -8);
+  ctx.moveTo(-10, -6); ctx.lineTo(16, 16); ctx.lineTo(8, 22); ctx.lineTo(-16, 2);
   ctx.fill();
-  ctx.fillStyle = '#3a3330';
-  ctx.fillRect(-16, 48, 14, 28);
-  ctx.fillRect(4, 48, 14, 28);
-  ctx.fillStyle = '#e36b2c';
-  ellipse(ctx, 0, -48, 22, 24, true);
+  ctx.fillStyle = '#6b4a32';
+  ctx.fillRect(-14, 46, 12, 22);
+  ctx.fillRect(2, 46, 12, 22);
+
+  // Hands on walker bar
+  ctx.fillStyle = '#e8c4b0';
+  ellipse(ctx, -26, 8, 5, 4, true);
+  ellipse(ctx, 26, 8, 5, 4, true);
+
+  // Head: white curly perm, round glasses, wrinkles
+  ctx.fillStyle = '#f2f0ea';
+  ellipse(ctx, 0, -42, 24, 22, true);
+  ctx.fillStyle = '#ebe6dc';
+  ellipse(ctx, -16, -40, 8, 10, true);
+  ellipse(ctx, 16, -40, 8, 10, true);
+  ellipse(ctx, 0, -56, 16, 10, true);
   ctx.fillStyle = '#f3c7b0';
-  ellipse(ctx, 0, -42, 15, 16, true);
+  ellipse(ctx, 0, -38, 15, 16, true);
+  // wrinkles
+  ctx.strokeStyle = 'rgba(140,90,80,0.45)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(-10, -46); ctx.quadraticCurveTo(-4, -44, 2, -46);
+  ctx.moveTo(-8, -30); ctx.quadraticCurveTo(0, -28, 8, -30);
+  ctx.stroke();
   ctx.strokeStyle = '#222';
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.arc(-6, -44, 5, 0, Math.PI * 2);
-  ctx.arc(6, -44, 5, 0, Math.PI * 2);
-  ctx.moveTo(-1, -44); ctx.lineTo(1, -44);
+  ctx.arc(-6, -40, 5.5, 0, Math.PI * 2);
+  ctx.arc(6, -40, 5.5, 0, Math.PI * 2);
+  ctx.moveTo(-0.5, -40); ctx.lineTo(0.5, -40);
   ctx.stroke();
-  ctx.fillStyle = '#3a6b3a';
-  ellipse(ctx, -6, -44, 2, 2, true);
-  ellipse(ctx, 6, -44, 2, 2, true);
+  ctx.fillStyle = '#5a3a28';
+  ellipse(ctx, -6, -40, 2, 2, true);
+  ellipse(ctx, 6, -40, 2, 2, true);
   ctx.fillStyle = '#c45c5c';
-  ellipse(ctx, 0, -36, 4, 2, true);
-  // tuna tin
+  ellipse(ctx, 0, -32, 4.5, 2.2, true);
+
+  // Tuna tin in her left hand on the walker
   ctx.fillStyle = '#cfd5da';
-  roundRect(ctx, 18, -8, 26, 20, 3);
+  roundRect(ctx, 22, -6, 26, 18, 3);
   ctx.fill();
   ctx.fillStyle = '#8b1e1e';
-  ctx.fillRect(18, 0, 26, 7);
+  ctx.fillRect(22, 2, 26, 6);
   ctx.fillStyle = '#f6e27a';
   ctx.font = 'bold 8px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('TUNA', 31, 6);
+  ctx.fillText('TUNA', 35, 7);
+
   if (phase === 'feed') {
     ctx.fillStyle = '#fff6d0';
     ctx.font = 'italic 13px Georgia';
     ctx.textAlign = 'center';
-    ctx.fillText('Protein for the fallen!', 0, -84);
+    ctx.fillText('Tuna for the fallen, dears.', 0, -78);
   }
   ctx.restore();
 }

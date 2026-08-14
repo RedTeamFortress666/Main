@@ -396,11 +396,11 @@ export class Fighter {
   static separate(a, b) {
     const pad = 46;
     const minDist = 100;
-    if (Math.abs(a.y - b.y) > 96) return;
+    if (Math.abs(a.y - b.y) > 96) return false;
     const left = a.x <= b.x ? a : b;
     const right = left === a ? b : a;
     const gap = right.x - left.x;
-    if (gap >= minDist) return;
+    if (gap >= minDist) return false;
     const need = minDist - gap;
     if (left.x <= pad + 2) {
       right.x = left.x + minDist;
@@ -416,6 +416,7 @@ export class Fighter {
       if (left.x <= pad + 1) right.x = Math.min(CANVAS_W - pad, left.x + minDist);
       else left.x = Math.max(pad, right.x - minDist);
     }
+    return true;
   }
 }
 

@@ -419,6 +419,11 @@ export function canTunaRevive(revivesUsed, cap = REVIVES_PER_MATCH) {
   return revivesUsed < cap;
 }
 
+/** Meow on a friendly bump, hiss if someone is swinging. */
+export function contactVoice(p1Attacking, p2Attacking) {
+  return (p1Attacking || p2Attacking) ? 'hiss' : 'meow';
+}
+
 export function flavorForWin(winnerId) {
   const ch = CHARACTERS[winnerId];
   if (!ch) return 'The tea party is adjourned.';
