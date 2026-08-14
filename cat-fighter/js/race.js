@@ -76,7 +76,7 @@ export function updateRace(race, p1Snap, p2Snap) {
     if (ctrl.accel) car.speed += ACCEL;
     if (ctrl.brake) car.speed -= BRAKE;
     car.speed *= DRAG;
-    car.speed = clamp(car.speed, 0, car.id === 'baby' ? 10.4 : car.id === 'kittens' ? 9.6 : 10.0);
+    car.speed = clamp(car.speed, 0, car.id === 'yoko' ? 10.6 : car.id === 'baby' ? 10.4 : car.id === 'kittens' ? 9.4 : 9.2);
 
     if (ctrl.left) car.lane -= STEER;
     if (ctrl.right) car.lane += STEER;

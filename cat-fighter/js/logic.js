@@ -538,7 +538,7 @@ export const RACERS = {
   },
   morlan: {
     id: 'morlan', name: 'Tsar Morlan', short: 'MORLAN',
-    car: 'Black Hearse', color: '#1a1a1a', accent: '#c0392b',
+    car: 'Black Hearse', color: '#ff8a80', accent: '#c0392b',
   },
   baby: {
     id: 'baby', name: 'Baby', short: 'BABY',

@@ -123,8 +123,8 @@ export function thinkAI(me, opp, difficulty = 0.72) {
   return snap;
 }
 
-export function thinkRaceAI(car, difficulty = 0.7) {
-  const target = 7.2 + difficulty * 2.4 + (car.id === 'kittens' ? 0.4 : 0);
+export function thinkRaceAI(car, difficulty = 0.55) {
+  const target = 6.2 + difficulty * 1.8 + (car.id === 'baby' ? 0.6 : car.id === 'kittens' ? 0.2 : 0);
   const wobble = (Math.sin(car.s * 0.01 + car._seed) * 10);
   return {
     accel: car.speed < target,
