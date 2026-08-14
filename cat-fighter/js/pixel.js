@@ -125,7 +125,7 @@ function pal(yoko) {
       white: '#f3efe6',
       gold: '#e8c547',
       goldDk: '#b8942a',
-      cloth: '#243868',
+      cloth: '#2f56a0',
       sash: '#d4b84a',
       eye: '#3dcc6a',
       nose: '#f0b3c0',

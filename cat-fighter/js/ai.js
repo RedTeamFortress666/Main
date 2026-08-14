@@ -54,30 +54,30 @@ export function thinkAI(me, opp, difficulty = 0.28) {
     return snap;
   }
 
-  if (r < 0.32) {
+  if (r < 0.22) {
     snap.punch = true;
     snap.anyPunch = true;
     snap.pressedPunch = true;
     snap.buttonClass = 'p';
     snap.attackId = 'lp';
     snap.limb = 'lp';
-  } else if (r < 0.48) {
+  } else if (r < 0.34) {
     snap.kick = true;
     snap.anyKick = true;
     snap.pressedKick = true;
     snap.buttonClass = 'k';
     snap.attackId = 'lk';
     snap.limb = 'lk';
-  } else if (r < 0.54 && me.laser >= 34) {
+  } else if (r < 0.38 && me.laser >= 34) {
     snap.laser = true;
     snap.buttonClass = 'p';
-  } else if (r < 0.62) {
+  } else if (r < 0.44) {
     snap.jump = true;
     snap.up = true;
   } else if (r < 0.82) {
     if (towardLeft) snap.left = true;
     else snap.right = true;
-  } else if (r < 0.9) {
+  } else if (r < 0.88) {
     snap.block = true;
     if (me.facing >= 0) snap.left = true;
     else snap.right = true;

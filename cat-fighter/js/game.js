@@ -377,6 +377,8 @@ export class Game {
       this.say('STELLA TOSSES SALMON', 48, 'Soviet Salmon for Morlan');
     }
     for (const p of this.pickups) {
+      if (p.kind === 'chicken') p.vx += Math.sign(this.p1.x - p.x) * 0.18;
+      if (p.kind === 'salmon') p.vx += Math.sign(this.p2.x - p.x) * 0.18;
       p.x += p.vx;
       p.y += p.vy;
       p.vy += 0.12;
