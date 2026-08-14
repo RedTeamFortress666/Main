@@ -121,7 +121,8 @@ export const ROOMS = {
       { id: 'plant', label: 'DEAD PLANT', x: 48, y: 140, w: 200, h: 110 },
       { id: 'desk', label: 'FRONT DESK', x: 48, y: 300, w: 360, h: 160 },
       { id: 'bellhop', label: 'BELLHOP', x: 440, y: 200, w: 220, h: 260 },
-      { id: 'door', label: 'EXIT DOORS', x: 820, y: 170, w: 400, h: 280 },
+      { id: 'door', label: 'EXIT DOORS', x: 820, y: 170, w: 340, h: 260 },
+      { id: 'exitR', label: 'NEXT >>', x: 1168, y: 430, w: 104, h: 70 },
     ],
   },
   hall: {
@@ -133,6 +134,8 @@ export const ROOMS = {
       { id: 'roomdoor', label: 'ROOM 101', x: 360, y: 180, w: 200, h: 250 },
       { id: 'maid', label: 'MAID CART', x: 920, y: 200, w: 280, h: 230 },
       { id: 'carpet', label: 'CARPET STAIN', x: 80, y: 450, w: 1080, h: 80 },
+      { id: 'exitL', label: '<< BACK', x: 8, y: 360, w: 110, h: 70 },
+      { id: 'exitR', label: 'NEXT >>', x: 1168, y: 360, w: 104, h: 70 },
     ],
   },
   room101: {
@@ -144,6 +147,7 @@ export const ROOMS = {
       { id: 'bed', label: 'BED', x: 48, y: 300, w: 520, h: 180 },
       { id: 'radio', label: 'NIGHT RADIO', x: 600, y: 320, w: 220, h: 140 },
       { id: 'bathdoor', label: 'BATHROOM', x: 980, y: 170, w: 220, h: 280 },
+      { id: 'exitL', label: '<< BACK', x: 8, y: 430, w: 110, h: 70 },
     ],
   },
   maid: {
@@ -154,6 +158,8 @@ export const ROOMS = {
       { id: 'linens', label: 'LINENS', x: 48, y: 200, w: 300, h: 250 },
       { id: 'kara', label: 'KARA', x: 420, y: 180, w: 280, h: 280 },
       { id: 'deck', label: 'BOOMBOX', x: 780, y: 260, w: 400, h: 180 },
+      { id: 'exitL', label: '<< BACK', x: 8, y: 430, w: 110, h: 70 },
+      { id: 'exitR', label: 'NEXT >>', x: 1168, y: 430, w: 104, h: 70 },
     ],
   },
   vent: {
@@ -164,6 +170,7 @@ export const ROOMS = {
       { id: 'fan', label: 'FAN BLADES', x: 48, y: 140, w: 320, h: 130 },
       { id: 'tape', label: 'SHINY OBJECT', x: 460, y: 230, w: 360, h: 150 },
       { id: 'dust', label: 'DUST', x: 80, y: 420, w: 1120, h: 100 },
+      { id: 'exitL', label: '<< BACK', x: 8, y: 360, w: 110, h: 70 },
     ],
   },
   bath: {
@@ -174,6 +181,7 @@ export const ROOMS = {
       { id: 'mirror', label: 'MIRROR', x: 360, y: 140, w: 560, h: 110 },
       { id: 'widow', label: 'GUEST', x: 48, y: 190, w: 260, h: 280 },
       { id: 'drain', label: 'DRAIN', x: 440, y: 350, w: 400, h: 140 },
+      { id: 'exitL', label: '<< BACK', x: 8, y: 430, w: 110, h: 70 },
     ],
   },
   kitchen: {
@@ -184,6 +192,8 @@ export const ROOMS = {
       { id: 'fridge', label: 'MINI FRIDGE', x: 48, y: 170, w: 300, h: 300 },
       { id: 'sink', label: 'SINK', x: 420, y: 300, w: 360, h: 160 },
       { id: 'coffee', label: 'COFFEE POT', x: 860, y: 220, w: 320, h: 180 },
+      { id: 'exitL', label: '<< BACK', x: 8, y: 430, w: 110, h: 70 },
+      { id: 'exitR', label: 'NEXT >>', x: 1168, y: 430, w: 104, h: 70 },
     ],
   },
   cctv: {
@@ -194,6 +204,7 @@ export const ROOMS = {
       { id: 'monitors', label: 'MONITORS', x: 80, y: 140, w: 1120, h: 180 },
       { id: 'tapes', label: 'TAPE SHELF', x: 48, y: 350, w: 320, h: 140 },
       { id: 'rivet', label: 'FIGURE', x: 500, y: 340, w: 320, h: 160 },
+      { id: 'exitL', label: '<< BACK', x: 8, y: 300, w: 120, h: 70 },
     ],
   },
   penthouse: {
@@ -204,6 +215,7 @@ export const ROOMS = {
       { id: 'sigil', label: 'NEON SIGIL', x: 420, y: 140, w: 440, h: 130 },
       { id: 'diary', label: 'DIARY', x: 48, y: 330, w: 320, h: 150 },
       { id: 'closetdoor', label: 'CLOSET', x: 960, y: 170, w: 240, h: 300 },
+      { id: 'exitR', label: 'NEXT >>', x: 1168, y: 430, w: 104, h: 70 },
     ],
   },
   closet: {
@@ -214,6 +226,8 @@ export const ROOMS = {
       { id: 'coats', label: 'COATS', x: 48, y: 160, w: 320, h: 320 },
       { id: 'blade', label: 'SILVER CASE', x: 440, y: 240, w: 380, h: 160 },
       { id: 'shoes', label: 'SHOES', x: 880, y: 390, w: 320, h: 100 },
+      { id: 'exitL', label: '<< BACK', x: 8, y: 430, w: 110, h: 70 },
+      { id: 'exitR', label: 'NEXT >>', x: 1168, y: 430, w: 104, h: 70 },
     ],
   },
   roof: {
@@ -224,6 +238,7 @@ export const ROOMS = {
       { id: 'city', label: 'CITY', x: 40, y: 130, w: 1200, h: 90 },
       { id: 'stranger', label: 'SILHOUETTE', x: 48, y: 230, w: 260, h: 250 },
       { id: 'sigilbig', label: 'ROOF SIGIL', x: 360, y: 230, w: 640, h: 220 },
+      { id: 'exitL', label: '<< BACK', x: 8, y: 430, w: 120, h: 70 },
     ],
   },
 };
@@ -409,6 +424,13 @@ export function applyVerb(state, hotspotId) {
   const verb = next.verb;
   const day = next.day;
   const id = hotspotId;
+  if (id === 'exitL' || id === 'exitR') {
+    const dir = id === 'exitR' ? 1 : -1;
+    const moved = cycleRoom(next, dir);
+    moved.px = dir > 0 ? PX_MIN + 80 : PX_MAX - 80;
+    moved.facing = dir;
+    return moved;
+  }
   const flag = (k) => !!next.flags[k];
   const set = (k) => {
     next.flags[k] = true;

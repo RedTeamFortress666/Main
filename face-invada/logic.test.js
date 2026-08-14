@@ -181,6 +181,9 @@ describe('5 days a stranger', () => {
     expect(s.room).toBe('hall');
     s = cycleRoom(s, 1);
     expect(s.room).toBe('room101');
+    s = emptyMysteryState();
+    s = applyVerb(s, 'exitR');
+    expect(s.room).toBe('hall');
   });
 
   it('solves nights 2-5 then advances', () => {

@@ -310,7 +310,7 @@ export class Game {
     if (Math.sin(this.time * 0.12) > -0.2) {
       drawPixelText(ctx, 'PRESS START', CANVAS_W / 2, 580, 3, '#ffffff', 'center');
     }
-    drawPixelText(ctx, 'ITALY  37  SILAT AND BLADE', CANVAS_W / 2, 620, 1, '#bbbbbb', 'center');
+    drawPixelText(ctx, 'ITALY  37  SILAT + BLADE', CANVAS_W / 2, 620, 2, '#bbbbbb', 'center');
   }
 
   _drawBriefing(ctx) {
