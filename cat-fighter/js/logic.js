@@ -422,6 +422,11 @@ export function canTunaRevive(revivesUsed, cap = REVIVES_PER_MATCH) {
   return revivesUsed < cap;
 }
 
+/** After a round pip is awarded: match over, or Stella serves milk between rounds. */
+export function afterRoundEnd(wins1, wins2, need = ROUNDS_TO_WIN) {
+  return matchOver(wins1, wins2, need) ? 'matchEnd' : 'stellaMilk';
+}
+
 /** Meow on a friendly bump, hiss if someone is swinging. */
 export function contactVoice(p1Attacking, p2Attacking) {
   return (p1Attacking || p2Attacking) ? 'hiss' : 'meow';

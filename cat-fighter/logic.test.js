@@ -11,6 +11,7 @@ import {
   matchOver,
   canMilkTimeout,
   canTunaRevive,
+  afterRoundEnd,
   contactVoice,
   gainMeter,
   spendMeter,
@@ -151,6 +152,13 @@ describe('round and timeout / revive rules', () => {
     expect(canMilkTimeout(MAX_MILKS_PER_ROUND)).toBe(false);
     expect(canTunaRevive(0)).toBe(true);
     expect(canTunaRevive(1)).toBe(false);
+  });
+
+  it('sends Stella between rounds until someone wins the match', () => {
+    expect(afterRoundEnd(1, 0)).toBe('stellaMilk');
+    expect(afterRoundEnd(1, 1)).toBe('stellaMilk');
+    expect(afterRoundEnd(2, 0)).toBe('matchEnd');
+    expect(afterRoundEnd(0, 2)).toBe('matchEnd');
   });
 });
 

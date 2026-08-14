@@ -7,9 +7,9 @@
  */
 import {
   CANVAS_W, CANVAS_H, GROUND_Y, ROUND_TIME,
-  CHARACTERS, MILK_HEAL, TUNA_HEAL, canMilkTimeout, canTunaRevive,
+  MILK_HEAL, TUNA_HEAL, canMilkTimeout, canTunaRevive,
   matchOver, flavorForWin, isBlocked, gainMeter, contactVoice,
-  GAME_TITLE, GAME_SUBTITLE,
+  GAME_TITLE, GAME_SUBTITLE, afterRoundEnd,
 } from './logic.js';
 import { Input } from './input.js';
 import { AudioBus } from './audio.js';
@@ -207,8 +207,9 @@ export class Game {
       this.roundEndT += 1;
       this._idlePose();
       if (this.roundEndT > 150) {
-        const over = matchOver(this.wins[0], this.wins[1]);
-        if (over) {
+        const next = afterRoundEnd(this.wins[0], this.wins[1]);
+        if (next === 'matchEnd') {
+          const over = matchOver(this.wins[0], this.wins[1]);
           this.winner = over === 1 ? 'yoko' : 'morlan';
           this.quote = flavorForWin(this.winner);
           this.mode = 'matchEnd';
@@ -216,7 +217,7 @@ export class Game {
           this.say(over === 1 ? 'QUEEN YOKO WINS!' : 'TSAR MORLAN IS VICTORIOUS!', 999, this.quote);
         } else {
           this.round += 1;
-          this.beginFight();
+          this._beginStellaVisit({ betweenRounds: true });
         }
       }
       return;
@@ -373,19 +374,27 @@ export class Game {
 
   _onTimeout() {
     if (canMilkTimeout(this.milksThisRound)) {
-      this.mode = 'timeout';
-      this.cutscene = { kind: 'stella', t: 0 };
-      this.frozen = true;
-      this.audio.sting();
-      this.say('MILK TIME!', 120, 'Stella has arrived. The log requested a pause.');
-      this.p1.state = 'idle';
-      this.p2.state = 'idle';
-      this.p1.attacking = false;
-      this.p2.attacking = false;
+      this._beginStellaVisit({ betweenRounds: false });
       return;
     }
     // Too many milks — decide the round on remaining HP.
     this._finishRoundByHp();
+  }
+
+  _beginStellaVisit({ betweenRounds = false } = {}) {
+    this.mode = 'timeout';
+    this.cutscene = { kind: 'stella', t: 0, betweenRounds };
+    this.frozen = true;
+    this.audio.sting();
+    this.say(
+      'MILK TIME!',
+      120,
+      betweenRounds ? 'Stella serves milk between rounds. The log asked.' : 'Stella has arrived. The log requested a pause.',
+    );
+    this.p1.state = 'idle';
+    this.p2.state = 'idle';
+    this.p1.attacking = false;
+    this.p2.attacking = false;
   }
 
   _finishRoundByHp() {
@@ -450,22 +459,32 @@ export class Game {
       this.p1.state = 'drink';
       this.p2.state = 'drink';
     }
-    if (cs.t > 90 && cs.t < 200 && cs.t % 8 === 0) {
+    if (!cs.betweenRounds && cs.t > 90 && cs.t < 200 && cs.t % 8 === 0) {
       this.p1.heal(MILK_HEAL / 12);
       this.p2.heal(MILK_HEAL / 12);
       this.particles.spawn(this.p1.x, GROUND_Y - 20, 'milk');
       this.particles.spawn(this.p2.x, GROUND_Y - 20, 'milk');
       if (cs.t % 16 === 0) this.audio.milk();
     }
-    if (cs.t > 360) {
+    if (cs.betweenRounds && cs.t > 90 && cs.t < 180 && cs.t % 16 === 0) {
+      this.particles.spawn(this.p1.x, GROUND_Y - 20, 'milk');
+      this.particles.spawn(this.p2.x, GROUND_Y - 20, 'milk');
+      this.audio.milk();
+    }
+    const doneAt = cs.betweenRounds ? 220 : 360;
+    if (cs.t > doneAt) {
+      this.cutscene = null;
+      this.frozen = false;
+      this.p1.state = 'idle';
+      this.p2.state = 'idle';
+      if (cs.betweenRounds) {
+        this.beginFight();
+        return;
+      }
       this.milksThisRound += 1;
       this.timer = 40;
       this.timerAcc = 0;
       this.mode = 'fight';
-      this.frozen = false;
-      this.cutscene = null;
-      this.p1.state = 'idle';
-      this.p2.state = 'idle';
       this.say('THE LOG IS SATISFIED', 70, 'Round continues.');
       this.audio.meow();
     }
@@ -538,8 +557,8 @@ export class Game {
       const enter = Math.min(1, t / 35);
       ctx.save();
       ctx.translate(sx, GROUND_Y - 20);
-      ctx.scale(2.15, 2.15);
-      drawStella(ctx, 0, -70 + (1 - enter) * 40, t, t > 50 ? 'place' : 'enter');
+      ctx.scale(2.35, 2.35);
+      drawStella(ctx, 0, -70 + (1 - enter) * 40, t, t > 50 ? 'place' : 'enter', this.assets.images.stellaSprite);
       ctx.restore();
       if (t > 40) {
         drawSaucer(ctx, this.p1.x + 36, GROUND_Y - 4, true);
@@ -547,16 +566,12 @@ export class Game {
       }
       const img = this.assets.images.stella;
       if (img && t > 10) {
+        ctx.imageSmoothingEnabled = false;
         ctx.globalAlpha = Math.min(1, (t - 10) / 20) * 0.98;
-        ctx.drawImage(img, 40, 100, 200, 280);
+        ctx.drawImage(img, 36, 96, 210, 300);
         ctx.globalAlpha = 1;
-        ctx.fillStyle = '#f6e27a';
-        ctx.font = 'italic 18px Georgia, serif';
-        ctx.textAlign = 'left';
-        ctx.fillText('Stella', 40, 396);
-        ctx.fillStyle = '#ddd';
-        ctx.font = '13px Georgia, serif';
-        ctx.fillText('The log has spoken.', 40, 416);
+        drawPixelText(ctx, 'STELLA', 40, 410, 2, '#f6e27a');
+        drawPixelText(ctx, 'THE LOG ASKED FOR MILK', 40, 432, 1, '#dddddd');
       }
     }
     if (this.mode === 'revive' && this.cutscene) {
@@ -567,19 +582,15 @@ export class Game {
       const t = this.cutscene.t;
       ctx.save();
       ctx.translate(cat.x + cat.facing * -80, GROUND_Y - 10);
-      ctx.scale(1.9, 1.9);
-      drawJoye(ctx, 0, -50, t, t > 50 ? 'feed' : 'enter');
+      ctx.scale(2.2, 2.2);
+      drawJoye(ctx, 0, -50, t, t > 50 ? 'feed' : 'enter', this.assets.images.joyeSprite);
       ctx.restore();
       const img = this.assets.images.joye;
       if (img) {
-        ctx.drawImage(img, CANVAS_W - 250, 100, 200, 280);
-        ctx.fillStyle = '#ffd39a';
-        ctx.font = 'italic 18px Georgia, serif';
-        ctx.textAlign = 'right';
-        ctx.fillText('Joye', CANVAS_W - 50, 396);
-        ctx.fillStyle = '#ddd';
-        ctx.font = '13px Georgia, serif';
-        ctx.fillText('Tuna for the fallen, dears.', CANVAS_W - 50, 416);
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(img, CANVAS_W - 250, 96, 210, 300);
+        drawPixelText(ctx, 'JOYE', CANVAS_W - 50, 410, 2, '#ffd39a', 'right');
+        drawPixelText(ctx, 'TUNA FOR THE FALLEN', CANVAS_W - 50, 432, 1, '#dddddd', 'right');
       }
     }
 
@@ -604,19 +615,30 @@ export class Game {
   }
 
   _drawTitle(ctx) {
-    drawStage(ctx, this.assets, 3, this.time, 0);
-    ctx.fillStyle = 'rgba(0,0,0,0.55)';
-    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-    drawPortraitCard(ctx, this.assets.images.yoko, 80, 150, 280, 360, 'QUEEN YOKO', CHARACTERS.yoko.title);
-    drawPortraitCard(ctx, this.assets.images.morlan, CANVAS_W - 360, 150, 280, 360, 'TSAR MORLAN', CHARACTERS.morlan.title);
+    const lineup = this.assets.images.titleLineup;
+    ctx.imageSmoothingEnabled = false;
+    if (lineup) {
+      ctx.drawImage(lineup, 0, 0, CANVAS_W, CANVAS_H);
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      ctx.fillRect(0, 0, CANVAS_W, 108);
+      ctx.fillRect(0, CANVAS_H - 128, CANVAS_W, 128);
+    } else {
+      drawStage(ctx, this.assets, 3, this.time, 0);
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    }
 
-    drawPixelText(ctx, GAME_TITLE, CANVAS_W / 2, 36, 4, '#ffe566', 'center');
-    drawPixelText(ctx, GAME_SUBTITLE, CANVAS_W / 2, 78, 2, '#ffffff', 'center');
-    drawPixelText(ctx, 'A SLIGHTLY MYSTICAL TEA PARTY', CANVAS_W / 2, 590, 1, '#dddddd', 'center');
+    drawPixelText(ctx, GAME_TITLE, CANVAS_W / 2, 28, 4, '#ffe566', 'center');
+    drawPixelText(ctx, GAME_SUBTITLE, CANVAS_W / 2, 68, 2, '#ffffff', 'center');
+    drawPixelText(ctx, 'MORLAN', 210, 548, 2, '#ff8a80', 'center');
+    drawPixelText(ctx, 'STELLA', 500, 548, 2, '#c8e6c0', 'center');
+    drawPixelText(ctx, 'JOYE', 780, 548, 2, '#ffd39a', 'center');
+    drawPixelText(ctx, 'YOKO', 1070, 548, 2, '#ffe566', 'center');
+    drawPixelText(ctx, 'BACK TO BACK  -  THE LOG AND THE WALKER', CANVAS_W / 2, 578, 1, '#dddddd', 'center');
 
     const blink = Math.sin(this.time * 0.12) > -0.2;
     if (blink) {
-      drawPixelText(ctx, 'PRESS ENTER', CANVAS_W / 2, 630, 3, '#fff4c2', 'center');
+      drawPixelText(ctx, 'PRESS ENTER', CANVAS_W / 2, 620, 3, '#fff4c2', 'center');
     }
     drawPixelText(ctx, 'Z SPACE OR TAP  -  ESC PAUSES', CANVAS_W / 2, 678, 1, '#aaaaaa', 'center');
   }
@@ -661,7 +683,7 @@ export class Game {
     ];
     p2.forEach((l, i) => drawPixelText(ctx, l, 700, 310 + i * 18, 1, '#dddddd'));
 
-    drawPixelText(ctx, 'TIMEOUT: STELLA MILK   KO: JOYE TUNA REVIVE   BEST OF 3', CANVAS_W / 2, 500, 1, '#aaaaaa', 'center');
+    drawPixelText(ctx, 'BETWEEN ROUNDS: STELLA MILK   KO: JOYE TUNA REVIVE   BEST OF 3', CANVAS_W / 2, 500, 1, '#aaaaaa', 'center');
     drawPixelText(ctx, 'ENTER / Z TO CONFIRM', CANVAS_W / 2, 640, 2, '#fff4c2', 'center');
   }
 

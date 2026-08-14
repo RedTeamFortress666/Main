@@ -1,4 +1,4 @@
-const CACHE = 'yokos-tuna-brawl-v2';
+const CACHE = 'yokos-tuna-brawl-v3';
 const CORE = [
   './',
   './index.html',

@@ -23,10 +23,15 @@ export class Assets {
       morlanHud: 'assets/morlan_hud.png',
       yokoSprite: 'assets/yoko_sprite.png',
       morlanSprite: 'assets/morlan_sprite.png',
+      stellaSprite: 'assets/stella_sprite.png',
+      joyeSprite: 'assets/joye_sprite.png',
+      titleLineup: 'assets/title_lineup.png',
     };
     await Promise.all(Object.entries(files).map(([k, src]) => this._img(k, src)));
     if (this.images.yokoSprite) this.images.yokoSprite = chromaKeyMagenta(this.images.yokoSprite);
     if (this.images.morlanSprite) this.images.morlanSprite = chromaKeyMagenta(this.images.morlanSprite);
+    if (this.images.stellaSprite) this.images.stellaSprite = chromaKeyMagenta(this.images.stellaSprite);
+    if (this.images.joyeSprite) this.images.joyeSprite = chromaKeyMagenta(this.images.joyeSprite);
     this.ready = true;
   }
 
@@ -189,176 +194,60 @@ export function drawProjectile(ctx, p, time) {
   ctx.restore();
 }
 
-export function drawStella(ctx, x, y, t, phase) {
+export function drawStella(ctx, x, y, t, phase, img) {
   ctx.save();
   ctx.translate(x, y);
   const sway = Math.sin(t * 0.04) * 2;
   ctx.translate(sway, 0);
-  // dress
-  ctx.fillStyle = '#3d2b1f';
-  ctx.beginPath();
-  ctx.moveTo(-22, 0);
-  ctx.lineTo(22, 0);
-  ctx.lineTo(28, 90);
-  ctx.lineTo(-28, 90);
-  ctx.closePath();
-  ctx.fill();
-  // plaid
-  ctx.strokeStyle = 'rgba(180,140,80,0.35)';
-  ctx.lineWidth = 1;
-  for (let i = -20; i < 24; i += 6) {
-    ctx.beginPath(); ctx.moveTo(i, 8); ctx.lineTo(i + 8, 88); ctx.stroke();
+  if (img) {
+    ctx.imageSmoothingEnabled = false;
+    const h = 120;
+    const w = (img.width / img.height) * h;
+    ctx.drawImage(img, -w / 2, -h + 88, w, h);
+  } else {
+    ctx.fillStyle = '#3d2b1f';
+    ctx.beginPath();
+    ctx.moveTo(-22, 0);
+    ctx.lineTo(22, 0);
+    ctx.lineTo(28, 90);
+    ctx.lineTo(-28, 90);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#6b4423';
+    ctx.fillRect(-38, -18, 78, 18);
+    ctx.fillStyle = '#1a1a1a';
+    ellipse(ctx, 0, -58, 22, 28, true);
+    ctx.fillStyle = '#f0d8c8';
+    ellipse(ctx, 0, -52, 16, 18, true);
   }
-  // torso
-  ctx.fillStyle = '#2c241c';
-  roundRect(ctx, -16, -36, 32, 44, 8);
-  ctx.fill();
-  // log
-  ctx.fillStyle = '#6b4423';
-  ctx.save();
-  ctx.rotate(-0.25);
-  roundRect(ctx, -38, -18, 78, 18, 6);
-  ctx.fill();
-  ctx.fillStyle = '#8b5a2b';
-  roundRect(ctx, -36, -16, 74, 8, 4);
-  ctx.fill();
-  ctx.restore();
-  // head + hair
-  ctx.fillStyle = '#1a1a1a';
-  ellipse(ctx, 0, -58, 22, 28, true);
-  ctx.fillStyle = '#f0d8c8';
-  ellipse(ctx, 0, -52, 16, 18, true);
-  ctx.fillStyle = '#3a3030';
-  ellipse(ctx, -6, -54, 2.2, 2.2, true);
-  ellipse(ctx, 6, -54, 2.2, 2.2, true);
-  ctx.strokeStyle = '#5a4040';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(-4, -44); ctx.lineTo(4, -44);
-  ctx.stroke();
   if (phase === 'place') {
-    ctx.fillStyle = '#eee';
-    ctx.font = 'italic 13px Georgia';
-    ctx.textAlign = 'center';
-    ctx.fillText('The log asked for milk.', 0, -96);
+    drawPixelText(ctx, 'THE LOG ASKED FOR MILK', 0, -108, 1, '#fff6d0', 'center');
   }
   ctx.restore();
 }
 
-export function drawJoye(ctx, x, y, t, phase) {
+export function drawJoye(ctx, x, y, t, phase, img) {
   ctx.save();
   ctx.translate(x, y);
   const shuffle = Math.sin(t * 0.08) * 1.5;
   ctx.translate(shuffle, 0);
-
-  // Walker (Zimmer frame) — behind / around her
-  ctx.strokeStyle = '#c5ccd4';
-  ctx.lineWidth = 4;
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-  const legs = [[-28, 8], [28, 8], [-22, 18], [22, 18]];
-  for (const [lx, top] of legs) {
-    ctx.beginPath();
-    ctx.moveTo(lx, top);
-    ctx.lineTo(lx, 78);
-    ctx.stroke();
-    ctx.fillStyle = '#4a4a4a';
-    ctx.beginPath();
-    ctx.arc(lx, 82, 6, 0, Math.PI * 2);
+  if (img) {
+    ctx.imageSmoothingEnabled = false;
+    const h = 120;
+    const w = (img.width / img.height) * h;
+    ctx.drawImage(img, -w / 2, -h + 88, w, h);
+  } else {
+    ctx.fillStyle = '#2e6b45';
+    roundRect(ctx, -12, -8, 24, 60, 10);
+    ctx.fill();
+    ctx.fillStyle = '#c4451a';
+    ellipse(ctx, 0, -46, 20, 22, true);
+    ctx.fillStyle = '#cfd5da';
+    roundRect(ctx, 22, -6, 26, 18, 3);
     ctx.fill();
   }
-  ctx.beginPath();
-  ctx.moveTo(-28, 8); ctx.lineTo(28, 8);
-  ctx.moveTo(-22, 28); ctx.lineTo(22, 28);
-  ctx.stroke();
-  // basket
-  ctx.fillStyle = '#9aa3ad';
-  roundRect(ctx, -16, 30, 22, 16, 2);
-  ctx.fill();
-  ctx.strokeStyle = '#6d757e';
-  ctx.lineWidth = 1.5;
-  roundRect(ctx, -16, 30, 22, 16, 2);
-  ctx.stroke();
-
-  // Extra tuna in the basket
-  ctx.fillStyle = '#cfd5da';
-  roundRect(ctx, -12, 33, 14, 10, 2);
-  ctx.fill();
-  ctx.fillStyle = '#8b1e1e';
-  ctx.fillRect(-12, 36, 14, 4);
-
-  // Body — elderly, slim green cardigan
-  ctx.fillStyle = '#2e6b45';
-  roundRect(ctx, -12, -8, 24, 60, 10);
-  ctx.fill();
-  ctx.fillStyle = '#f2d56b';
-  ctx.beginPath();
-  ctx.moveTo(-7, -6); ctx.lineTo(11, 16); ctx.lineTo(6, 20); ctx.lineTo(-11, 2);
-  ctx.fill();
-  ctx.fillStyle = '#6b4a32';
-  ctx.fillRect(-10, 48, 8, 24);
-  ctx.fillRect(2, 48, 8, 24);
-
-  // Hands on walker bar
-  ctx.fillStyle = '#e8c4b0';
-  ellipse(ctx, -26, 8, 4, 3.2, true);
-  ellipse(ctx, 26, 8, 4, 3.2, true);
-
-  // Head: copper-red hair a bit past the shoulders, round glasses, wrinkles
-  const hair = '#c4451a';
-  const hairDark = '#8f2e10';
-  ctx.fillStyle = hair;
-  ellipse(ctx, 0, -46, 20, 22, true);
-  ellipse(ctx, 0, -60, 14, 11, true);
-  // longer side locks
-  ctx.fillStyle = hairDark;
-  ellipse(ctx, -16, -28, 6, 24, true);
-  ellipse(ctx, 16, -28, 6, 24, true);
-  ctx.fillStyle = hair;
-  ellipse(ctx, -15, -22, 5.5, 22, true);
-  ellipse(ctx, 16, -20, 5.5, 24, true);
-  ellipse(ctx, -13, -6, 5, 14, true);
-  ellipse(ctx, 14, -4, 5, 16, true);
-  ellipse(ctx, -12, 8, 4.5, 12, true);
-  ellipse(ctx, 13, 10, 4.5, 14, true);
-  ctx.fillStyle = '#f3c7b0';
-  ellipse(ctx, 0, -40, 11, 15, true);
-  // wrinkles
-  ctx.strokeStyle = 'rgba(140,90,80,0.45)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(-7, -48); ctx.quadraticCurveTo(-2, -46, 3, -48);
-  ctx.moveTo(-6, -32); ctx.quadraticCurveTo(0, -30, 6, -32);
-  ctx.stroke();
-  ctx.strokeStyle = '#222';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(-5, -42, 4.5, 0, Math.PI * 2);
-  ctx.arc(5, -42, 4.5, 0, Math.PI * 2);
-  ctx.moveTo(-0.5, -42); ctx.lineTo(0.5, -42);
-  ctx.stroke();
-  ctx.fillStyle = '#5a3a28';
-  ellipse(ctx, -5, -42, 1.7, 1.7, true);
-  ellipse(ctx, 5, -42, 1.7, 1.7, true);
-  ctx.fillStyle = '#c45c5c';
-  ellipse(ctx, 0, -34, 3.2, 1.8, true);
-
-  // Tuna tin in her left hand on the walker
-  ctx.fillStyle = '#cfd5da';
-  roundRect(ctx, 22, -6, 26, 18, 3);
-  ctx.fill();
-  ctx.fillStyle = '#8b1e1e';
-  ctx.fillRect(22, 2, 26, 6);
-  ctx.fillStyle = '#f6e27a';
-  ctx.font = 'bold 8px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('TUNA', 35, 7);
-
   if (phase === 'feed') {
-    ctx.fillStyle = '#fff6d0';
-    ctx.font = 'italic 13px Georgia';
-    ctx.textAlign = 'center';
-    ctx.fillText('Tuna for the fallen, dears.', 0, -78);
+    drawPixelText(ctx, 'TUNA FOR THE FALLEN', 0, -100, 1, '#fff6d0', 'center');
   }
   ctx.restore();
 }
