@@ -18,7 +18,6 @@ import { thinkAI } from './ai.js';
 import {
   Assets, Particles, drawStage, drawFighter, drawFighterNames, drawProjectile,
   drawStella, drawJoye, drawSaucer, drawHUD, drawLetterbox,
-  drawPortraitCard,
 } from './render.js';
 import { drawPixelText } from './pixel.js';
 
