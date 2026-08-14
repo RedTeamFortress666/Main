@@ -21,9 +21,9 @@ export const MAX_METER = 100;
 export const LASER_MAX = 100;
 export const LASER_COST = 34;
 export const LASER_REGEN = 0.55;
-export const P1_DAMAGE_MULT = 2.25;
-export const CPU_DAMAGE_MULT = 0.32;
-export const POWERUP_DURATION = 300;
+export const P1_DAMAGE_MULT = 2.6;
+export const CPU_DAMAGE_MULT = 0.14;
+export const POWERUP_DURATION = 420;
 export const POWERUP_DAMAGE = 2.15;
 export const POWERUP_SPEED = 1.7;
 export const MILK_HEAL = 220;
@@ -100,7 +100,7 @@ export const ATTACKS = {
   simplePunch: {
     id: 'simplePunch', name: 'Punch',
     startup: 4, active: 4, recovery: 8,
-    damage: 72, meterGain: 8, chip: 6,
+    damage: 96, meterGain: 8, chip: 6,
     hitstun: 14, blockstun: 8, hitstop: 5,
     knockback: 4.2, launch: 0, type: 'mid',
     hitbox: { x: 28, y: -100, w: 62, h: 44 },
@@ -108,7 +108,7 @@ export const ATTACKS = {
   simpleKick: {
     id: 'simpleKick', name: 'Kick',
     startup: 6, active: 5, recovery: 10,
-    damage: 88, meterGain: 10, chip: 8,
+    damage: 118, meterGain: 10, chip: 8,
     hitstun: 16, blockstun: 10, hitstop: 6,
     knockback: 6.0, launch: 1.4, type: 'mid',
     hitbox: { x: 34, y: -80, w: 78, h: 40 },

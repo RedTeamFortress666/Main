@@ -290,9 +290,9 @@ export class Game {
     const s1 = this.input.snapshot('p1', this.p1.facing);
     let s2;
     if (this.vsCpu) {
-      if (this.time % 10 === 0) this._aiHold = thinkAI(this.p2, this.p1, 0.28);
+      if (this.time % 16 === 0) this._aiHold = thinkAI(this.p2, this.p1, 0.18);
       s2 = { ...(this._aiHold || emptySnap()) };
-      if (this.time % 10 !== 0) {
+      if (this.time % 16 !== 0) {
         s2.punch = false;
         s2.kick = false;
         s2.laser = false;

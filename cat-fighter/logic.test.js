@@ -282,7 +282,7 @@ describe('laser eyes', () => {
   });
 
   it('defines punch kick and laser attacks', () => {
-    expect(ATTACKS.simplePunch.damage).toBeGreaterThan(50);
+    expect(ATTACKS.simplePunch.damage).toBeGreaterThan(80);
     expect(ATTACKS.simpleKick.damage).toBeGreaterThan(ATTACKS.simplePunch.damage);
     expect(ATTACKS.laserEyes.projectile).toBe('laser');
   });

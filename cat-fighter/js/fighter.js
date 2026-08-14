@@ -252,7 +252,7 @@ export class Fighter {
   grantPower(kind, duration) {
     this.powerKind = kind;
     this.powerT = duration;
-    this.invuln = Math.max(this.invuln, 8);
+    this.invuln = Math.max(this.invuln, duration);
   }
 
   update(snap, opponent, world) {
