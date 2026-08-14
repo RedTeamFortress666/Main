@@ -38,6 +38,7 @@ export class Game {
     this.mode = 'boot';
     this.vsCpu = true;
     this.menuIndex = 0;
+    this.menuCooldown = 0;
     this.round = 1;
     this.wins = [0, 0];
     this.timer = ROUND_TIME;
@@ -94,8 +95,8 @@ export class Game {
     const m2 = this.p2.meter;
     const r1 = this.p1.revivesUsed;
     const r2 = this.p2.revivesUsed;
-    this.p1.resetRound(340);
-    this.p2.resetRound(940);
+    this.p1.resetRound(300);
+    this.p2.resetRound(980);
     this.p1.meter = m1;
     this.p2.meter = m2;
     this.p1.revivesUsed = r1;
@@ -143,10 +144,12 @@ export class Game {
         this.audio.ensure();
         this.audio.ui();
         this.mode = 'menu';
+        this.menuCooldown = 28;
       }
       return;
     }
     if (this.mode === 'menu') {
+      if (this.menuCooldown > 0) this.menuCooldown -= 1;
       if (this.input.just('ArrowUp') || this.input.just('KeyW')) {
         this.menuIndex = (this.menuIndex + 2) % 3;
         this.audio.ui();
@@ -155,7 +158,7 @@ export class Game {
         this.menuIndex = (this.menuIndex + 1) % 3;
         this.audio.ui();
       }
-      if (this.input.just('Enter') || this.input.just('Space') || this.input.just('KeyZ')) {
+      if (this.menuCooldown <= 0 && (this.input.just('Enter') || this.input.just('Space') || this.input.just('KeyZ'))) {
         this.audio.meow(true);
         if (this.menuIndex === 2) {
           this.mode = 'title';
@@ -219,6 +222,11 @@ export class Game {
       this.paused = !this.paused;
       return;
     }
+    if (this.debug.fastTimer || this.debug.debug) {
+      if (this.input.just('F9')) { this.forceTimeout(); return; }
+      if (this.input.just('F10')) { this.forceKo('p1'); }
+      if (this.input.just('F11')) { this.forceKo('p2'); }
+    }
     if (this.paused) return;
 
     if (this.hitstop > 0) {
@@ -256,6 +264,7 @@ export class Game {
 
     this.p1.update(s1, this.p2, world1);
     this.p2.update(s2, this.p1, world2);
+    Fighter.separate(this.p1, this.p2);
     if (this.combo) {
       this.combo.t -= 1;
       if (this.combo.t <= 0) this.combo = null;
@@ -427,7 +436,7 @@ export class Game {
       this.particles.spawn(this.p2.x, GROUND_Y - 20, 'milk');
       if (cs.t % 16 === 0) this.audio.milk();
     }
-    if (cs.t > 240) {
+    if (cs.t > 360) {
       this.milksThisRound += 1;
       this.timer = 40;
       this.timerAcc = 0;
@@ -454,7 +463,7 @@ export class Game {
       this.particles.spawn(cat.x, cat.y - 40, 'tuna', { color: '#d4a017' });
     }
     if (cs.t === 80) this.audio.tuna();
-    if (cs.t > 190) {
+    if (cs.t > 280) {
       cat.revivesUsed += 1;
       cat.hp = Math.max(cat.hp, 160);
       cat.state = 'idle';
@@ -498,30 +507,57 @@ export class Game {
     this.particles.draw(ctx);
 
     if (this.mode === 'timeout' && this.cutscene) {
-      drawLetterbox(ctx, 0.75);
+      drawLetterbox(ctx, 0.82);
+      ctx.fillStyle = 'rgba(10,0,20,0.35)';
+      ctx.fillRect(0, 90, CANVAS_W, CANVAS_H - 180);
       const t = this.cutscene.t;
       const sx = CANVAS_W / 2;
-      const sy = GROUND_Y - 160;
       const enter = Math.min(1, t / 35);
-      drawStella(ctx, sx, sy + (1 - enter) * 80, t, t > 50 ? 'place' : 'enter');
+      ctx.save();
+      ctx.translate(sx, GROUND_Y - 20);
+      ctx.scale(2.15, 2.15);
+      drawStella(ctx, 0, -70 + (1 - enter) * 40, t, t > 50 ? 'place' : 'enter');
+      ctx.restore();
       if (t > 40) {
-        drawSaucer(ctx, this.p1.x + 30, GROUND_Y - 4, true);
-        drawSaucer(ctx, this.p2.x - 30, GROUND_Y - 4, true);
+        drawSaucer(ctx, this.p1.x + 36, GROUND_Y - 4, true);
+        drawSaucer(ctx, this.p2.x - 36, GROUND_Y - 4, true);
       }
       const img = this.assets.images.stella;
       if (img && t > 10) {
-        ctx.globalAlpha = Math.min(1, (t - 10) / 20) * 0.95;
-        ctx.drawImage(img, 24, CANVAS_H - 86 - 210, 150, 210);
+        ctx.globalAlpha = Math.min(1, (t - 10) / 20) * 0.98;
+        ctx.drawImage(img, 40, 100, 200, 280);
         ctx.globalAlpha = 1;
+        ctx.fillStyle = '#f6e27a';
+        ctx.font = 'italic 18px Georgia, serif';
+        ctx.textAlign = 'left';
+        ctx.fillText('Stella', 40, 396);
+        ctx.fillStyle = '#ddd';
+        ctx.font = '13px Georgia, serif';
+        ctx.fillText('The log has spoken.', 40, 416);
       }
     }
     if (this.mode === 'revive' && this.cutscene) {
-      drawLetterbox(ctx, 0.65);
+      drawLetterbox(ctx, 0.75);
+      ctx.fillStyle = 'rgba(40,10,0,0.28)';
+      ctx.fillRect(0, 90, CANVAS_W, CANVAS_H - 180);
       const cat = this.cutscene.target;
       const t = this.cutscene.t;
-      drawJoye(ctx, cat.x + cat.facing * -70, GROUND_Y - 90, t, t > 50 ? 'feed' : 'enter');
+      ctx.save();
+      ctx.translate(cat.x + cat.facing * -80, GROUND_Y - 10);
+      ctx.scale(1.9, 1.9);
+      drawJoye(ctx, 0, -50, t, t > 50 ? 'feed' : 'enter');
+      ctx.restore();
       const img = this.assets.images.joye;
-      if (img) ctx.drawImage(img, CANVAS_W - 174, CANVAS_H - 86 - 210, 150, 210);
+      if (img) {
+        ctx.drawImage(img, CANVAS_W - 250, 100, 200, 280);
+        ctx.fillStyle = '#ffd39a';
+        ctx.font = 'italic 18px Georgia, serif';
+        ctx.textAlign = 'right';
+        ctx.fillText('Joye', CANVAS_W - 50, 396);
+        ctx.fillStyle = '#ddd';
+        ctx.font = '13px Georgia, serif';
+        ctx.fillText('Tuna for the fallen!', CANVAS_W - 50, 416);
+      }
     }
 
     drawHUD(ctx, {
@@ -530,7 +566,7 @@ export class Game {
       timer: this.timer,
       wins: this.wins,
       announce: this.announce,
-      combo: this.combo && this.combo.count > 1 ? this.combo : null,
+      combo: this.mode === 'fight' && this.combo && this.combo.count > 1 ? this.combo : null,
     });
 
     if (this.paused) {

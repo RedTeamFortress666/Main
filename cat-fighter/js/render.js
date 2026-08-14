@@ -189,9 +189,12 @@ export function drawFighter(ctx, f) {
   ctx.save();
   const jx = f.shake ? (Math.random() - 0.5) * f.shake : 0;
   ctx.translate(f.x + jx, f.y + bob + crouch * 36);
-  ctx.scale(f.facing, squash);
+  ctx.scale(f.facing * 1.28, squash * 1.28);
+  ctx.shadowColor = 'rgba(0,0,0,0.85)';
+  ctx.shadowBlur = 10;
+  ctx.shadowOffsetY = 4;
   if (f.hitFlash > 0) ctx.filter = 'brightness(2.4) saturate(0.2)';
-  ctx.rotate(bodyRot * f.facing);
+  ctx.rotate(bodyRot * 0.35);
 
   // Tail
   ctx.strokeStyle = p.fur;
@@ -236,8 +239,12 @@ export function drawFighter(ctx, f) {
 
   // Torso / clothes
   ctx.fillStyle = p.cloth;
-  roundRect(ctx, -26, -108, 52, 82, 16);
+  roundRect(ctx, -28, -112, 56, 92, 16);
   ctx.fill();
+  ctx.strokeStyle = f.characterId === 'yoko' ? '#e6c35c' : '#7a1515';
+  ctx.lineWidth = 2;
+  roundRect(ctx, -28, -112, 56, 92, 16);
+  ctx.stroke();
   if (f.characterId === 'yoko') {
     ctx.fillStyle = p.fur2;
     ctx.beginPath();
@@ -508,15 +515,18 @@ export function drawJoye(ctx, x, y, t, phase) {
 
 export function drawSaucer(ctx, x, y, drinking) {
   ctx.save();
-  ctx.fillStyle = '#ddd';
-  ellipse(ctx, x, y, 22, 7, true);
-  ctx.fillStyle = drinking ? '#f7f1dc' : '#f4ead0';
-  ellipse(ctx, x, y - 2, 16, 4, true);
+  ctx.shadowColor = 'rgba(255,248,220,0.8)';
+  ctx.shadowBlur = 16;
+  ctx.fillStyle = '#f2f2f2';
+  ellipse(ctx, x, y, 28, 9, true);
+  ctx.fillStyle = drinking ? '#fff8dc' : '#f4ead0';
+  ellipse(ctx, x, y - 3, 20, 5, true);
   if (drinking) {
-    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+    ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(x - 4, y - 10);
-    ctx.quadraticCurveTo(x, y - 18, x + 6, y - 8);
+    ctx.moveTo(x - 6, y - 14);
+    ctx.quadraticCurveTo(x, y - 26, x + 8, y - 10);
     ctx.stroke();
   }
   ctx.restore();
@@ -534,18 +544,20 @@ export function drawHUD(ctx, game) {
   roundRect(ctx, CANVAS_W - 56 - barW, y - 8, barW + 16, 52, 8); ctx.fill();
 
   const drawBar = (x, hp, color, flip) => {
-    ctx.fillStyle = '#2a2a2a';
+    ctx.fillStyle = '#1a1a1a';
     roundRect(ctx, x, y, barW, barH, 4); ctx.fill();
-    const w = (hp / MAX_HP) * barW;
+    const w = Math.max(0, (hp / MAX_HP) * barW);
+    ctx.save();
+    roundRect(ctx, x, y, barW, barH, 4);
+    ctx.clip();
     const g = ctx.createLinearGradient(x, y, x, y + barH);
-    g.addColorStop(0, color);
-    g.addColorStop(1, '#5a1010');
-    ctx.fillStyle = hp < MAX_HP * 0.22 ? '#e74c3c' : g;
-    if (flip) {
-      ctx.fillRect(x + barW - w, y, w, barH);
-    } else {
-      ctx.fillRect(x, y, w, barH);
-    }
+    g.addColorStop(0, '#fff3c4');
+    g.addColorStop(0.35, color);
+    g.addColorStop(1, color);
+    ctx.fillStyle = hp < MAX_HP * 0.22 ? '#ff4d4d' : g;
+    if (flip) ctx.fillRect(x + barW - w, y, w, barH);
+    else ctx.fillRect(x, y, w, barH);
+    ctx.restore();
     ctx.strokeStyle = '#f3e27a';
     ctx.lineWidth = 2;
     roundRect(ctx, x, y, barW, barH, 4); ctx.stroke();

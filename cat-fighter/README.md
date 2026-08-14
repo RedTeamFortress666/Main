@@ -17,8 +17,8 @@ Then open `http://localhost:4173`.
 
 Query flags:
 
-- `?fasttimeout=1` — round timer starts at 8 seconds so Stella's milk sequence is easy to demo
-- `?debug=1` — reserved debug flag
+- `?fasttimeout=1` — round timer starts at 8 seconds so Stella's milk sequence is easy to demo. F9 forces a timeout, F10/F11 KO P1/P2.
+- `?debug=1` — same debug keys as above
 
 ## Controls
 

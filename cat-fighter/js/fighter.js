@@ -385,19 +385,30 @@ export class Fighter {
 
     const pad = 46;
     this.x = clamp(this.x, pad, CANVAS_W - pad);
+  }
 
-    if (world.opponent) {
-      const o = world.opponent;
-      const minDist = 54;
-      const dx = o.x - this.x;
-      if (Math.abs(dx) < minDist && Math.abs(this.y - o.y) < 80) {
-        const push = (minDist - Math.abs(dx)) / 2;
-        const s = dx === 0 ? (this.facing) : Math.sign(dx);
-        this.x -= s * push;
-        o.x += s * push;
-        this.x = clamp(this.x, pad, CANVAS_W - pad);
-        o.x = clamp(o.x, pad, CANVAS_W - pad);
-      }
+  static separate(a, b) {
+    const pad = 46;
+    const minDist = 92;
+    if (Math.abs(a.y - b.y) > 96) return;
+    const left = a.x <= b.x ? a : b;
+    const right = left === a ? b : a;
+    const gap = right.x - left.x;
+    if (gap >= minDist) return;
+    const need = minDist - gap;
+    if (left.x <= pad + 2) {
+      right.x = left.x + minDist;
+    } else if (right.x >= CANVAS_W - pad - 2) {
+      left.x = right.x - minDist;
+    } else {
+      left.x -= need / 2;
+      right.x += need / 2;
+    }
+    left.x = clamp(left.x, pad, CANVAS_W - pad);
+    right.x = clamp(right.x, pad, CANVAS_W - pad);
+    if (right.x - left.x < minDist) {
+      if (left.x <= pad + 1) right.x = Math.min(CANVAS_W - pad, left.x + minDist);
+      else left.x = Math.max(pad, right.x - minDist);
     }
   }
 }
