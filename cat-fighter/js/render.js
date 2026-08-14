@@ -575,13 +575,23 @@ export function drawJoye(ctx, x, y, t, phase) {
   ellipse(ctx, -26, 8, 5, 4, true);
   ellipse(ctx, 26, 8, 5, 4, true);
 
-  // Head: white curly perm, round glasses, wrinkles
-  ctx.fillStyle = '#f2f0ea';
-  ellipse(ctx, 0, -42, 24, 22, true);
-  ctx.fillStyle = '#ebe6dc';
-  ellipse(ctx, -16, -40, 8, 10, true);
-  ellipse(ctx, 16, -40, 8, 10, true);
-  ellipse(ctx, 0, -56, 16, 10, true);
+  // Head: copper-red hair a bit past the shoulders, round glasses, wrinkles
+  const hair = '#c4451a';
+  const hairDark = '#8f2e10';
+  ctx.fillStyle = hair;
+  ellipse(ctx, 0, -44, 26, 24, true);
+  ellipse(ctx, 0, -58, 18, 12, true);
+  // longer side locks
+  ctx.fillStyle = hairDark;
+  ellipse(ctx, -20, -28, 9, 22, true);
+  ellipse(ctx, 20, -28, 9, 22, true);
+  ctx.fillStyle = hair;
+  ellipse(ctx, -18, -22, 8, 20, true);
+  ellipse(ctx, 19, -20, 8, 22, true);
+  ellipse(ctx, -16, -8, 7, 12, true);
+  ellipse(ctx, 17, -6, 7, 14, true);
+  ellipse(ctx, -14, 6, 6, 12, true);
+  ellipse(ctx, 16, 8, 6, 14, true);
   ctx.fillStyle = '#f3c7b0';
   ellipse(ctx, 0, -38, 15, 16, true);
   // wrinkles
