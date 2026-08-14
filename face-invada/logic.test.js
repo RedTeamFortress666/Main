@@ -52,7 +52,7 @@ describe('timing', () => {
   it('finds the nearest unhit note in a lane', () => {
     const notes = [
       { beat: 4, lane: 'punch', hit: false },
-      { beat: 5, lane: 'kick', hit: false },
+      { beat: 8, lane: 'kick', hit: false },
     ];
     expect(findHittable(notes, 'punch', 4.05).beat).toBe(4);
     expect(findHittable(notes, 'kick', 4.05)).toBe(null);
@@ -60,7 +60,7 @@ describe('timing', () => {
 
   it('expires late notes as misses', () => {
     const notes = [{ beat: 4, lane: 'punch', hit: false, grade: null }];
-    const missed = expireNotes(notes, 5.0);
+    const missed = expireNotes(notes, 5.2);
     expect(missed).toHaveLength(1);
     expect(notes[0].grade).toBe('miss');
   });

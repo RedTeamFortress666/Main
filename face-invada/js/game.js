@@ -3,7 +3,7 @@
  */
 import {
   CANVAS_W, CANVAS_H, GAME_TITLE, GAME_SUBTITLE, HERO, RIVAL, ROSTER,
-  BPM, LANES, CONTROL_MAP, MAX_HP, CPU_HP, SUPER_COST,
+  BPM, LANES, CONTROL_MAP, MAX_HP, CPU_HP, SUPER_COST, CHART_BEATS,
   beatAtFrame, makeChart, findHittable, expireNotes, gradeDelta,
   applyPlayerHit, applyMiss, applySuper, winnerOf, emptyFightState, canSuper,
 } from './logic.js';
@@ -116,16 +116,27 @@ export class Game {
 
     this.fight.frame += 1;
     const beat = beatAtFrame(this.fight.frame);
-    this.fight.beat = beat;
+    const loop = Math.floor(beat / CHART_BEATS);
+    if (loop !== this.fight.loop) {
+      this.fight.loop = loop;
+      for (const n of this.fight.notes) {
+        n.hit = false;
+        n.grade = null;
+      }
+    }
+    const localBeat = beat - loop * CHART_BEATS;
+    this.fight.beat = localBeat;
     const bi = Math.floor(beat);
     if (bi !== this._beatInt && bi >= 0) {
       this._beatInt = bi;
       this.audio.tickBeat(bi);
     }
+    if (this.fight.gradeT > 0) this.fight.gradeT -= 1;
 
-    const missed = expireNotes(this.fight.notes, beat);
+    const missed = expireNotes(this.fight.notes, localBeat);
     for (const _m of missed) {
       this.fight.state = applyMiss(this.fight.state);
+      this.fight.gradeT = 24;
       this.facePose.hit = 1;
       this.rivetPose.punch = 1;
       this.audio.miss();
@@ -153,6 +164,7 @@ export class Game {
       note.hit = true;
       note.grade = grade;
       f.state = applyPlayerHit(f.state, grade);
+      f.gradeT = 50;
       this.facePose[lane === 'bass' ? 'punch' : lane] = 1;
       this.rivetPose.hit = 1;
       if (grade === 'perfect') this.audio.perfect();
@@ -179,9 +191,11 @@ export class Game {
   }
 
   beginFight() {
-    this.fight = {
+      this.fight = {
       frame: 0,
       beat: 0,
+      loop: 0,
+      gradeT: 0,
       notes: makeChart(7),
       state: emptyFightState(),
     };
@@ -314,7 +328,7 @@ export class Game {
     if (st.combo > 1) {
       drawPixelText(ctx, `${st.combo} HIT`, 640, 100, 3, '#fff', 'center');
     }
-    if (st.lastGrade) {
+    if (st.lastGrade && this.fight.gradeT > 0) {
       const col = st.lastGrade === 'perfect' ? '#ffe566' : st.lastGrade === 'good' ? '#3df0ff' : st.lastGrade === 'super' ? '#ff4ad2' : '#ff6a3a';
       drawPixelText(ctx, st.lastGrade.toUpperCase(), 640, 140, 2, col, 'center');
     }
