@@ -16,6 +16,7 @@ export const ITEM_NAMES = {
   pot: 'HOT POT',
   receipt: 'RECEIPT',
   silverblade: 'S.BLADE',
+  tablet: 'TABLET',
 };
 
 export const INV_X = 620;
@@ -119,6 +120,7 @@ export const ROOMS = {
     color: '#0b1020',
     hotspots: [
       { id: 'plant', label: 'DEAD PLANT', x: 48, y: 140, w: 200, h: 110 },
+      { id: 'tablet', label: 'TABLET', x: 270, y: 128, w: 150, h: 48, air: true },
       { id: 'desk', label: 'FRONT DESK', x: 48, y: 300, w: 360, h: 160 },
       { id: 'bellhop', label: 'BELLHOP', x: 440, y: 200, w: 220, h: 260 },
       { id: 'door', label: 'EXIT DOORS', x: 820, y: 170, w: 340, h: 260 },
@@ -252,8 +254,12 @@ export function emptyMysteryState() {
     selected: null,
     flags: {},
     clues: [],
-    log: 'Walk with LEFT/RIGHT. DOWN to act. LOOK the plant.',
+    log: 'JUMP for high clues. LOOK the plant. Track the funkiest bassline.',
+    banner: 'CLUE: JUMP. LOOK. THE BASSLINE IS HIDING.',
     px: 260,
+    py: 0,
+    vy: 0,
+    grown: false,
     facing: 1,
     walkTarget: null,
     pendingHotspot: null,
@@ -291,6 +297,7 @@ function clone(state) {
 
 function addClue(state, text) {
   if (!state.clues.includes(text)) state.clues.push(text);
+  state.banner = text;
 }
 
 export function setVerb(state, verb) {
@@ -328,6 +335,7 @@ function markSolved(state) {
   state.solved[state.day - 1] = true;
   const enemy = enemyOf(state);
   state.log = `CASE CLOSED. START fights ${enemy.name}.`;
+  state.banner = state.log;
   addClue(state, `Night ${state.day} closed.`);
 }
 
@@ -336,7 +344,25 @@ export function hotspotCX(h) {
 }
 
 export function inRangeOf(state, h) {
-  return Math.abs((state.px ?? 260) - hotspotCX(h)) <= REACH;
+  const near = Math.abs((state.px ?? 260) - hotspotCX(h)) <= REACH;
+  if (h.air) return near && (state.py || 0) < -36;
+  return near;
+}
+
+export function stepPhysics(state, jump) {
+  const next = clone(state);
+  let vy = next.vy || 0;
+  let py = next.py || 0;
+  if (jump && py >= 0) vy = -13.5;
+  vy += 0.7;
+  py += vy;
+  if (py > 0) {
+    py = 0;
+    vy = 0;
+  }
+  next.py = py;
+  next.vy = vy;
+  return next;
 }
 
 export function stepWalk(state, dir) {
@@ -437,7 +463,11 @@ export function applyVerb(state, hotspotId) {
   };
 
   if (verb === 'look') {
-    if (day === 1 && id === 'plant') {
+    if (day === 1 && id === 'tablet') {
+      next.log = 'A TABLET on a high ledge. JUMP to TAKE it. Label: EAT ME.';
+      next.banner = next.log;
+      set('tabletLook');
+    } else if (day === 1 && id === 'plant') {
       next.log = 'Scrap in the dirt: WAX IN THE HALL. DOOR PIN 333.';
       set('plantLook');
       addClue(next, 'PIN 333. Wax in the hall.');
@@ -562,7 +592,10 @@ export function applyVerb(state, hotspotId) {
   }
 
   if (verb === 'take') {
-    if (day === 1 && id === 'carpet') {
+    if (id === 'tablet') {
+      if (!flag('tabletLook')) next.log = 'LOOK the high TABLET first. JUMP.';
+      else if (!give(next, 'tablet')) next.log = 'You already have the TABLET.';
+    } else if (day === 1 && id === 'carpet') {
       if (!flag('carpetLook')) next.log = 'LOOK at the stain first.';
       else if (!give(next, 'vinyl')) next.log = 'You already have the WAX DISC.';
       else set('vinylTaken');
@@ -610,7 +643,12 @@ export function applyVerb(state, hotspotId) {
       next.log = 'Select an item up top, then USE on a hotspot.';
       return next;
     }
-    if (day === 1 && item === 'vinyl' && id === 'bellhop') {
+    if (item === 'tablet') {
+      next.grown = true;
+      next.log = 'PILLS THAT MAKE ME LARGER? YEAH RIGHT.';
+      next.banner = next.log;
+      addClue(next, next.log);
+    } else if (day === 1 && item === 'vinyl' && id === 'bellhop') {
       set('vinylBusy');
       next.log = 'Vinyl drops the needle. Headphones on. Desk is clear.';
       addClue(next, 'Vinyl is busy.');
@@ -714,17 +752,24 @@ export function markBeaten(state) {
   return next;
 }
 
-export function advanceDay(state) {
+export function seekDay(state, n) {
   const next = clone(state);
-  if (next.day >= 5) return next;
-  next.day += 1;
-  next.room = DAYS[next.day - 1].rooms[0];
+  next.day = n;
+  next.room = DAYS[n - 1].rooms[0];
   next.verb = 'look';
   next.selected = null;
   next.px = 260;
+  next.py = 0;
+  next.vy = 0;
   next.facing = 1;
   next.walkTarget = null;
   next.pendingHotspot = null;
-  next.log = `NIGHT ${next.day}. ${DAYS[next.day - 1].title}. Walk. LOOK.`;
+  next.log = `NIGHT ${n}. ${DAYS[n - 1].title}. JUMP. LOOK. FETCH.`;
+  next.banner = next.log;
   return next;
+}
+
+export function advanceDay(state) {
+  if (state.day >= 5) return state;
+  return seekDay(state, state.day + 1);
 }

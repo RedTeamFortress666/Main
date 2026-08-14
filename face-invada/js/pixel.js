@@ -362,6 +362,63 @@ const ROOM_FURNITURE = {
   ],
 };
 
+export function drawClueBanner(ctx, text, t) {
+  const pulse = 0.75 + Math.sin(t * 0.15) * 0.15;
+  ctx.fillStyle = `rgba(255, 229, 102, ${0.18 + pulse * 0.08})`;
+  ctx.fillRect(8, 8, 1264, 72);
+  ctx.fillStyle = '#120c00';
+  ctx.fillRect(12, 12, 1256, 64);
+  ctx.strokeStyle = '#ffe566';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(12, 12, 1256, 64);
+  const s = String(text || '').toUpperCase();
+  const words = s.split(' ');
+  let line = '';
+  let ly = 20;
+  let lines = 0;
+  for (const w of words) {
+    const test = `${line}${w} `;
+    if (test.length * 12 > 1220) {
+      drawPixelText(ctx, line, 24, ly, 2, '#ffe566');
+      line = `${w} `;
+      ly += 22;
+      lines += 1;
+      if (lines >= 2) break;
+    } else line = test;
+  }
+  if (lines < 2) drawPixelText(ctx, line, 24, ly, 2, '#fff4c2');
+}
+
+export function drawFaceHead(ctx, x, y, scale, t) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+  rect(ctx, -10, -10, 20, 18, '#0a0808');
+  rect(ctx, -9, -9, 18, 16, '#e6c4a8');
+  rect(ctx, -11, -16, 22, 8, '#3a3a40');
+  rect(ctx, -8, -18, 16, 4, '#5a5a62');
+  rect(ctx, -8, -6, 7, 6, '#b8b8c0');
+  rect(ctx, 1, -6, 7, 6, '#b8b8c0');
+  rect(ctx, -7, -5, 5, 4, '#1a1a1c');
+  rect(ctx, 2, -5, 5, 4, '#1a1a1c');
+  rect(ctx, -6, 2, 12, 2, '#2a221c');
+  rect(ctx, -1, 4, 3, 3, '#2a221c');
+  if ((t | 0) % 20 < 3) rect(ctx, -3, 8, 2, 1, '#b08070');
+  ctx.restore();
+}
+
+export function drawRaveVampire(ctx, x, y, scale, scared) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+  rect(ctx, -9, -10, 18, 18, scared ? '#3df0ff' : '#6a1030');
+  rect(ctx, -6, -6, 4, 4, '#ffe566');
+  rect(ctx, 2, -6, 4, 4, '#ffe566');
+  rect(ctx, -3, 4, 2, 4, '#fff');
+  rect(ctx, 1, 4, 2, 4, '#fff');
+  ctx.restore();
+}
+
 export function drawMysteryRoom(ctx, room, t) {
   ctx.fillStyle = room.color || '#0b1020';
   ctx.fillRect(0, 118, 1280, 422);

@@ -10,7 +10,14 @@ import {
   emptyMysteryState, setVerb, applyVerb, tapInventory, tapAt,
   canFight, advanceDay, cycleRoom, hasItem, hitHotspot, hitInventoryIndex,
   DAYS, ENEMIES, INV_X, INV_Y, currentRoom, enemyOf, stepWalk, PX_MAX,
+  stepPhysics,
 } from './js/mystery.js';
+import {
+  CAMPAIGN, CREDITS_BY, PONG_DISCLAIMER, DJ_TRICKS, KIM_LINE, LANA_LINE,
+  emptyPacState, stepPac, emptyPongState, stepPong, clubPress, emptyClubState,
+  emptyBribeState, stepBribe, emptySentinelState, stepSentinel,
+  emptyGrammyState, stepGrammy,
+} from './js/arcade.js';
 
 describe('title and hero', () => {
   it('is FACE INVADA\'s BEAT BOXING', () => {
@@ -242,6 +249,22 @@ describe('5 days a stranger', () => {
     expect(enemyOf(s).id).toBe('stranger');
   });
 
+  it('jumps for air clues and tablets make you larger', () => {
+    let s = emptyMysteryState();
+    expect(s.py).toBe(0);
+    s = stepPhysics(s, true);
+    expect(s.py).toBeLessThan(0);
+    s = setVerb(s, 'look');
+    s = applyVerb(s, 'tablet');
+    s = setVerb(s, 'take');
+    s = applyVerb(s, 'tablet');
+    expect(hasItem(s, 'tablet')).toBe(true);
+    s = setVerb(s, 'use');
+    s = applyVerb(s, 'desk');
+    expect(s.grown).toBe(true);
+    expect(s.banner).toMatch(/PILLS THAT MAKE ME LARGER/);
+  });
+
   it('maps canvas taps to hotspots and inventory', () => {
     const s = emptyMysteryState();
     const desk = currentRoom(s).hotspots.find((h) => h.id === 'desk');
@@ -249,5 +272,82 @@ describe('5 days a stranger', () => {
     expect(hitInventoryIndex(INV_X + 10, INV_Y + 10)).toBe(0);
     const after = tapAt(s, desk.x + 10, desk.y + 10);
     expect(after.flags.deskLook).toBe(true);
+  });
+});
+
+describe('campaign arcade', () => {
+  it('credits a bastard and warns Atari', () => {
+    expect(CREDITS_BY).toBe('MADE BY SOME BASTARD');
+    expect(PONG_DISCLAIMER).toMatch(/HOMAGE/);
+    expect(KIM_LINE).toMatch(/KANYE/);
+    expect(LANA_LINE).toBe('LANAAAAAA');
+    expect(CAMPAIGN.some((s) => s.kind === 'pac')).toBe(true);
+    expect(CAMPAIGN[CAMPAIGN.length - 1].kind).toBe('credits');
+  });
+
+  it('lets Face head chomp pellets and slay a powered vampire', () => {
+    let p = emptyPacState();
+    const n = p.pellets.length;
+    p = stepPac(p, 1, 0);
+    expect(p.pellets.length).toBeLessThanOrEqual(n);
+    p.power = 20;
+    p.c = p.vamps[0].c;
+    p.r = p.vamps[0].r;
+    p = stepPac(p, 0, 0);
+    expect(p.dead).toBe(false);
+  });
+
+  it('plays pong until Face scores 3', () => {
+    let s = emptyPongState();
+    s.ps = 2;
+    s.ball = { x: 1261, y: 300, vx: 7, vy: 0 };
+    s.cy = 0;
+    s = stepPong(s, 0);
+    expect(s.won).toBe(true);
+  });
+
+  it('clears a club set with the six trick combos', () => {
+    let s = emptyClubState();
+    for (const trick of DJ_TRICKS) {
+      for (const k of trick.keys) s = clubPress(s, k);
+    }
+    expect(s.won).toBe(true);
+    expect(s.cheer).toBeGreaterThan(50);
+  });
+
+  it('delivers coffee and doughnuts on Sentinel Isle', () => {
+    let s = emptySentinelState();
+    s = stepSentinel(s, 0, false, true);
+    expect(s.holding).toBe('coffee');
+    s.px = 1000;
+    s = stepSentinel(s, 0, false, true);
+    expect(s.deliveredC).toBe(true);
+    expect(s.breakShown).toBe(true);
+    s.px = 160;
+    s = stepSentinel(s, 0, false, true);
+    s.px = 1000;
+    s = stepSentinel(s, 0, false, true);
+    expect(s.won).toBe(true);
+  });
+
+  it('collects four grammys by jumping', () => {
+    let s = emptyGrammyState();
+    for (const t of s.trophies) {
+      s.px = t.x;
+      s.py = t.y;
+      s = stepGrammy(s, 0, false);
+    }
+    expect(s.won).toBe(true);
+  });
+
+  it('hurts Face when Don Trumpet bribes him with cash', () => {
+    let s = emptyBribeState();
+    s.cash = [{ x: s.px, y: 480, vx: 0, vy: 0 }];
+    s = stepBribe(s, 0, false, false);
+    expect(s.hp).toBeLessThan(100);
+    s.px = s.bossX;
+    const boss = s.boss;
+    s = stepBribe(s, 0, false, true);
+    expect(s.boss).toBeLessThan(boss);
   });
 });

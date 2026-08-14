@@ -12,14 +12,21 @@ import { Input } from './input.js';
 import { AudioBus } from './audio.js';
 import {
   drawPixelText, drawNeonCity, drawFighter, drawHighway, lifeBarWidth,
-  drawMysteryRoom,
+  drawMysteryRoom, drawClueBanner, drawFaceHead, drawRaveVampire,
 } from './pixel.js';
 import {
-  emptyMysteryState, setVerb, tapAt, canFight, allBeaten,
-  markBeaten, advanceDay, dayMeta, enemyOf, currentRoom, DAYS, ENEMIES,
+  emptyMysteryState, setVerb, tapAt, canFight,
+  markBeaten, dayMeta, enemyOf, currentRoom, DAYS, ENEMIES,
   ITEM_NAMES, INV_X, INV_Y, INV_SLOT_W, INV_SLOT_H, INV_GAP,
-  stepWalk, interactNearest,
+  stepWalk, interactNearest, stepPhysics, seekDay,
 } from './mystery.js';
+import {
+  CAMPAIGN, campaignStep, CUTS, CREDITS_BY, MISSION, PONG_DISCLAIMER,
+  LANA_LINE, KIM_LINE, DJ_TRICKS,
+  emptyPacState, stepPac, emptyPongState, stepPong,
+  emptyClubState, clubPress, emptySentinelState, stepSentinel,
+  emptyGrammyState, stepGrammy, emptyBribeState, stepBribe,
+} from './arcade.js';
 
 const VERB_KEYS = { KeyZ: 'look', KeyX: 'talk', KeyC: 'take', KeyV: 'use' };
 
@@ -43,6 +50,10 @@ export class Game {
     this.rivetPose = { t: 0 };
     this.onModeChange = null;
     this.winner = null;
+    this.camp = 0;
+    this.cut = null;
+    this.cutLine = 0;
+    this.arcade = null;
   }
 
   setMode(mode) {
@@ -72,10 +83,86 @@ export class Game {
   }
 
   tapCanvas(x, y) {
-    if (this.mode !== 'mystery') return;
-    this.mystery = tapAt(this.mystery, x, y);
+    if (this.mode === 'mystery') {
+      this.mystery = tapAt(this.mystery, x, y);
+      this.audio.ensure();
+      this.audio.ui();
+      return;
+    }
+    if (this.mode === 'cut' || this.mode === 'title' || this.mode === 'briefing'
+        || this.mode === 'result' || this.mode === 'credits' || this.mode === 'journal') {
+      this.input.setVirtual('Enter', true);
+      setTimeout(() => this.input.setVirtual('Enter', false), 80);
+    }
+  }
+
+  beginCampaign() {
+    this.camp = 0;
+    this.mystery = emptyMysteryState();
     this.audio.ensure();
-    this.audio.ui();
+    this.beginStep();
+  }
+
+  beginStep() {
+    const step = campaignStep(this.camp);
+    if (!step || step.kind === 'credits') {
+      this.setMode('credits');
+      return;
+    }
+    if (step.kind === 'cut') {
+      this.cut = CUTS[step.cut];
+      this.cutLine = 0;
+      this.setMode('cut');
+      this.audio.vocal();
+      return;
+    }
+    if (step.kind === 'mystery') {
+      this.mystery = seekDay(this.mystery, step.day);
+      this.beginMystery();
+      return;
+    }
+    if (step.kind === 'fight') {
+      this.beginFight();
+      return;
+    }
+    if (step.kind === 'pac') {
+      this.arcade = emptyPacState();
+      this.setMode('pac');
+      this.say('LEVEL 2', 50, 'RAVE VAMPIRES');
+      return;
+    }
+    if (step.kind === 'pong') {
+      this.arcade = emptyPongState();
+      this.setMode('pong');
+      return;
+    }
+    if (step.kind === 'club') {
+      this.arcade = emptyClubState();
+      this.setMode('club');
+      return;
+    }
+    if (step.kind === 'sentinel') {
+      this.arcade = emptySentinelState();
+      this.setMode('sentinel');
+      return;
+    }
+    if (step.kind === 'grammy') {
+      this.arcade = emptyGrammyState();
+      this.setMode('grammy');
+      return;
+    }
+    if (step.kind === 'bribe') {
+      this.arcade = emptyBribeState();
+      this.setMode('bribe');
+      return;
+    }
+    this.setMode('credits');
+  }
+
+  advanceCampaign() {
+    this.camp += 1;
+    if (this.camp >= CAMPAIGN.length) this.camp = CAMPAIGN.length - 1;
+    this.beginStep();
   }
 
   beginBriefing() {
@@ -122,10 +209,20 @@ export class Game {
     if (this.rivetPose.hit > 0) this.rivetPose.hit -= 0.08;
     if (this.rivetPose.punch > 0) this.rivetPose.punch -= 0.08;
 
+    this.audio.dnbTick(this.time);
+
     if (this.mode === 'title') {
       if (this.input.just('Enter') || this.input.just('Space') || this.input.just('KeyZ')) {
-        this.mystery = emptyMysteryState();
-        this.beginBriefing();
+        this.beginCampaign();
+      }
+      return;
+    }
+
+    if (this.mode === 'cut') {
+      if (this.input.just('Enter') || this.input.just('Space') || this.input.just('KeyZ')) {
+        this.cutLine += 1;
+        this.audio.ui();
+        if (!this.cut || this.cutLine >= this.cut.lines.length) this.advanceCampaign();
       }
       return;
     }
@@ -149,6 +246,7 @@ export class Game {
     if (this.mode === 'credits') {
       if (this.input.just('Enter') || this.input.just('Space') || this.input.just('KeyZ')) {
         this.mystery = emptyMysteryState();
+        this.camp = 0;
         this.setMode('title');
       }
       return;
@@ -158,13 +256,7 @@ export class Game {
       if (this.input.just('Enter') || this.input.just('Space') || this.input.just('KeyZ')) {
         if (this.winner === 'face') {
           this.mystery = markBeaten(this.mystery);
-          if (allBeaten(this.mystery)) {
-            this.setMode('credits');
-            this.say('5 DAYS CLOSED', 180, 'THE STRANGER FALLS');
-          } else {
-            this.mystery = advanceDay(this.mystery);
-            this.beginBriefing();
-          }
+          this.advanceCampaign();
         } else {
           this.beginFight();
         }
@@ -184,6 +276,9 @@ export class Game {
       const dir = (right ? 1 : 0) - (left ? 1 : 0);
       const before = this.mystery;
       this.mystery = stepWalk(this.mystery, dir);
+      const jump = this.input.just('KeyW') || this.input.just('ArrowUp');
+      this.mystery = stepPhysics(this.mystery, jump);
+      if (jump) this.audio.ui();
       if (dir) this.facePose.walk = this.time * 0.4;
       else if (this.mystery.walkTarget != null) this.facePose.walk = this.time * 0.4;
       else this.facePose.walk = 0;
@@ -192,16 +287,86 @@ export class Game {
         this.mystery = interactNearest(this.mystery);
         this.audio.ui();
       }
-      if (this.input.just('KeyW') || this.input.just('ArrowUp')) {
-        this.setMode('journal');
-        this.audio.ui();
-      }
       if (this.input.just('Enter') || this.input.just('Space')) {
         if (canFight(this.mystery)) this.beginFight();
         else {
           this.setMode('journal');
           this.audio.ui();
         }
+      }
+      return;
+    }
+
+    if (this.mode === 'pac' && this.arcade) {
+      if (this.time % 8 === 0) {
+        let dc = 0;
+        let dr = 0;
+        if (this.input.held('KeyA') || this.input.held('ArrowLeft')) dc = -1;
+        if (this.input.held('KeyD') || this.input.held('ArrowRight')) dc = 1;
+        if (this.input.held('KeyW') || this.input.held('ArrowUp')) dr = -1;
+        if (this.input.held('KeyS') || this.input.held('ArrowDown')) dr = 1;
+        this.arcade = stepPac(this.arcade, dc, dr);
+        if (dc || dr) this.audio.hat();
+      }
+      if (this.arcade.won) this.advanceCampaign();
+      if (this.arcade.dead && (this.input.just('Enter') || this.input.just('KeyZ'))) {
+        this.arcade = emptyPacState();
+      }
+      return;
+    }
+
+    if (this.mode === 'pong' && this.arcade) {
+      let dir = 0;
+      if (this.input.held('KeyW') || this.input.held('ArrowUp')) dir = -1;
+      if (this.input.held('KeyS') || this.input.held('ArrowDown')) dir = 1;
+      this.arcade = stepPong(this.arcade, dir);
+      if (this.arcade.won) this.advanceCampaign();
+      if (this.arcade.lost && (this.input.just('Enter') || this.input.just('KeyZ'))) {
+        this.arcade = emptyPongState();
+      }
+      return;
+    }
+
+    if (this.mode === 'club' && this.arcade) {
+      for (const code of ['KeyZ', 'KeyX', 'KeyC', 'KeyV']) {
+        if (this.input.just(code)) {
+          this.arcade = clubPress(this.arcade, code);
+          this.audio.sample(this.arcade.last || '');
+        }
+      }
+      if (this.arcade.won) this.advanceCampaign();
+      return;
+    }
+
+    if (this.mode === 'sentinel' && this.arcade) {
+      const dir = (this.input.held('KeyD') || this.input.held('ArrowRight') ? 1 : 0)
+        - (this.input.held('KeyA') || this.input.held('ArrowLeft') ? 1 : 0);
+      const jump = this.input.just('KeyW') || this.input.just('ArrowUp');
+      const take = this.input.just('KeyC') || this.input.just('KeyZ') || this.input.just('KeyS');
+      this.arcade = stepSentinel(this.arcade, dir, jump, take);
+      if (this.arcade.won) this.advanceCampaign();
+      return;
+    }
+
+    if (this.mode === 'grammy' && this.arcade) {
+      const dir = (this.input.held('KeyD') || this.input.held('ArrowRight') ? 1 : 0)
+        - (this.input.held('KeyA') || this.input.held('ArrowLeft') ? 1 : 0);
+      const jump = this.input.just('KeyW') || this.input.just('ArrowUp');
+      this.arcade = stepGrammy(this.arcade, dir, jump);
+      if (this.arcade.won) this.advanceCampaign();
+      return;
+    }
+
+    if (this.mode === 'bribe' && this.arcade) {
+      const dir = (this.input.held('KeyD') || this.input.held('ArrowRight') ? 1 : 0)
+        - (this.input.held('KeyA') || this.input.held('ArrowLeft') ? 1 : 0);
+      const jump = this.input.just('KeyW') || this.input.just('ArrowUp');
+      const punch = this.input.just('KeyZ') || this.input.just('KeyC');
+      this.arcade = stepBribe(this.arcade, dir, jump, punch);
+      if (punch) this.audio.punch();
+      if (this.arcade.won) this.advanceCampaign();
+      if (this.arcade.lost && (this.input.just('Enter') || this.input.just('KeyV'))) {
+        this.arcade = emptyBribeState();
       }
       return;
     }
@@ -291,10 +456,17 @@ export class Game {
     ctx.imageSmoothingEnabled = false;
     if (this.mode === 'title') this._drawTitle(ctx);
     else if (this.mode === 'briefing') this._drawBriefing(ctx);
+    else if (this.mode === 'cut') this._drawCut(ctx);
     else if (this.mode === 'mystery') this._drawMystery(ctx);
     else if (this.mode === 'journal') this._drawJournal(ctx);
     else if (this.mode === 'result') this._drawResult(ctx);
     else if (this.mode === 'credits') this._drawCredits(ctx);
+    else if (this.mode === 'pac') this._drawPac(ctx);
+    else if (this.mode === 'pong') this._drawPong(ctx);
+    else if (this.mode === 'club') this._drawClub(ctx);
+    else if (this.mode === 'sentinel') this._drawSentinel(ctx);
+    else if (this.mode === 'grammy') this._drawGrammy(ctx);
+    else if (this.mode === 'bribe') this._drawBribe(ctx);
     else this._drawFight(ctx);
   }
 
@@ -304,8 +476,9 @@ export class Game {
     ctx.fillRect(0, 80, CANVAS_W, 240);
     drawPixelText(ctx, "FACE INVADA'S", CANVAS_W / 2, 100, 4, '#ff4ad2', 'center');
     drawPixelText(ctx, '5 DAYS A STRANGER', CANVAS_W / 2, 150, 4, '#ffe566', 'center');
-    drawPixelText(ctx, GAME_TITLE, CANVAS_W / 2, 210, 2, '#3df0ff', 'center');
-    drawPixelText(ctx, GAME_SUBTITLE, CANVAS_W / 2, 250, 2, '#e878ff', 'center');
+    drawPixelText(ctx, GAME_TITLE, CANVAS_W / 2, 200, 2, '#3df0ff', 'center');
+    drawPixelText(ctx, MISSION, CANVAS_W / 2, 234, 2, '#ffe566', 'center');
+    drawPixelText(ctx, GAME_SUBTITLE, CANVAS_W / 2, 268, 2, '#e878ff', 'center');
     drawFighter(ctx, 'face', 640, 540, 1, { t: this.time, punch: Math.max(0, Math.sin(this.time * 0.08)), blade: 0.35 }, 4.8);
     if (Math.sin(this.time * 0.12) > -0.2) {
       drawPixelText(ctx, 'PRESS START', CANVAS_W / 2, 580, 3, '#ffffff', 'center');
@@ -342,18 +515,19 @@ export class Game {
       drawFighter(ctx, who, npc.x + npc.w / 2, npc.y + npc.h - 4, 1, { t: this.time }, 2.1);
     }
     const px = m.px ?? 260;
-    drawFighter(ctx, 'face', px, 518, m.facing || 1, {
+    const py = m.py || 0;
+    const grow = m.grown ? 1.55 : 1;
+    drawFighter(ctx, 'face', px, 518 + py, m.facing || 1, {
       t: this.time,
       walk: this.facePose.walk || 0,
       blade: 0.25,
-    }, 2.6);
+    }, 2.6 * grow);
 
-    ctx.fillStyle = 'rgba(6,4,14,0.92)';
-    ctx.fillRect(0, 0, CANVAS_W, 118);
-    drawPixelText(ctx, `NIGHT ${day.day}  ${day.title}`, 16, 8, 2, '#ffe566');
-    drawPixelText(ctx, `${room.name}   ${m.verb.toUpperCase()}`, 16, 36, 2, '#3df0ff');
-    this._wrap(ctx, m.log, 16, 62, 590, 1, '#ffffff');
-    if (canFight(m)) drawPixelText(ctx, 'START FIGHT', 400, 36, 2, '#ff4ad2');
+    drawClueBanner(ctx, m.banner || m.log, this.time);
+    ctx.fillStyle = 'rgba(6,4,14,0.88)';
+    ctx.fillRect(0, 84, CANVAS_W, 36);
+    drawPixelText(ctx, `NIGHT ${day.day}  ${day.title}  ${room.name}  ${m.verb.toUpperCase()}`, 16, 92, 2, '#3df0ff');
+    if (canFight(m)) drawPixelText(ctx, 'START FIGHT', 980, 92, 2, '#ff4ad2');
 
     drawPixelText(ctx, 'BAG', INV_X - 50, INV_Y + 8, 1, '#888888');
     for (let i = 0; i < 5; i++) {
@@ -477,7 +651,7 @@ export class Game {
       drawPixelText(ctx, `SCORE ${st.score}`, CANVAS_W / 2, 500, 2, '#fff', 'center');
       drawPixelText(ctx, `MAX COMBO ${st.maxCombo}   PERFECTS ${st.perfects}`, CANVAS_W / 2, 534, 1, '#ddd', 'center');
     }
-    const hint = win ? (this.mystery.day >= 5 ? 'START FOR CREDITS' : 'START FOR NIGHT ' + (this.mystery.day + 1)) : 'START TO RETRY FIGHT';
+    const hint = win ? 'START FOR THE NEXT BIT' : 'START TO RETRY FIGHT';
     drawPixelText(ctx, hint, CANVAS_W / 2, 620, 2, '#fff4c2', 'center');
   }
 
@@ -485,11 +659,144 @@ export class Game {
     drawNeonCity(ctx, CANVAS_W, CANVAS_H, this.time);
     ctx.fillStyle = 'rgba(0,0,0,0.7)';
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-    drawPixelText(ctx, '5 DAYS A STRANGER', CANVAS_W / 2, 120, 4, '#ffe566', 'center');
-    drawPixelText(ctx, 'THE NEON ARMS IS QUIET', CANVAS_W / 2, 190, 2, '#3df0ff', 'center');
-    drawPixelText(ctx, 'FACE INVADA WALKS OUT', CANVAS_W / 2, 240, 2, '#ffffff', 'center');
-    drawFighter(ctx, 'face', 640, 520, 1, { t: this.time, blade: 0.5 }, 4);
-    drawPixelText(ctx, 'START TO RETURN', CANVAS_W / 2, 640, 2, '#fff4c2', 'center');
+    drawPixelText(ctx, 'THE BASSLINE WAS YOU', CANVAS_W / 2, 100, 3, '#ffe566', 'center');
+    drawPixelText(ctx, CREDITS_BY, CANVAS_W / 2, 180, 4, '#ff4ad2', 'center');
+    drawPixelText(ctx, 'NO ATARI WAS SUED', CANVAS_W / 2, 250, 2, '#3df0ff', 'center');
+    drawFighter(ctx, 'face', 640, 500, 1, { t: this.time, blade: 0.5 }, 4);
+    drawPixelText(ctx, 'START TO RETURN', CANVAS_W / 2, 620, 2, '#fff4c2', 'center');
+  }
+
+  _drawCut(ctx) {
+    drawNeonCity(ctx, CANVAS_W, CANVAS_H, this.time);
+    const cut = this.cut || { title: '', lines: [''] };
+    ctx.fillStyle = 'rgba(0,0,20,0.72)';
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    if (cut.bike) {
+      ctx.fillStyle = '#111';
+      ctx.fillRect(0, 420, CANVAS_W, 80);
+      drawFighter(ctx, 'face', 200 + (this.time * 8) % 900, 420, 1, { t: this.time, punch: 1 }, 3.2);
+      drawPixelText(ctx, LANA_LINE, CANVAS_W / 2, 200, 6, '#ffe566', 'center');
+    } else if (cut.phone) {
+      drawFighter(ctx, 'face', 400, 520, 1, { t: this.time }, 3.6);
+      ctx.fillStyle = '#fff4c2';
+      ctx.fillRect(520, 140, 680, 160);
+      ctx.fillStyle = '#120c00';
+      ctx.fillRect(528, 148, 664, 144);
+      this._wrap(ctx, KIM_LINE, 548, 168, 620, 2, '#ffe566');
+    } else {
+      drawPixelText(ctx, cut.title || 'CUT', CANVAS_W / 2, 80, 4, '#e878ff', 'center');
+      const line = cut.lines[Math.min(this.cutLine, cut.lines.length - 1)] || '';
+      this._wrap(ctx, line, 80, 220, 1120, 3, '#ffffff');
+      drawFighter(ctx, 'face', 640, 560, 1, { t: this.time, blade: 0.3 }, 3);
+    }
+    drawPixelText(ctx, 'START', CANVAS_W / 2, 640, 2, '#fff4c2', 'center');
+  }
+
+  _drawPac(ctx) {
+    ctx.fillStyle = '#050510';
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    drawPixelText(ctx, 'LEVEL 2  FACE HEAD PAC  SLAY RAVE VAMPIRES', 24, 16, 2, '#ffe566');
+    const a = this.arcade;
+    const ox = 80;
+    const oy = 80;
+    const tw = 72;
+    const th = 58;
+    ctx.fillStyle = '#0a1430';
+    ctx.fillRect(ox, oy, 15 * tw, 9 * th);
+    for (const p of a.pellets) {
+      ctx.fillStyle = p.power ? '#3df0ff' : '#ffe566';
+      ctx.fillRect(ox + p.c * tw + 30, oy + p.r * th + 24, p.power ? 12 : 6, p.power ? 12 : 6);
+    }
+    drawFaceHead(ctx, ox + a.c * tw + 36, oy + a.r * th + 30, 2.2, this.time);
+    for (const v of a.vamps) {
+      drawRaveVampire(ctx, ox + v.c * tw + 36, oy + v.r * th + 30, 2, a.power > 0);
+    }
+    if (a.dead) drawPixelText(ctx, 'RAVE VAMPIRE GOT YOU  START', CANVAS_W / 2, 640, 2, '#ff6a3a', 'center');
+  }
+
+  _drawPong(ctx) {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    drawPixelText(ctx, PONG_DISCLAIMER, CANVAS_W / 2, 24, 2, '#ffe566', 'center');
+    const a = this.arcade;
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(40, a.py, 18, 90);
+    ctx.fillRect(1222, a.cy, 18, 90);
+    ctx.fillRect(a.ball.x, a.ball.y, 14, 14);
+    drawFaceHead(ctx, 49, a.py + 20, 1.4, this.time);
+    drawPixelText(ctx, `${a.ps}  ${a.cs}`, CANVAS_W / 2, 70, 3, '#fff', 'center');
+    if (a.lost) drawPixelText(ctx, 'ATARI WINS  START', CANVAS_W / 2, 640, 2, '#ff6a3a', 'center');
+  }
+
+  _drawClub(ctx) {
+    drawNeonCity(ctx, CANVAS_W, CANVAS_H, this.time);
+    ctx.fillStyle = 'rgba(40,0,40,0.45)';
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    const a = this.arcade;
+    const trick = DJ_TRICKS[Math.min(a.i, DJ_TRICKS.length - 1)];
+    drawPixelText(ctx, 'CLUB SET', CANVAS_W / 2, 30, 3, '#ff4ad2', 'center');
+    drawPixelText(ctx, trick ? trick.name : 'DONE', CANVAS_W / 2, 90, 3, '#ffe566', 'center');
+    drawPixelText(ctx, a.last || 'HIT THE COMBO', CANVAS_W / 2, 150, 2, '#3df0ff', 'center');
+    ctx.fillStyle = '#111';
+    ctx.fillRect(200, 200, 880, 24);
+    ctx.fillStyle = '#e878ff';
+    ctx.fillRect(200, 200, Math.min(880, a.cheer * 8), 24);
+    drawFighter(ctx, 'face', 640, 480, 1, { t: this.time, punch: a.last ? 0.6 : 0 }, 3.4);
+    drawPixelText(ctx, 'Z X C V   CROWD WANTS TRICKS', CANVAS_W / 2, 620, 2, '#fff4c2', 'center');
+  }
+
+  _drawSentinel(ctx) {
+    ctx.fillStyle = '#1a3040';
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    ctx.fillStyle = '#c8b070';
+    ctx.fillRect(0, 500, CANVAS_W, 220);
+    ctx.fillStyle = '#3a2010';
+    ctx.fillRect(1000, 300, 180, 200);
+    const a = this.arcade;
+    drawPixelText(ctx, 'SENTINEL ISLE  COFFEE AND DOUGHNUTS', 24, 20, 2, '#ffe566');
+    if (a.breakShown && !a.won) {
+      drawPixelText(ctx, 'FETCH BREAK: THEY DO NOT WANT YOUR PLAYLIST', 24, 56, 2, '#ff4ad2');
+    }
+    drawPixelText(ctx, `HOLDING ${a.holding || 'NOTHING'}  HUT WANTS BOTH`, 24, 88, 2, '#fff');
+    if (a.coffee) drawPixelText(ctx, 'COFFEE', 120, 460, 2, '#6a4010');
+    if (a.donut) drawPixelText(ctx, 'DONUT', 200, 460, 2, '#e87880');
+    drawFighter(ctx, 'face', a.px, 500 + a.py, 1, { t: this.time }, 2.4);
+    drawPixelText(ctx, 'WALK  JUMP  TAKE/DO TO PICK UP AND DELIVER', 24, 620, 1, '#ddd');
+  }
+
+  _drawGrammy(ctx) {
+    drawNeonCity(ctx, CANVAS_W, CANVAS_H, this.time);
+    const a = this.arcade;
+    drawPixelText(ctx, 'GRAMMY NIGHT  JUMP THE TROPHIES', 24, 20, 2, '#ffe566');
+    drawPixelText(ctx, `GOT ${a.got} / 4`, 24, 56, 2, '#3df0ff');
+    for (const t of a.trophies) {
+      if (t.got) continue;
+      ctx.fillStyle = '#ffe566';
+      ctx.fillRect(t.x - 16, 500 + t.y - 28, 32, 36);
+      drawPixelText(ctx, 'G', t.x - 8, 500 + t.y - 20, 2, '#120c00');
+    }
+    drawFighter(ctx, 'face', a.px, 500 + a.py, 1, { t: this.time, blade: 0.4 }, 2.6);
+  }
+
+  _drawBribe(ctx) {
+    drawNeonCity(ctx, CANVAS_W, CANVAS_H, this.time);
+    const a = this.arcade;
+    drawPixelText(ctx, 'DON TRUMPET  DO NOT TAKE THE CASH', 24, 16, 2, '#ffe566');
+    this._bar(ctx, 20, 50, 400, a.hp, 100, '#3dcc5a', false);
+    this._bar(ctx, 860, 50, 400, a.boss, 120, '#ff4d6a', true);
+    drawFighter(ctx, 'face', a.px, 500 + a.py, 1, { t: this.time }, 2.8);
+    ctx.fillStyle = '#e8a060';
+    ctx.fillRect(a.bossX - 30, 360, 70, 140);
+    ctx.fillStyle = '#f0d080';
+    ctx.fillRect(a.bossX - 20, 330, 50, 40);
+    drawPixelText(ctx, 'DON', a.bossX - 20, 300, 2, '#fff');
+    for (const c of a.cash) {
+      ctx.fillStyle = '#3dcc5a';
+      ctx.fillRect(c.x, c.y, 28, 16);
+      drawPixelText(ctx, 'S', c.x + 4, c.y + 2, 1, '#fff');
+    }
+    if (a.lost) drawPixelText(ctx, 'BRIBED  START TO RETRY', CANVAS_W / 2, 200, 3, '#ff6a3a', 'center');
+    drawPixelText(ctx, 'WALK JUMP PUNCH   CASH HURTS', 24, 620, 2, '#fff4c2');
   }
 
   _wrap(ctx, text, x, y, maxW, scale, color) {

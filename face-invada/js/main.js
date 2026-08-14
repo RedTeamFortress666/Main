@@ -21,10 +21,10 @@ window.FaceInvada = game;
 game.start();
 
 function syncPad(mode) {
-  const mysteryModes = ['title', 'briefing', 'mystery', 'journal', 'credits'];
+  const mysteryModes = ['title', 'briefing', 'mystery', 'journal', 'credits', 'cut', 'sentinel', 'grammy'];
   const mystery = mysteryModes.includes(mode);
   document.body.classList.toggle('mode-mystery', mystery && mode !== 'title');
-  document.body.classList.toggle('mode-fight', mode === 'fight');
+  document.body.classList.toggle('mode-fight', mode === 'fight' || mode === 'club' || mode === 'bribe' || mode === 'pac' || mode === 'pong');
   for (const btn of document.querySelectorAll('[data-mystery][data-fight]')) {
     btn.textContent = mystery ? btn.getAttribute('data-mystery') : btn.getAttribute('data-fight');
   }
@@ -74,15 +74,7 @@ function canvasToGame(e) {
 canvas.addEventListener('pointerdown', (e) => {
   game.audio.ensure();
   const pt = canvasToGame(e);
-  if (game.mode === 'mystery') {
-    game.tapCanvas(pt.x, pt.y);
-    return;
-  }
-  if (game.mode === 'title' || game.mode === 'briefing' || game.mode === 'journal'
-      || game.mode === 'result' || game.mode === 'credits') {
-    game.input.setVirtual('Enter', true);
-    setTimeout(() => game.input.setVirtual('Enter', false), 80);
-  }
+  game.tapCanvas(pt.x, pt.y);
 });
 
 if ('serviceWorker' in navigator && !['localhost', '127.0.0.1'].includes(location.hostname)) {

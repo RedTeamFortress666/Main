@@ -91,4 +91,27 @@ export class AudioBus {
     if (b === 2) this.snare();
     if (b === 0) this.tone(55, 0.2, 'sine', 0.18, 40);
   }
+
+  dnbTick(frame) {
+    const step = Math.floor(frame / 6) % 16;
+    if (this._dnbStep === step) return;
+    this._dnbStep = step;
+    if (step === 0 || step === 3 || step === 8 || step === 10) this.kick();
+    if (step === 4 || step === 12) this.snare();
+    if (step % 2 === 0) this.hat();
+    if (step === 0 || step === 6 || step === 11) this.tone(48 + (step % 3) * 7, 0.18, 'sawtooth', 0.2, 36);
+    if (step === 8) this.tone(70, 0.22, 'square', 0.12, 40);
+  }
+
+  wubz() { this.tone(55, 0.35, 'sawtooth', 0.4, 90); this.tone(40, 0.4, 'sine', 0.25, 30); }
+  glitch() { this.noise(0.08, 0.4, 2000); this.tone(1400, 0.05, 'square', 0.2, 200); }
+  scratch() { this.noise(0.12, 0.35, 800); this.tone(320, 0.1, 'sawtooth', 0.22, 80); }
+  sample(name) {
+    if (name.includes('WUBZ')) this.wubz();
+    else if (name.includes('GLIT')) this.glitch();
+    else if (name.includes('SCRATCH')) this.scratch();
+    else if (name.includes('SIC')) this.vocal();
+    else if (name.includes('HIPPY')) this.tone(90, 0.2, 'square', 0.3, 50);
+    else this.bassDrop();
+  }
 }
