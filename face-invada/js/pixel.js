@@ -158,9 +158,9 @@ export function paintFaceInvada(ctx, pose = {}) {
   rect(ctx, cx - 12, foot - 51, 24, 28, jacket);
   rect(ctx, cx - 10, foot - 49, 8, 24, jacketHi);
   rect(ctx, cx - 4, foot - 48, 10, 22, shirt);
-  rect(ctx, cx - 7, foot - 51, 16, 8, scarf);
-  rect(ctx, cx - 3, foot - 46, 7, 16, scarf);
-  rect(ctx, cx + 2, foot - 44, 3, 12, '#7ab0d4');
+  rect(ctx, cx - 8, foot - 52, 18, 7, scarf);
+  rect(ctx, cx + 4, foot - 48, 5, 14, scarf);
+  rect(ctx, cx + 5, foot - 46, 3, 12, '#7ab0d4');
 
   const bx = cx - 18 - Math.round(blade * 8);
   rect(ctx, bx, foot - 48, 8, 16, outline);
@@ -193,12 +193,13 @@ export function paintFaceInvada(ctx, pose = {}) {
   rect(ctx, hx - 10, hy - 4, 20, 8, cap);
   rect(ctx, hx - 8, hy - 7, 16, 4, capHi);
   rect(ctx, hx - 11, hy + 2, 22, 3, cap);
-  rect(ctx, hx - 9, hy + 4, 18, 6, rim);
-  rect(ctx, hx - 8, hy + 5, 7, 4, lens);
-  rect(ctx, hx + 1, hy + 5, 7, 4, lens);
-  rect(ctx, hx - 1, hy + 6, 2, 2, rim);
-  rect(ctx, hx - 7, hy + 6, 2, 1, '#3a3a44');
-  rect(ctx, hx + 4, hy + 6, 2, 1, '#3a3a44');
+  rect(ctx, hx - 8, hy + 4, 7, 7, rim);
+  rect(ctx, hx + 1, hy + 4, 7, 7, rim);
+  rect(ctx, hx - 1, hy + 6, 2, 3, rim);
+  rect(ctx, hx - 7, hy + 5, 5, 5, lens);
+  rect(ctx, hx + 2, hy + 5, 5, 5, lens);
+  rect(ctx, hx - 6, hy + 6, 2, 2, '#2a2a30');
+  rect(ctx, hx + 3, hy + 6, 2, 2, '#2a2a30');
   rect(ctx, hx - 8, hy, 4, 3, hair);
   rect(ctx, hx + 5, hy, 4, 3, hair);
   if ((t | 0) % 50 < 3) {
