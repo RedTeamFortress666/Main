@@ -537,30 +537,23 @@ export function drawHUD(ctx, game) {
   ctx.save();
   // bars
   const barW = 430;
-  const barH = 22;
-  const y = 28;
-  ctx.fillStyle = 'rgba(0,0,0,0.55)';
-  roundRect(ctx, 40, y - 8, barW + 16, 52, 8); ctx.fill();
-  roundRect(ctx, CANVAS_W - 56 - barW, y - 8, barW + 16, 52, 8); ctx.fill();
+  const barH = 26;
+  const y = 26;
+  ctx.fillStyle = 'rgba(0,0,0,0.62)';
+  roundRect(ctx, 40, y - 8, barW + 16, 56, 8); ctx.fill();
+  roundRect(ctx, CANVAS_W - 56 - barW, y - 8, barW + 16, 56, 8); ctx.fill();
 
   const drawBar = (x, hp, color, flip) => {
-    ctx.fillStyle = '#1a1a1a';
-    roundRect(ctx, x, y, barW, barH, 4); ctx.fill();
-    const w = Math.max(0, (hp / MAX_HP) * barW);
-    ctx.save();
-    roundRect(ctx, x, y, barW, barH, 4);
-    ctx.clip();
-    const g = ctx.createLinearGradient(x, y, x, y + barH);
-    g.addColorStop(0, '#fff3c4');
-    g.addColorStop(0.35, color);
-    g.addColorStop(1, color);
-    ctx.fillStyle = hp < MAX_HP * 0.22 ? '#ff4d4d' : g;
+    const cur = Number.isFinite(hp) ? hp : MAX_HP;
+    ctx.fillStyle = '#0d0d0d';
+    ctx.fillRect(x, y, barW, barH);
+    const w = Math.max(0, Math.min(barW, (cur / MAX_HP) * barW));
+    ctx.fillStyle = cur < MAX_HP * 0.22 ? '#ff3b3b' : color;
     if (flip) ctx.fillRect(x + barW - w, y, w, barH);
     else ctx.fillRect(x, y, w, barH);
-    ctx.restore();
-    ctx.strokeStyle = '#f3e27a';
-    ctx.lineWidth = 2;
-    roundRect(ctx, x, y, barW, barH, 4); ctx.stroke();
+    ctx.strokeStyle = '#ffe566';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(x + 0.5, y + 0.5, barW - 1, barH - 1);
   };
   drawBar(48, p1.hp, '#e8c547', false);
   drawBar(CANVAS_W - 48 - barW, p2.hp, '#c0392b', true);

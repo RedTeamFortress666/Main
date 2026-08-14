@@ -364,6 +364,12 @@ export class Fighter {
         this.vx *= FRICTION;
         this.state = 'idle';
       }
+      const o = world.opponent;
+      if (o && Math.abs(this.y - o.y) < 90) {
+        const min = 100;
+        if (this.vx < 0 && this.x > o.x && this.x - o.x < min) this.vx = 0;
+        if (this.vx > 0 && this.x < o.x && o.x - this.x < min) this.vx = 0;
+      }
     }
 
     this._physics(world);
@@ -389,7 +395,7 @@ export class Fighter {
 
   static separate(a, b) {
     const pad = 46;
-    const minDist = 92;
+    const minDist = 100;
     if (Math.abs(a.y - b.y) > 96) return;
     const left = a.x <= b.x ? a : b;
     const right = left === a ? b : a;
