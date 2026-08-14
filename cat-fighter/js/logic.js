@@ -1,5 +1,5 @@
 /**
- * Cat Fighter: Tuna vs Blue — pure combat/rules helpers.
+ * Yoko's Tuna Brawl — pure combat/rules helpers.
  * No DOM. Safe to unit-test from Vitest.
  *
  * Adding a special later:
@@ -8,7 +8,9 @@
  *   3. Map it on the character in CHARACTERS[id].specials
  */
 
-export const CANVAS_W = 1280;
+export const GAME_TITLE = "YOKO'S TUNA BRAWL";
+export const GAME_TITLE_SHORT = 'Tuna Brawl';
+export const GAME_SUBTITLE = 'Queen Yoko vs Tsar Morlan';
 export const CANVAS_H = 720;
 export const GROUND_Y = 604;
 export const ROUND_TIME = 99;

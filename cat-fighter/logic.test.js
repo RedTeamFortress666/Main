@@ -19,7 +19,14 @@ import {
   MAX_MILKS_PER_ROUND,
   ATTACKS,
   CHARACTERS,
+  GAME_TITLE,
 } from './js/logic.js';
+
+describe('title', () => {
+  it('is Yoko\'s Tuna Brawl', () => {
+    expect(GAME_TITLE).toBe("YOKO'S TUNA BRAWL");
+  });
+});
 
 describe('numpadDir', () => {
   it('treats right as forward when facing right', () => {

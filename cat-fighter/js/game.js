@@ -1,5 +1,5 @@
 /**
- * Cat Fighter: Tuna vs Blue — screens, rounds, Stella milk, Joye tuna.
+ * Yoko's Tuna Brawl — screens, rounds, Stella milk, Joye tuna.
  *
  * Flow: title → menu → intro → fight ⇄ timeout/revive → roundEnd → matchEnd
  * Adding a stage: drawStage() in render.js already swaps palace / Russia /
@@ -9,6 +9,7 @@ import {
   CANVAS_W, CANVAS_H, GROUND_Y, ROUND_TIME,
   CHARACTERS, MILK_HEAL, TUNA_HEAL, canMilkTimeout, canTunaRevive,
   matchOver, flavorForWin, isBlocked, gainMeter, contactVoice,
+  GAME_TITLE, GAME_SUBTITLE,
 } from './logic.js';
 import { Input } from './input.js';
 import { AudioBus } from './audio.js';
@@ -158,17 +159,21 @@ export class Game {
     if (this.mode === 'menu') {
       if (this.menuCooldown > 0) this.menuCooldown -= 1;
       if (this.input.just('ArrowUp') || this.input.just('KeyW')) {
-        this.menuIndex = (this.menuIndex + 2) % 3;
+        this.menuIndex = (this.menuIndex + 3) % 4;
         this.audio.ui();
       }
       if (this.input.just('ArrowDown') || this.input.just('KeyS')) {
-        this.menuIndex = (this.menuIndex + 1) % 3;
+        this.menuIndex = (this.menuIndex + 1) % 4;
         this.audio.ui();
       }
       if (this.menuCooldown <= 0 && (this.input.just('Enter') || this.input.just('Space') || this.input.just('KeyZ'))) {
         this.audio.meow(true);
-        if (this.menuIndex === 2) {
+        if (this.menuIndex === 3) {
           this.mode = 'title';
+          return;
+        }
+        if (this.menuIndex === 2) {
+          window.location.href = './downloads.html';
           return;
         }
         this.vsCpu = this.menuIndex === 0;
@@ -605,14 +610,14 @@ export class Game {
     drawPortraitCard(ctx, this.assets.images.morlan, CANVAS_W - 360, 160, 280, 360, 'TSAR MORLAN', CHARACTERS.morlan.title);
 
     ctx.fillStyle = '#f6e27a';
-    ctx.font = 'bold 70px Impact, sans-serif';
+    ctx.font = 'bold 46px Impact, sans-serif';
     ctx.textAlign = 'center';
     ctx.shadowColor = '#000';
     ctx.shadowBlur = 12;
-    ctx.fillText('CAT FIGHTER', CANVAS_W / 2, 92);
-    ctx.font = 'bold 32px Impact, sans-serif';
+    ctx.fillText(GAME_TITLE, CANVAS_W / 2, 88);
+    ctx.font = 'bold 26px Impact, sans-serif';
     ctx.fillStyle = '#fff';
-    ctx.fillText('TUNA  vs  BLUE', CANVAS_W / 2, 132);
+    ctx.fillText(GAME_SUBTITLE, CANVAS_W / 2, 126);
     ctx.shadowBlur = 0;
 
     ctx.fillStyle = '#ddd';
@@ -642,6 +647,7 @@ export class Game {
     const items = [
       'VS CPU  —  challenge the Red Tsar',
       'VS PLAYER  —  two cats, one keyboard',
+      'DOWNLOADS  —  Android APK, PC zip, iPhone',
       'BACK',
     ];
     items.forEach((label, i) => {

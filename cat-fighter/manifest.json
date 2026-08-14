@@ -1,6 +1,6 @@
 {
-  "name": "Cat Fighter: Tuna vs Blue",
-  "short_name": "Cat Fighter",
+  "name": "Yoko's Tuna Brawl",
+  "short_name": "Tuna Brawl",
   "description": "Street Fighter-style cat brawler. Queen Yoko vs Tsar Morlan.",
   "start_url": "./index.html",
   "display": "fullscreen",

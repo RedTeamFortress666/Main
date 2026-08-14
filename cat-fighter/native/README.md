@@ -17,10 +17,9 @@ chmod +x native/build-android.sh
 ./native/build-android.sh
 ```
 
-The debug APK is written to `native/CatFighter-debug.apk` and
-`native/android/app/build/outputs/apk/debug/app-debug.apk`.
+The debug APK is written to `native/YokosTunaBrawl.apk` and `downloads/YokosTunaBrawl.apk`.
 
-Sideload with `adb install -r native/CatFighter-debug.apk`.
+Sideload with `adb install -r downloads/YokosTunaBrawl.apk`.
 
 ## iPhone
 Apple will not sign an IPA from Linux. Two supported options:

@@ -1,7 +1,8 @@
-const CACHE = 'cat-fighter-v2';
+const CACHE = 'yokos-tuna-brawl-v1';
 const CORE = [
   './',
   './index.html',
+  './downloads.html',
   './styles.css',
   './manifest.json',
   './js/main.js',
