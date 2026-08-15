@@ -343,13 +343,15 @@ export function stepNight(s, input) {
     return moved;
   });
 
-  if (input.take) {
-    const w = next.wilds.find((c) => !c.caught && Math.abs(next.px - c.x) < 52
-      && Math.abs(FLOOR_Y + next.py - 20 - c.y) < 64);
-    if (w && (w.dazed > 0 || Math.abs(next.vy) < 2)) {
-      w.caught = true;
-      grantCatch(next, w.id);
-    }
+  const catchable = next.wilds.find((c) => !c.caught
+    && Math.abs(next.px - c.x) < 80
+    && Math.abs(FLOOR_Y + next.py - 20 - c.y) < 80);
+  if (catchable && catchable.dazed > 0 && (input.take || input.use || Math.abs(next.vy) < 1.6)) {
+    catchable.caught = true;
+    grantCatch(next, catchable.id);
+  } else if (input.take && catchable) {
+    catchable.dazed = 90;
+    next.banner = `${beatName(catchable.id)} FLINCHES. TAKE OR WALK INTO IT.`;
   }
 
   next.bats = next.bats.map((b) => {
@@ -489,8 +491,14 @@ export function talkNearest(s) {
 }
 
 export function useSelected(s) {
+  const dazed = s.wilds.find((c) => !c.caught && c.dazed > 0 && Math.abs(s.px - c.x) < 90);
+  if (dazed) {
+    dazed.caught = true;
+    grantCatch(s, dazed.id);
+    return s;
+  }
   if (!s.selected) {
-    s.banner = 'TAP A BAG ITEM FIRST.';
+    s.banner = 'TAP A BAG ITEM FIRST. OR DAZE A WILD BEAT AND USE THE TIN.';
     return s;
   }
   if (s.selected === 'mint') {
