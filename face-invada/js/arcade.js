@@ -252,8 +252,8 @@ export function emptySentinelState() {
     party: [],
     banner: 'SAFARI HUT. CATCH BREWCRAB AND GLAZEMOTH IN THE TALL GRASS.',
     wilds: [
-      { id: 'coffee', beat: 'brewcrab', x: 420, y: 0, vx: 2.4, dazed: 0 },
-      { id: 'donut', beat: 'glazemoth', x: 720, y: -50, vx: -2.2, hop: 40, baseY: -50, dazed: 0 },
+      { id: 'coffee', beat: 'brewcrab', x: 420, y: 0, vx: 1.1, dazed: 0 },
+      { id: 'donut', beat: 'glazemoth', x: 720, y: -50, vx: -1.0, hop: 28, baseY: -50, dazed: 0 },
     ],
   };
 }
@@ -277,12 +277,14 @@ export function stepSentinel(state, dir, jump, take) {
 
   next.wilds = next.wilds.map((w) => {
     if (w.caught) return w;
-    let x = w.x + (w.vx || 0);
-    let vx = w.vx || 0;
-    if (x < 300 || x > 940) vx *= -1;
+    const stunned = (w.dazed || 0) > 0;
+    let x = stunned ? w.x : w.x + (w.vx || 0);
+    let vx = stunned ? 0 : (w.vx || 0);
+    if (!stunned && (x < 300 || x > 940)) vx *= -1;
     let y = w.y;
-    if (w.hop) y = (w.baseY || 0) + Math.sin(x * 0.05) * w.hop;
+    if (w.hop && !stunned) y = (w.baseY || 0) + Math.sin(x * 0.05) * w.hop;
     const dazed = Math.max(0, (w.dazed || 0) - 1);
+    if (stunned && dazed === 0) vx = w.id === 'donut' ? -1 : 1.1;
     const stomp = Math.abs(next.px - x) < 44 && Math.abs(next.py - y) < 46 && next.vy > 1;
     if (stomp) {
       next.vy = -8;
@@ -323,10 +325,10 @@ export function emptyGrammyState() {
     vy: 0,
     got: 0,
     trophies: [
-      { x: 360, y: -80, vx: 2.2, got: false },
-      { x: 560, y: -40, vx: -2, got: false },
-      { x: 780, y: -100, vx: 1.8, got: false },
-      { x: 1000, y: -50, vx: -2.4, got: false },
+      { x: 360, y: -80, vx: 1.2, got: false },
+      { x: 560, y: -40, vx: -1.1, got: false },
+      { x: 780, y: -100, vx: 1.0, got: false },
+      { x: 1000, y: -50, vx: -1.3, got: false },
     ],
     won: false,
   };

@@ -162,11 +162,11 @@ export function emptyNightState() {
       { x: 3500, y: 320, vx: 2.1 },
     ],
     wilds: [
-      { id: 'mintmite', x: 340, y: 480, vx: 1.6, dazed: 0 },
-      { id: 'spicegrub', x: 920, y: 480, vx: -1.5, dazed: 0 },
-      { id: 'glowbat', x: 1960, y: 280, vx: 2.1, dazed: 0 },
-      { id: 'bassling', x: 2680, y: 300, vx: -1.8, dazed: 0 },
-      { id: 'mintmite', x: 3180, y: 480, vx: 1.3, dazed: 0 },
+      { id: 'mintmite', x: 340, y: 480, vx: 0.7, dazed: 0 },
+      { id: 'spicegrub', x: 920, y: 480, vx: -0.65, dazed: 0 },
+      { id: 'glowbat', x: 1960, y: 280, vx: 0.9, dazed: 0 },
+      { id: 'bassling', x: 2680, y: 300, vx: -0.8, dazed: 0 },
+      { id: 'mintmite', x: 3180, y: 480, vx: 0.6, dazed: 0 },
     ],
     party: [],
     encounter: null,
@@ -330,15 +330,18 @@ export function stepNight(s, input) {
 
   next.wilds = next.wilds.map((w) => {
     if (w.caught) return w;
-    const moved = roam(w, 80, NIGHT_W - 80);
+    const stunned = (w.dazed || 0) > 0;
+    const moved = stunned ? { ...w, vx: 0 } : roam(w, 80, NIGHT_W - 80);
     moved.dazed = Math.max(0, (w.dazed || 0) - 1);
-    const stomp = Math.abs(next.px - moved.x) < 40
-      && Math.abs(FLOOR_Y + next.py - moved.y) < 50
-      && next.vy > 2;
+    if (stunned && moved.dazed === 0) moved.vx = w.id === 'spicegrub' || w.id === 'bassling' ? -0.7 : 0.7;
+    const stomp = Math.abs(next.px - moved.x) < 64
+      && Math.abs(FLOOR_Y + next.py - moved.y) < 70
+      && next.vy > 1;
     if (stomp) {
-      next.vy = -10;
-      moved.dazed = 90;
-      next.banner = `${beatName(moved.id)} IS DAZED. TAKE TO TIN IT.`;
+      next.vy = -9;
+      moved.dazed = 140;
+      moved.vx = 0;
+      next.banner = `${beatName(moved.id)} IS DAZED. WALK INTO IT OR TAKE.`;
     }
     return moved;
   });
