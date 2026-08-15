@@ -28,11 +28,11 @@ dist-ssr
 *.sw?
 
 # AndR36oid / LineageOS 18.1 trees (nested clones; do not vendor into this repo)
-device/
-kernel/
-hardware/
-docker_build/
-.repo/
+/device/
+/kernel/
+/hardware/
+/docker_build/
+/.repo/
 
 # User-supplied ROM prebuilts (drop APKs locally; do not commit binaries)
 device_r36s_polybius/prebuilts/**/*.apk
