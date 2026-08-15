@@ -11,13 +11,9 @@ on boot
     chown system system /dev/ttyACM0
     chown system system /dev/ttyUSB0
 
-on device-added-/dev/ttyACM0
-    chmod 0660 /dev/ttyACM0
-    chown system system /dev/ttyACM0
-
-on device-added-/dev/ttyUSB0
-    chmod 0660 /dev/ttyUSB0
-    chown system system /dev/ttyUSB0
+# Hotplug nodes are 0660 system system via ueventd (ttyACM* / ttyUSB*).
+# Do not use device-added-/dev/... triggers — Android 11 host_init_verifier
+# rejects '/' in those action names.
 
 # Starts only if you install a native binary at /system/bin/polybius_bridge
 # (recommended) or wrap scripts/polybius_bridge.py with Termux / a python
