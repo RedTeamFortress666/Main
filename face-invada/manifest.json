@@ -1,0 +1,14 @@
+{
+  "name": "FACE INVADA Curiously Strong All Night Long",
+  "short_name": "FACE INVADA",
+  "description": "Android night-out: jump, grab, combine, get into the club. Then the bassline campaign.",
+  "start_url": "./index.html",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#070614",
+  "theme_color": "#070614",
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

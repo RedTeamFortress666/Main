@@ -1,0 +1,106 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  background: #070614;
+  overflow: hidden;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  color: #e878ff;
+}
+
+#wrap {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform-origin: center center;
+  box-shadow: 0 0 0 4px #ff4ad2, 0 0 40px #3df0ff88;
+  background: #000;
+}
+
+#game {
+  display: block;
+  width: 1280px;
+  height: 720px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.touch-ui {
+  display: block;
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.touch-cluster {
+  position: absolute;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.touch-cluster.left { left: max(12px, env(safe-area-inset-left)); }
+.touch-cluster.right {
+  right: max(12px, env(safe-area-inset-right));
+  width: 250px;
+  align-items: flex-end;
+}
+
+.dpad {
+  display: grid;
+  grid-template-columns: 84px 84px 84px;
+  grid-template-rows: 84px 84px;
+  gap: 8px;
+}
+.dpad-up { grid-column: 2; grid-row: 1; }
+.dpad-left { grid-column: 1; grid-row: 2; }
+.dpad-down { grid-column: 2; grid-row: 2; }
+.dpad-right { grid-column: 3; grid-row: 2; }
+
+.touch-row { display: flex; gap: 10px; }
+
+.tbtn {
+  width: 84px;
+  height: 84px;
+  border-radius: 18px;
+  border: 2px solid #e878ff;
+  background: rgba(8, 6, 16, 0.78);
+  color: #f4d0ff;
+  font: bold 14px Impact, sans-serif;
+  letter-spacing: 0.5px;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tbtn:active, .tbtn.held { background: rgba(232, 120, 255, 0.45); }
+.tbtn.punch { border-color: #ffe566; color: #ffe566; }
+.tbtn.kick { border-color: #ff6a3a; color: #ff6a3a; }
+.tbtn.blade { border-color: #c0c8d0; color: #c0c8d0; }
+.tbtn.bass { border-color: #b44cff; color: #e878ff; }
+.tbtn.start { width: 162px; height: 52px; font-size: 16px; }
+
+body.mode-mystery .tbtn.punch { border-color: #3df0ff; color: #3df0ff; }
+body.mode-mystery .tbtn.kick { border-color: #ffe566; color: #ffe566; }
+body.mode-mystery .tbtn.blade { border-color: #ff6a3a; color: #ff6a3a; }
+body.mode-mystery .tbtn.bass { border-color: #e878ff; color: #e878ff; }
+
+body.mode-mystery .tbtn,
+body.mode-briefing .tbtn,
+body.mode-journal .tbtn {
+  width: 64px;
+  height: 64px;
+  font-size: 12px;
+}
+body.mode-mystery .tbtn.start,
+body.mode-briefing .tbtn.start,
+body.mode-journal .tbtn.start { width: 140px; height: 46px; }
+body.mode-mystery .dpad {
+  grid-template-columns: 64px 64px 64px;
+  grid-template-rows: 64px 64px;
+}

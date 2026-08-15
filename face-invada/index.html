@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#070614" />
+  <title>FACE INVADA — Curiously Strong All Night Long</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="assets/icon-192.png" />
+  <link rel="apple-touch-icon" href="assets/icon-192.png" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="wrap">
+    <canvas id="game" width="1280" height="720" aria-label="FACE INVADA Curiously Strong All Night Long">
+      Canvas required.
+    </canvas>
+  </div>
+  <div id="touch-ui" class="touch-ui show" aria-hidden="false">
+    <div class="touch-cluster left">
+      <div class="dpad">
+        <button type="button" class="tbtn dpad-up" data-code="KeyW" data-mystery="JUMP" data-fight="UP">JUMP</button>
+        <button type="button" class="tbtn dpad-left" data-code="KeyA" data-mystery="WALK" data-fight="LEFT">WALK</button>
+        <button type="button" class="tbtn dpad-down" data-code="KeyS" data-mystery="DO" data-fight="DOWN">DO</button>
+        <button type="button" class="tbtn dpad-right" data-code="KeyD" data-mystery="WALK" data-fight="RIGHT">WALK</button>
+      </div>
+    </div>
+    <div class="touch-cluster right">
+      <div class="touch-row">
+        <button type="button" class="tbtn punch" data-code="KeyZ" data-mystery="LOOK" data-fight="PUNCH">LOOK</button>
+        <button type="button" class="tbtn kick" data-code="KeyX" data-mystery="TALK" data-fight="KICK">TALK</button>
+      </div>
+      <div class="touch-row">
+        <button type="button" class="tbtn blade" data-code="KeyC" data-mystery="TAKE" data-fight="BLADE">TAKE</button>
+        <button type="button" class="tbtn bass" data-code="KeyV" data-mystery="USE" data-fight="BASS">USE</button>
+      </div>
+      <div class="touch-row">
+        <button type="button" class="tbtn start" data-code="Enter">START</button>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
