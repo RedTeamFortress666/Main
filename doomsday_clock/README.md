@@ -19,4 +19,4 @@ flutter test
 flutter build apk --release
 ```
 
-APK: `polybius/dist/doomsday_clock/doomsday-clock-2.0.0-android-arm64.apk`
+APK: drop the rebuilt 2.0.2+ binary at `device_r36s_polybius/prebuilts/DoomsdayClock/DoomsdayClock.apk`.
