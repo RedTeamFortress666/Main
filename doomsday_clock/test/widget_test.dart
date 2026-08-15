@@ -11,7 +11,7 @@ import 'package:doomsday_clock/theme/noir_theme.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('home desk shows three cover apps, not vault login', (tester) async {
+  testWidgets('home desk shows four cover apps, not vault login', (tester) async {
     SharedPreferences.setMockInitialValues({});
     await tester.pumpWidget(const DoomsdayClockApp());
     await tester.pump();
