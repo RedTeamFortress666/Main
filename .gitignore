@@ -33,3 +33,6 @@ kernel/
 hardware/
 docker_build/
 .repo/
+
+# User-supplied ROM prebuilts (drop APKs locally; do not commit binaries)
+device_r36s_polybius/prebuilts/**/*.apk

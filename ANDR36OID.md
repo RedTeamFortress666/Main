@@ -161,6 +161,21 @@ kernel/gameconsole/r36s/
 `device/gameconsole/common/device.mk`. The R36S tree is a thin product overlay
 on that common RK3326 board.
 
+## Specialized product: `lineage_r36s_polybius`
+
+A second lunch target lives in `device_r36s_polybius/`. It keeps stock
+AndR36oid hardware bring-up and adds Polybius + vault + mesh/privacy policy.
+
+```bash
+./device_r36s_polybius/apply.sh
+# then, after a full repo sync:
+source build/envsetup.sh
+lunch lineage_r36s_polybius-userdebug
+```
+
+See `device_r36s_polybius/README.md` for APK drop-in paths and what is in/out
+of the image. Do not run `repo sync` until you ask for the full tree.
+
 ## Next steps to actually build an image
 
 1. Confirm you want the full ~50GB `repo sync` (and ~200GB build disk).

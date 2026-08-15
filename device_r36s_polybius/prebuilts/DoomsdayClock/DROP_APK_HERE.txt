@@ -1,0 +1,13 @@
+Copy the Doomsday Clock Calendar Vault APK here as:
+
+  DoomsdayClock.apk
+
+Then set the real applicationId in
+  permissions/privapp-permissions-polybius.xml
+(default placeholder: com.doomsday.clock).
+
+The vault should:
+  - Declare android.intent.category.HOME + DEFAULT (it becomes the launcher)
+  - Launch com.polybius.polybius/.MainActivity from the covert entry
+  - Optionally embed/store the Polybius APK in its own assets if you want
+    a single visible app; the ROM still preinstalls both

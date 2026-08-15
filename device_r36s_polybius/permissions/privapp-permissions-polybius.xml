@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<permissions>
+    <!-- Update package= if the vault applicationId differs. -->
+    <privapp-permissions package="com.doomsday.clock">
+        <permission name="android.permission.WRITE_SECURE_SETTINGS"/>
+        <permission name="android.permission.CHANGE_COMPONENT_ENABLED_STATE"/>
+        <permission name="android.permission.INTERACT_ACROSS_USERS"/>
+        <permission name="android.permission.START_ACTIVITIES_FROM_BACKGROUND"/>
+    </privapp-permissions>
+
+    <privapp-permissions package="com.polybius.polybius">
+        <permission name="android.permission.BLUETOOTH_CONNECT"/>
+        <permission name="android.permission.BLUETOOTH_SCAN"/>
+        <permission name="android.permission.BLUETOOTH_ADVERTISE"/>
+        <permission name="android.permission.ACCESS_FINE_LOCATION"/>
+        <permission name="android.permission.NEARBY_WIFI_DEVICES"/>
+        <permission name="android.permission.CHANGE_WIFI_STATE"/>
+        <permission name="android.permission.CHANGE_WIFI_MULTICAST_STATE"/>
+        <permission name="android.permission.FOREGROUND_SERVICE"/>
+    </privapp-permissions>
+
+    <privapp-permissions package="org.torproject.android">
+        <permission name="android.permission.BIND_VPN_SERVICE"/>
+    </privapp-permissions>
+
+    <privapp-permissions package="com.wireguard.android">
+        <permission name="android.permission.BIND_VPN_SERVICE"/>
+    </privapp-permissions>
+</permissions>

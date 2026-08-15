@@ -1,0 +1,10 @@
+Copy your release APK here as:
+
+  Polybius.apk
+
+Expected applicationId: com.polybius.polybius
+
+Recommended ROM flavor of the APK:
+  - Remove android.intent.category.LAUNCHER from MainActivity
+  - Keep the activity exported so the vault can start it
+  - Add BLE / Wi-Fi Direct / USB Host permissions when mesh lands
