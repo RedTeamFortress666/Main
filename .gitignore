@@ -36,6 +36,7 @@ dist-ssr
 
 # User-supplied ROM prebuilts (drop APKs locally; do not commit binaries)
 device_r36s_polybius/prebuilts/**/*.apk
+device_r36s_polybius/prebuilts/**/*.apk.idsig
 
 # Generated CRYPT3X boot animation (rebuild with media/render_bootanim.py)
 device_r36s_polybius/media/build/
