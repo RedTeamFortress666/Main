@@ -730,7 +730,7 @@ export function drawNightNpc(ctx, paintId, x, y, facing, pose, scale = 2.6) {
 export function paintPickup(ctx, x, y, id, t) {
   const bob = Math.sin(t * 0.15 + x * 0.02) * 6;
   const colors = {
-    mint: '#7cff6b',
+    biscuit: '#7cff6b',
     lighter: '#ff8844',
     cinnamon: '#c44',
     keys: '#ffe566',
@@ -813,7 +813,7 @@ export function paintBeat(ctx, id, x, y, t, facing = 1) {
   ctx.save();
   ctx.translate(x, y + bob);
   ctx.scale(facing, 1);
-  if (id === 'mintmite') {
+  if (id === 'ravebug' || id === 'mintmite') {
     ctx.fillStyle = '#0a0808';
     ctx.fillRect(-12, -10, 24, 20);
     ctx.fillStyle = '#7cff6b';
@@ -864,10 +864,75 @@ export function paintBeat(ctx, id, x, y, t, facing = 1) {
   ctx.restore();
 }
 
+export function paintStreetCar(ctx, x, y, locked) {
+  ctx.fillStyle = '#0a0808';
+  ctx.fillRect(x - 70, y - 38, 140, 40);
+  ctx.fillStyle = locked ? '#3a2030' : '#ff2bd6';
+  ctx.fillRect(x - 66, y - 34, 132, 32);
+  ctx.fillStyle = '#3df0ff';
+  ctx.fillRect(x - 20, y - 28, 50, 16);
+  ctx.fillStyle = '#111';
+  ctx.fillRect(x - 48, y - 8, 18, 18);
+  ctx.fillRect(x + 28, y - 8, 18, 18);
+  ctx.fillStyle = locked ? '#ffe566' : '#7cff6b';
+}
+
+export function paintIslander(ctx, x, y, t) {
+  const bob = Math.sin(t * 0.1) * 2;
+  ctx.fillStyle = '#5a3a28';
+  ctx.fillRect(x - 12, y - 70 + bob, 24, 22);
+  ctx.fillStyle = '#c88870';
+  ctx.fillRect(x - 10, y - 68 + bob, 20, 18);
+  ctx.fillStyle = '#2a1810';
+  ctx.fillRect(x - 16, y - 48 + bob, 32, 30);
+  ctx.fillStyle = '#e87880';
+  ctx.fillRect(x - 8, y - 40 + bob, 16, 10);
+  ctx.fillStyle = '#1a1020';
+  ctx.fillRect(x - 12, y - 18 + bob, 10, 20);
+  ctx.fillRect(x + 2, y - 18 + bob, 10, 20);
+}
+
+export function paintDonut(ctx, x, y, t) {
+  const bob = Math.sin(t * 0.2) * 3;
+  ctx.fillStyle = '#e87880';
+  ctx.beginPath();
+  ctx.arc(x, y + bob, 12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#1a1020';
+  ctx.beginPath();
+  ctx.arc(x, y + bob, 4, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+export function paintDriveWorld(ctx, camX, camY, t) {
+  ctx.fillStyle = '#141018';
+  ctx.fillRect(0, 0, 1280, 720);
+  ctx.fillStyle = '#2a2430';
+  for (let y = -camY % 40; y < 720; y += 40) {
+    ctx.fillRect(0, y, 1280, 2);
+  }
+  for (let x = -camX % 40; x < 1280; x += 40) {
+    ctx.fillRect(x, 0, 2, 720);
+  }
+}
+
+export function paintDriveCar(ctx, x, y, ang, color, rave) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(ang);
+  ctx.fillStyle = '#0a0808';
+  ctx.fillRect(-22, -12, 44, 24);
+  ctx.fillStyle = rave ? '#ffe566' : color;
+  ctx.fillRect(-20, -10, 40, 20);
+  ctx.fillStyle = '#3df0ff';
+  ctx.fillRect(4, -7, 12, 14);
+  ctx.restore();
+}
+
 export function paintPartyBalls(ctx, party, x, y) {
   party.forEach((id, i) => {
     const colors = {
-      mintmite: '#7cff6b',
+      ravebug: '#7cff6b',
       spicegrub: '#c44',
       glowbat: '#9b6bff',
       brewcrab: '#6a4010',

@@ -19,7 +19,7 @@ export const BAG_GAP = 6;
 export const BAG_SLOTS = 10;
 
 export const ITEM_LABEL = {
-  mint: 'MINT TIN',
+  biscuit: 'RAVE BISCUIT',
   gum: 'GUM',
   marker: 'MARKER',
   lighter: 'LIGHTER',
@@ -43,7 +43,7 @@ export const RECIPES = [
   { need: ['glow', 'battery'], out: 'lamp', line: 'GLOW PLUS BATTERY. A LAMP. SCIENCE.' },
   { need: ['lighter', 'cinnamon'], out: 'hotshot', line: 'FIRE PLUS SPICE. DO NOT DRINK THIS.' },
   { need: ['matches', 'cinnamon'], out: 'hotshot', line: 'MATCHES PLUS SPICE. STILL A CRIME IN A CUP.' },
-  { need: ['mint', 'gum', 'marker'], out: 'wristband', line: 'CURIOUSLY STRONG. ALL NIGHT LONG.' },
+  { need: ['biscuit', 'gum', 'marker'], out: 'wristband', line: 'RAVE BISCUITS. ALL NIGHT LONG.' },
 ];
 
 export const PLATFORMS = [
@@ -83,15 +83,21 @@ export const PIPES = [
   { x: 2360, to: 900 },
 ];
 
+export const CAR = { x: 3860, y: 500 };
+
 export function platY(p, frame) {
   if (!p.amp) return p.y;
   return p.y + Math.round(Math.sin(frame / (p.period || 50)) * p.amp);
 }
 
+export function nearCar(s) {
+  return Math.abs(s.px - CAR.x) < 100 && FLOOR_Y + (s.py || 0) > 400;
+}
+
 const START_PICKUPS = [
   { id: 'coin', x: 210, y: 480 },
   { id: 'flyer', x: 360, y: 480 },
-  { id: 'mint', x: 260, y: 360 },
+  { id: 'biscuit', x: 260, y: 360 },
   { id: 'lighter', x: 450, y: 480 },
   { id: 'cinnamon', x: 820, y: 320 },
   { id: 'matches', x: 1120, y: 480 },
@@ -110,14 +116,14 @@ export const NPCS = [
     paint: 'pipe',
     name: 'PIPE',
     x: 560,
-    line: 'TALL GRASS HIDES MINTMITES. STOMP THEN TIN THEM. BAR STILL WANTS FIRE AND SPICE.',
+    line: 'TALL GRASS HIDES RAVEBUGS. KEYS ARE UP HIGH. THE CAR AT THE END WANTS THEM.',
   },
   {
     id: 'prophet',
     paint: 'mouth',
     name: 'MOUTH',
     x: 980,
-    line: 'CATCH A GLOWBAT IN THE NEON WEEDS. OR CRAFT A LAMP LIKE A COWARD.',
+    line: 'KEYS ON THE AWNING. NO KEYS, NO CAR. I PEAK AT 4AM AND NEVER APOLOGIZE.',
   },
   {
     id: 'bar',
@@ -138,7 +144,7 @@ export const NPCS = [
     paint: 'bolt',
     name: 'BOLT',
     x: 3920,
-    line: 'NO BAND. NO ENTRY. CRAFT A WRISTBAND OR GO HOME TO YOUR VINYL.',
+    line: 'CLUB IS A DISTRACTION. STEAL THE KEYS. TAKE THE CAR. LEAVE ME.',
   },
 ];
 
@@ -162,11 +168,11 @@ export function emptyNightState() {
       { x: 3500, y: 320, vx: 2.1 },
     ],
     wilds: [
-      { id: 'mintmite', x: 340, y: 480, vx: 0.7, dazed: 0 },
+      { id: 'ravebug', x: 340, y: 480, vx: 0.7, dazed: 0 },
       { id: 'spicegrub', x: 920, y: 480, vx: -0.65, dazed: 0 },
       { id: 'glowbat', x: 1960, y: 280, vx: 0.9, dazed: 0 },
       { id: 'bassling', x: 2680, y: 300, vx: -0.8, dazed: 0 },
-      { id: 'mintmite', x: 3180, y: 480, vx: 0.6, dazed: 0 },
+      { id: 'ravebug', x: 3180, y: 480, vx: 0.6, dazed: 0 },
     ],
     party: [],
     encounter: null,
@@ -174,10 +180,11 @@ export function emptyNightState() {
     frame: 0,
     alleyLit: false,
     talked: {},
-    banner: 'NEON GRASS. STOMP WILD BEATS. THROW A TIN. GET IN THE CLUB.',
-    log: 'WALK THE STREET. CATCH CRITTERS. COMBINE JUNK.',
+    banner: 'FIND THE KEYS. GET THE CAR. RAVE BISCUITS ARE LOOT, NOT THE POINT.',
+    log: 'JUMP THE LEDGES. KEYS UNLOCK THE CAR.',
     won: false,
     dead: false,
+    carPrompt: false,
   };
 }
 
@@ -264,6 +271,18 @@ export function stepNight(s, input) {
   const next = clone(s);
   next.frame = (next.frame || 0) + 1;
 
+  if (next.carPrompt) {
+    if (input.yes) {
+      next.won = true;
+      next.carPrompt = false;
+      next.banner = 'ENGINE ON. DOUGHNUTS AWAIT.';
+    } else if (input.no) {
+      next.carPrompt = false;
+      next.banner = 'FINE. WALK LIKE A PEDESTRIAN.';
+    }
+    return next;
+  }
+
   if (next.encounter) {
     let action = null;
     if (input.dir) action = 'flee';
@@ -320,7 +339,7 @@ export function stepNight(s, input) {
   if (next.onGround && dir && inGrass(next.px, GRASS)) {
     next.grassSteps = (next.grassSteps || 0) + 1;
     if (next.grassSteps % 42 === 0) {
-      const roster = ['mintmite', 'spicegrub', 'glowbat', 'bassling'];
+      const roster = ['ravebug', 'spicegrub', 'glowbat', 'bassling'];
       const id = roster[Math.abs(Math.floor(next.px / 80)) % roster.length];
       next.encounter = makeEncounter(id, 2);
       next.banner = `WILD ${beatName(id)} JUMPED OUT OF THE NEON GRASS.`;
@@ -395,9 +414,13 @@ export function stepNight(s, input) {
   if (input.talk) talkNearest(next);
   if (input.use) useSelected(next);
 
-  if (has(next, 'wristband') && next.px > 4000) {
-    next.won = true;
-    next.banner = 'YOU ARE IN. CURIOUSLY STRONG. ALL NIGHT LONG.';
+  if (nearCar(next)) {
+    if (has(next, 'keys')) {
+      next.carPrompt = true;
+      next.banner = 'ENTER CAR? Y N';
+    } else {
+      next.banner = 'THE CAR IS LOCKED. JUMP THE LEDGES. FIND THE KEYS.';
+    }
   }
   return next;
 }
@@ -459,8 +482,8 @@ export function talkNearest(s) {
     return s;
   }
   s.talked[n.id] = true;
-  if (n.id === 'skater' && s.party.includes('mintmite')) {
-    s.banner = 'PIPE: NICE MINTMITE. STILL UGLY. BAR WANTS FIRE PLUS SPICE.';
+  if (n.id === 'skater' && s.party.includes('ravebug')) {
+    s.banner = 'PIPE: NICE RAVEBUG. STILL UGLY. KEYS ARE UP HIGH.';
   } else if (n.id === 'prophet' && s.party.includes('glowbat')) {
     s.banner = 'MOUTH: THAT BAT IS A LAMP WITH WINGS. I PEAK AT 4AM.';
   } else if (n.id === 'skater' && has(s, 'coin')) {
@@ -471,15 +494,13 @@ export function talkNearest(s) {
   } else if (n.id === 'nix' && has(s, 'lipstick')) {
     s.banner = 'NIX: GROSS. PERFECT. TAKE THE MARKER I STOLE FROM A TEEN.';
     give(s, 'marker');
-  } else if (n.id === 'bounce' && has(s, 'wristband')) {
-    s.banner = 'BOLT: FINE. YOU LOOK LIKE A MINT COMMERCIAL. GO IN.';
-    s.px = 4050;
-    s.won = true;
+  } else if (n.id === 'bounce' && has(s, 'keys')) {
+    s.banner = 'BOLT: YOU HAVE KEYS. THE CAR IS THAT WAY. I AM NOT A VALET.';
   } else if (n.id === 'bounce' && has(s, 'badge')) {
     s.banner = 'BOLT: THAT ID SAYS YOU ARE 12 AND A SENATOR. NO.';
   } else if (n.id === 'bounce' && has(s, 'flyer')) {
-    s.banner = 'BOLT: PAPER IS NOT A BAND. CRAFT ONE. MINT. GUM. MARKER.';
-  } else if (n.id === 'bounce' && has(s, 'mint') && has(s, 'gum') && has(s, 'marker')) {
+    s.banner = 'BOLT: PAPER IS NOT A KEY. JUMP THE AWNINGS.';
+  } else if (n.id === 'bounce' && has(s, 'biscuit') && has(s, 'gum') && has(s, 'marker')) {
     const r = tryRecipe(s.inv);
     if (r) {
       s.inv = r.inv;
@@ -504,9 +525,9 @@ export function useSelected(s) {
     s.banner = 'TAP A BAG ITEM FIRST. OR DAZE A WILD BEAT AND USE THE TIN.';
     return s;
   }
-  if (s.selected === 'mint') {
+  if (s.selected === 'biscuit') {
     s.grown = true;
-    s.banner = 'PILLS THAT MAKE ME LARGER? YEAH RIGHT. STILL A MINT.';
+    s.banner = 'PILLS THAT MAKE ME LARGER? YEAH RIGHT. STILL A RAVE BISCUIT.';
     s.log = s.banner;
     return s;
   }
@@ -516,11 +537,16 @@ export function useSelected(s) {
     return s;
   }
   if (s.selected === 'note') {
-    s.banner = 'NOTE: MINT + GUM + MARKER = BAND. GLOW + BATTERY = LAMP.';
+    s.banner = 'NOTE: KEYS ON THE HIGH LEDGE. CAR AT THE END. BISCUIT + GUM + MARKER = BAND.';
     return s;
   }
   if (s.selected === 'keys') {
-    s.banner = 'KEYS TO NOTHING. A METAPHOR. ALSO THEY JINGLE SARCASTICALLY.';
+    if (nearCar(s)) {
+      s.carPrompt = true;
+      s.banner = 'ENTER CAR? Y N';
+      return s;
+    }
+    s.banner = 'CAR KEYS. THE LOCKED COUPE AT THE END OF THE BLOCK WANTS THESE.';
     return s;
   }
   if (s.selected === 'spray') {
@@ -555,6 +581,16 @@ export function tapNight(s, worldX, worldY) {
       next.px = p.x;
       return stepNight(next, { take: true });
     }
+  }
+  if (Math.abs(worldX - CAR.x) < 80 && worldY > 400) {
+    next.px = CAR.x;
+    if (has(next, 'keys')) {
+      next.carPrompt = true;
+      next.banner = 'ENTER CAR? Y N';
+    } else {
+      next.banner = 'THE CAR IS LOCKED. FIND THE KEYS.';
+    }
+    return next;
   }
   for (const n of NPCS) {
     if (Math.abs(worldX - n.x) < 64 && worldY > 280 && worldY < 540) {

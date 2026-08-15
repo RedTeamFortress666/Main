@@ -15,6 +15,7 @@ import {
   drawMysteryRoom, drawClueBanner, drawFaceHead, drawRaveVampire,
   paintNightStreet, paintPickup, paintRaveBat, drawNightNpc,
   paintBeat, paintGrass, paintSpring, paintWarpPipe, paintPartyBalls,
+  paintStreetCar, paintIslander, paintDonut, paintDriveWorld, paintDriveCar,
 } from './pixel.js';
 import {
   emptyMysteryState, setVerb, tapAt, canFight,
@@ -23,7 +24,7 @@ import {
   stepWalk, interactNearest, stepPhysics, seekDay,
 } from './mystery.js';
 import {
-  CAMPAIGN, campaignStep, CUTS, CREDITS_BY, PONG_DISCLAIMER,
+  CAMPAIGN, campaignStep, CUTS, CREDITS_BY, PONG_DISCLAIMER, DONUT_LINE,
   LANA_LINE, KIM_LINE, DJ_TRICKS,
   emptyPacState, stepPac, emptyPongState, stepPong,
   emptyClubState, clubPress, emptySentinelState, stepSentinel,
@@ -33,9 +34,10 @@ import {
   emptyNightState, stepNight, tapNight, selectNightItem, nightCam,
   hitNightInv, ITEM_LABEL, PLATFORMS, NPCS, NIGHT_W, FLOOR_Y,
   BAG_X, BAG_Y, BAG_SLOT_W, BAG_SLOT_H, BAG_GAP, BAG_SLOTS,
-  GRASS, SPRINGS, PIPES, platY,
+  GRASS, SPRINGS, PIPES, platY, CAR,
 } from './nightout.js';
 import { beatName } from './catch.js';
+import { emptyDriveState, stepDrive, driveCam, BUILDINGS, MAP_W, MAP_H, PART_LABEL } from './drive.js';
 
 const VERB_KEYS = { KeyZ: 'look', KeyX: 'talk', KeyC: 'take', KeyV: 'use' };
 
@@ -62,6 +64,7 @@ export class Game {
     this.camp = 0;
     this.cut = null;
     this.cutLine = 0;
+    this.cutLoad = 0;
     this.arcade = null;
     this.night = emptyNightState();
   }
@@ -100,6 +103,12 @@ export class Game {
       return;
     }
     if (this.mode === 'nightout') {
+      if (this.night.carPrompt) {
+        this.night = stepNight(this.night, { yes: x >= 640, no: x < 640 });
+        this.audio.ensure();
+        this.audio.ui();
+        return;
+      }
       const bag = hitNightInv(x, y);
       if (bag >= 0) {
         this.night = selectNightItem(this.night, bag);
@@ -137,8 +146,15 @@ export class Game {
     if (step.kind === 'cut') {
       this.cut = CUTS[step.cut];
       this.cutLine = 0;
+      this.cutLoad = 0;
       this.setMode('cut');
       this.audio.vocal();
+      return;
+    }
+    if (step.kind === 'drive') {
+      this.arcade = emptyDriveState();
+      this.setMode('drive');
+      this.say('RAVE DRIVE', 50, 'SPEAKER RUN');
       return;
     }
     if (step.kind === 'nightout') {
@@ -250,6 +266,13 @@ export class Game {
     }
 
     if (this.mode === 'cut') {
+      if (this.cut?.loading) {
+        this.cutLoad = (this.cutLoad || 0) + 1;
+        if (this.cutLoad > 200 || this.input.just('Enter') || this.input.just('Space') || this.input.just('KeyZ')) {
+          this.advanceCampaign();
+        }
+        return;
+      }
       if (this.input.just('Enter') || this.input.just('Space') || this.input.just('KeyZ')) {
         this.cutLine += 1;
         this.audio.ui();
@@ -304,7 +327,9 @@ export class Game {
       const talk = this.input.just('KeyX');
       const use = this.input.just('KeyV');
       const look = this.input.just('KeyZ');
-      this.night = stepNight(this.night, { dir, jump, take, talk, use, look });
+      const yes = this.input.just('KeyZ') || this.input.just('Enter') || this.input.just('KeyY');
+      const no = this.input.just('KeyX') || this.input.just('KeyN');
+      this.night = stepNight(this.night, { dir, jump, take, talk, use, look, yes, no });
       if (dir) this.facePose.walk = this.time * 0.4;
       else this.facePose.walk = 0;
       if (jump) this.audio.ui();
@@ -382,6 +407,18 @@ export class Game {
           this.audio.sample(this.arcade.last || '');
         }
       }
+      if (this.arcade.won) this.advanceCampaign();
+      return;
+    }
+
+    if (this.mode === 'drive' && this.arcade) {
+      const steer = (this.input.held('KeyD') || this.input.held('ArrowRight') ? 1 : 0)
+        - (this.input.held('KeyA') || this.input.held('ArrowLeft') ? 1 : 0);
+      const accel = (this.input.held('KeyW') || this.input.held('ArrowUp') ? 1 : 0)
+        - (this.input.held('KeyS') || this.input.held('ArrowDown') ? 1 : 0);
+      const rave = this.input.just('KeyV') || this.input.just('KeyC') || this.input.just('KeyZ');
+      this.arcade = stepDrive(this.arcade, { steer, accel, rave });
+      if (rave) this.audio.bassDrop();
       if (this.arcade.won) this.advanceCampaign();
       return;
     }
@@ -505,6 +542,7 @@ export class Game {
     ctx.imageSmoothingEnabled = false;
     if (this.mode === 'title') this._drawTitle(ctx);
     else if (this.mode === 'nightout') this._drawNightout(ctx);
+    else if (this.mode === 'drive') this._drawDrive(ctx);
     else if (this.mode === 'briefing') this._drawBriefing(ctx);
     else if (this.mode === 'cut') this._drawCut(ctx);
     else if (this.mode === 'mystery') this._drawMystery(ctx);
@@ -572,6 +610,12 @@ export class Game {
       drawPixelText(ctx, ITEM_LABEL[p.id] || p.id, x, p.y - 28, 1, '#fff4c2', 'center');
     }
 
+    const carX = CAR.x - cam;
+    if (carX > -160 && carX < CANVAS_W + 80) {
+      paintStreetCar(ctx, carX, FLOOR_Y - 4, !n.inv.includes('keys'));
+      drawPixelText(ctx, n.inv.includes('keys') ? 'CAR' : 'LOCKED CAR', carX, FLOOR_Y - 70, 2, '#ffe566', 'center');
+    }
+
     for (const npc of NPCS) {
       const x = npc.x - cam;
       if (x < -80 || x > CANVAS_W + 80) continue;
@@ -604,7 +648,7 @@ export class Game {
     drawClueBanner(ctx, n.banner || n.log, this.time);
     ctx.fillStyle = 'rgba(6,4,14,0.88)';
     ctx.fillRect(0, 84, CANVAS_W, 36);
-    drawPixelText(ctx, 'STOMP + TAKE TO CATCH    GRASS STARTS BATTLES    DO ON PIPES', 16, 92, 2, '#3df0ff');
+    drawPixelText(ctx, 'FIND KEYS    GET THE CAR    RAVE TO CATCH BEATS', 16, 92, 2, '#3df0ff');
     drawPixelText(ctx, 'PARTY', 16, 128, 1, '#888');
     paintPartyBalls(ctx, n.party || [], 80, 134);
 
@@ -627,6 +671,19 @@ export class Game {
       ctx.fillStyle = '#100c18';
       ctx.fillRect(x, BAG_Y, BAG_SLOT_W, BAG_SLOT_H);
       drawPixelText(ctx, id ? ITEM_LABEL[id] || id : '--', x + 6, BAG_Y + 12, 1, id ? '#fff4c2' : '#444');
+    }
+
+    if (n.carPrompt) {
+      ctx.fillStyle = 'rgba(0,0,10,0.78)';
+      ctx.fillRect(280, 180, 720, 280);
+      drawPixelText(ctx, 'ENTER CAR?', CANVAS_W / 2, 220, 4, '#ffe566', 'center');
+      ctx.fillStyle = '#1a6a28';
+      ctx.fillRect(400, 320, 160, 80);
+      ctx.fillStyle = '#6a1818';
+      ctx.fillRect(720, 320, 160, 80);
+      drawPixelText(ctx, 'Y', 480, 344, 5, '#fff', 'center');
+      drawPixelText(ctx, 'N', 800, 344, 5, '#fff', 'center');
+      drawPixelText(ctx, 'LOOK / START = Y     TALK = N', CANVAS_W / 2, 420, 2, '#bbb', 'center');
     }
 
     if (this.announce.text) {
@@ -821,6 +878,28 @@ export class Game {
     const cut = this.cut || { title: '', lines: [''] };
     ctx.fillStyle = 'rgba(0,0,20,0.72)';
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    if (cut.donuts) {
+      ctx.fillStyle = '#1a3040';
+      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+      ctx.fillStyle = '#c8b070';
+      ctx.fillRect(0, 480, CANVAS_W, 240);
+      drawPixelText(ctx, DONUT_LINE, CANVAS_W / 2, 40, 2, '#ffe566', 'center');
+      paintIslander(ctx, 420, 500, this.time);
+      paintIslander(ctx, 560, 510, this.time + 8);
+      paintIslander(ctx, 860, 500, this.time + 16);
+      paintIslander(ctx, 1000, 508, this.time + 4);
+      drawFighter(ctx, 'face', 700, 500, 1, { t: this.time, punch: 0.6 }, 3.2);
+      paintDonut(ctx, 640, 360, this.time);
+      paintDonut(ctx, 500, 400, this.time + 10);
+      paintDonut(ctx, 820, 390, this.time + 20);
+      const load = Math.min(1, (this.cutLoad || 0) / 200);
+      ctx.fillStyle = '#111';
+      ctx.fillRect(80, 640, 1120, 28);
+      ctx.fillStyle = '#3df0ff';
+      ctx.fillRect(80, 640, 1120 * load, 28);
+      drawPixelText(ctx, 'LOADING', CANVAS_W / 2, 646, 2, '#fff', 'center');
+      return;
+    }
     if (cut.bike) {
       ctx.fillStyle = '#111';
       ctx.fillRect(0, 420, CANVAS_W, 80);
@@ -840,6 +919,48 @@ export class Game {
       drawFighter(ctx, 'face', 640, 560, 1, { t: this.time, blade: 0.3 }, 3);
     }
     drawPixelText(ctx, 'START', CANVAS_W / 2, 640, 2, '#fff4c2', 'center');
+  }
+
+  _drawDrive(ctx) {
+    const a = this.arcade;
+    const cam = driveCam(a, CANVAS_W, CANVAS_H);
+    paintDriveWorld(ctx, cam.x, cam.y, this.time);
+    ctx.fillStyle = '#3a3a48';
+    for (let i = 0; i < MAP_W; i += 420) {
+      ctx.fillRect(i - cam.x, 0, 140, CANVAS_H);
+    }
+    for (let j = 0; j < MAP_H; j += 420) {
+      ctx.fillRect(0, j - cam.y, CANVAS_W, 140);
+    }
+    ctx.fillStyle = '#ffe566';
+    for (let i = 0; i < MAP_W; i += 40) {
+      ctx.fillRect(i - cam.x, 64 - cam.y, 16, 4);
+      ctx.fillRect(i - cam.x, 2720 - cam.y, 16, 4);
+    }
+    ctx.fillStyle = '#1a1030';
+    for (const b of BUILDINGS) {
+      const x = b.x - cam.x;
+      const y = b.y - cam.y;
+      if (x > CANVAS_W || y > CANVAS_H || x + b.w < 0 || y + b.h < 0) continue;
+      ctx.fillRect(x, y, b.w, b.h);
+      ctx.fillStyle = '#ffe566';
+      ctx.fillRect(x + 12, y + 16, 10, 10);
+      ctx.fillStyle = '#1a1030';
+    }
+    for (const p of a.parts) {
+      if (p.got) continue;
+      const pulse = 10 + Math.sin(this.time * 0.2) * 4;
+      ctx.fillStyle = '#ff2bd6';
+      ctx.fillRect(p.x - cam.x - pulse / 2, p.y - cam.y - pulse / 2, pulse, pulse);
+      drawPixelText(ctx, PART_LABEL[p.id], p.x - cam.x, p.y - cam.y - 28, 1, '#ffe566', 'center');
+    }
+    for (const t of a.traffic) {
+      paintDriveCar(ctx, t.x - cam.x, t.y - cam.y, t.ang, t.c, false);
+    }
+    paintDriveCar(ctx, a.x - cam.x, a.y - cam.y, a.ang, '#ff2bd6', a.rave > 0);
+    drawPixelText(ctx, a.banner || 'RAVE DRIVE', 24, 16, 2, '#ffe566');
+    drawPixelText(ctx, `SPEAKERS ${a.got} / 5`, 24, 48, 2, '#3df0ff');
+    drawPixelText(ctx, 'WALK STEER   JUMP GAS   DO BRAKE   USE RAVE', 24, 680, 2, '#fff4c2');
   }
 
   _drawPac(ctx) {

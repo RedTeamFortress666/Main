@@ -13,16 +13,17 @@ import {
   stepPhysics,
 } from './js/mystery.js';
 import {
-  CAMPAIGN, CREDITS_BY, PONG_DISCLAIMER, DJ_TRICKS, KIM_LINE, LANA_LINE,
+  CAMPAIGN, CREDITS_BY, PONG_DISCLAIMER, DJ_TRICKS, KIM_LINE, LANA_LINE, DONUT_LINE,
   emptyPacState, stepPac, emptyPongState, stepPong, clubPress, emptyClubState,
   emptyBribeState, stepBribe, emptySentinelState, stepSentinel,
   emptyGrammyState, stepGrammy,
 } from './js/arcade.js';
 import {
   emptyNightState, stepNight, tryRecipe, talkNearest, useSelected, has,
-  selectNightItem, tapNight, hitNightInv, BAG_X, BAG_Y, PIPES,
+  selectNightItem, tapNight, hitNightInv, BAG_X, BAG_Y, PIPES, CAR,
 } from './js/nightout.js';
 import { resolveEncounter, makeEncounter, addToParty, beatName } from './js/catch.js';
+import { emptyDriveState, stepDrive, PART_NEED } from './js/drive.js';
 
 describe('title and hero', () => {
   it('is FACE INVADA\'s BEAT BOXING', () => {
@@ -287,6 +288,9 @@ describe('campaign arcade', () => {
     expect(KIM_LINE).toMatch(/KANYE/);
     expect(LANA_LINE).toBe('LANAAAAAA');
     expect(CAMPAIGN[0].kind).toBe('nightout');
+    expect(CAMPAIGN[1].kind).toBe('cut');
+    expect(CAMPAIGN[2].kind).toBe('drive');
+    expect(DONUT_LINE).toMatch(/SENTINALESE/);
     expect(CAMPAIGN.some((s) => s.kind === 'mystery' && s.day === 1)).toBe(false);
     expect(CAMPAIGN.some((s) => s.kind === 'pac')).toBe(true);
     expect(CAMPAIGN[CAMPAIGN.length - 1].kind).toBe('credits');
@@ -393,11 +397,11 @@ describe('curiously strong night out', () => {
     expect(tryRecipe(['glow', 'battery']).out).toBe('lamp');
     expect(tryRecipe(['lighter', 'cinnamon']).out).toBe('hotshot');
     expect(tryRecipe(['matches', 'cinnamon']).out).toBe('hotshot');
-    expect(tryRecipe(['mint', 'gum', 'marker']).out).toBe('wristband');
-    expect(tryRecipe(['mint', 'gum', 'marker']).line).toMatch(/CURIOUSLY STRONG/);
+    expect(tryRecipe(['biscuit', 'gum', 'marker']).out).toBe('wristband');
+    expect(tryRecipe(['biscuit', 'gum', 'marker']).line).toMatch(/RAVE BISCUIT/);
   });
 
-  it('trades hotshot for gum and lipstick for marker, then Bolt lets you in', () => {
+  it('trades hotshot for gum and lipstick for marker, then Bolt points at the car', () => {
     let s = emptyNightState();
     s.inv = ['hotshot'];
     s.selected = 'hotshot';
@@ -408,16 +412,17 @@ describe('curiously strong night out', () => {
     s.px = 2480;
     talkNearest(s);
     expect(has(s, 'marker')).toBe(true);
-    s.inv = ['wristband'];
+    s.inv = ['keys'];
     s.px = 3920;
     talkNearest(s);
-    expect(s.won).toBe(true);
+    expect(s.banner).toMatch(/CAR/);
+    expect(s.won).toBe(false);
   });
 
-  it('grows on mint USE and maps bag taps', () => {
+  it('grows on rave biscuit USE and maps bag taps', () => {
     let s = emptyNightState();
-    s.inv = ['mint'];
-    s.selected = 'mint';
+    s.inv = ['biscuit'];
+    s.selected = 'biscuit';
     s = useSelected(s);
     expect(s.grown).toBe(true);
     expect(s.banner).toMatch(/PILLS THAT MAKE ME LARGER/);
@@ -431,22 +436,32 @@ describe('curiously strong night out', () => {
     expect(has(s, 'flyer')).toBe(true);
   });
 
-  it('wins by walking in with a wristband', () => {
+  it('locks the car until keys, then ENTER CAR Y wins', () => {
     let s = emptyNightState();
-    s.inv = ['wristband'];
-    s.px = 4010;
-    s = stepNight(s, { dir: 1 });
+    s.px = CAR.x;
+    s = stepNight(s, { dir: 0 });
+    expect(s.won).toBe(false);
+    expect(s.banner).toMatch(/LOCKED/);
+    s.inv = ['keys'];
+    s = stepNight(s, { dir: 0 });
+    expect(s.carPrompt).toBe(true);
+    expect(s.banner).toMatch(/ENTER CAR/);
+    s = stepNight(s, { no: true });
+    expect(s.won).toBe(false);
+    s.px = CAR.x;
+    s = stepNight(s, { dir: 0 });
+    s = stepNight(s, { yes: true });
     expect(s.won).toBe(true);
   });
 
   it('tins a dazed wild beat and warps through a pipe', () => {
     let s = emptyNightState();
-    const mite = s.wilds.find((w) => w.id === 'mintmite');
+    const mite = s.wilds.find((w) => w.id === 'ravebug');
     s.px = mite.x;
     mite.dazed = 40;
     s = stepNight(s, { take: true });
-    expect(s.party).toContain('mintmite');
-    expect(has(s, 'mint')).toBe(true);
+    expect(s.party).toContain('ravebug');
+    expect(has(s, 'biscuit')).toBe(true);
     s.px = PIPES[0].x;
     s.onGround = true;
     s = stepNight(s, { take: true });
@@ -456,7 +471,7 @@ describe('curiously strong night out', () => {
 
 describe('wild beats', () => {
   it('names original critters and fills a party', () => {
-    expect(beatName('mintmite')).toBe('MINTMITE');
+    expect(beatName('ravebug')).toBe('RAVEBUG');
     expect(addToParty([], 'glowbat')).toEqual(['glowbat']);
     expect(addToParty(['glowbat'], 'glowbat')).toEqual(['glowbat']);
   });
@@ -471,5 +486,30 @@ describe('wild beats', () => {
     expect(r.caught).toBe('spicegrub');
     r = resolveEncounter(makeEncounter('glowbat', 2), 'flee');
     expect(r.fled).toBe(true);
+  });
+});
+
+describe('rave drive', () => {
+  it('picks up speaker parts only while raving nearby', () => {
+    let s = emptyDriveState();
+    const part = s.parts[0];
+    s.x = part.x;
+    s.y = part.y;
+    s = stepDrive(s, {});
+    expect(s.got).toBe(0);
+    s = stepDrive(s, { rave: true });
+    expect(s.got).toBe(1);
+    expect(s.parts[0].got).toBe(true);
+  });
+
+  it('wins after all five speaker parts', () => {
+    let s = emptyDriveState();
+    for (const p of s.parts) {
+      s.x = p.x;
+      s.y = p.y;
+      s = stepDrive(s, { rave: true });
+    }
+    expect(s.got).toBe(PART_NEED);
+    expect(s.won).toBe(true);
   });
 });

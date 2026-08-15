@@ -1,26 +1,22 @@
 # FACE INVADA — Curiously Strong All Night Long
 
-Android-first street crawl. **Face Invada** (Italy, 37) jumps Mario platforms, stomps rave bats, and combines junk into a club wristband. Sarcastic NPCs are drawn at the same pixel budget as Face. Credits: **made by some bastard**.
+Android-first street crawl. **Face Invada** (Italy, 37) jumps platforms, tins wild beats, finds **car keys**, and raves a top-down speaker run. Credits: **made by some bastard**.
 
-The slack motel opener is gone. You start on the packed night street.
+## Level 1
 
-## Opening level
+Find the **keys** on a high ledge. The coupe at the end of the block is locked without them. Reach the car: **ENTER CAR? Y N**. Y starts the doughnut loading cut, then the drive.
 
-Walk the neon route. Tall grass starts wild battles. Stomp roaming beats, then TAKE to tin them. Springs launch you. DO on green pipes to warp.
+Catch **Ravebugs**, Spicegrubs, Glowbats, and Basslings. Ravebugs drop **Rave biscuits**.
 
-Catch **Mintmites**, **Spicegrubs**, **Glowbats**, and **Basslings**. They drop the junk you combine. Trainers roast your party.
+- **RAVE BISCUIT + GUM + MARKER** → wristband
+- **GLOW + BATTERY** → lamp
+- **LIGHTER or MATCHES + CINNAMON** → hot shot
 
-- **MINT + GUM + MARKER** → wristband (`CURIOUSLY STRONG. ALL NIGHT LONG.`)
-- **GLOW + BATTERY** → lamp (lights the alley so lipstick shows)
-- **LIGHTER or MATCHES + CINNAMON** → hot shot (bribe Brick for gum)
-- Lipstick to **NIX** for the marker
-- Wristband to **BOLT** to get in the club
+## After the car
 
-Pipe, Mouth, Brick, Nix, and Bolt roast you. USE mint to grow (`PILLS THAT MAKE ME LARGER? YEAH RIGHT.`). Jump on bat heads.
+Loading cut: Face feeds doughnuts to Sentinalese islanders — `DOUGHNUTS... FAVOURITE FOOD OF THE ANCIENT SENTINALESE ISLANDERS`. Then a top-down GTA 2-style drive: steer, gas, **RAVE** to pick up woofer / tweeter / amp / cable / sub.
 
-## After the club
-
-LANAAAAAA motorcycle cut, Face-head Pac vs rave vampires, Kim/Kanye phone, Sentinel Safari (chase Brewcrab and Glazemoth to the hut gym), Atari roast, Pong homage, later motel nights, club DJ set, fleeing Grammy statuettes, Don Trumpet bribe, credits.
+Then Lana, Pac, Sentinel Safari, Pong, later nights, club set, Grammys, Don Trumpet, credits.
 
 ## Play
 
@@ -29,6 +25,6 @@ cd face-invada
 python3 -m http.server 4174 --bind 0.0.0.0
 ```
 
-Android pad: JUMP / WALK / DO / LOOK / TALK / TAKE / USE. Tap the bag, then USE. Tap world objects to pick them up.
+Android: JUMP / WALK / LOOK=Y / TALK=N / TAKE / USE=RAVE.
 
 APK: `downloads/FaceInvadaBeatBoxing.apk`

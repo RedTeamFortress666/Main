@@ -6,7 +6,7 @@
 export const PARTY_MAX = 6;
 
 export const BEATS = {
-  mintmite: { name: 'MINTMITE', item: 'mint', color: '#7cff6b' },
+  ravebug: { name: 'RAVEBUG', item: 'biscuit', color: '#7cff6b' },
   spicegrub: { name: 'SPICEGRUB', item: 'cinnamon', color: '#c44' },
   glowbat: { name: 'GLOWBAT', item: 'glow', color: '#9b6bff' },
   brewcrab: { name: 'BREWCRAB', item: 'coffee', color: '#6a4010' },

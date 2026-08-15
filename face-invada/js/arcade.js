@@ -9,6 +9,7 @@ export const PONG_DISCLAIMER = "PONG DON'T SUE - ITS AN HOMAGE";
 export const TABLET_JOKE = 'PILLS THAT MAKE ME LARGER? YEAH RIGHT.';
 export const LANA_LINE = 'LANAAAAAA';
 export const KIM_LINE = "I'M SORRY KIM, I JUST DON'T THINK KANYE'S THAT GOOD FOR YOU";
+export const DONUT_LINE = 'DOUGHNUTS... FAVOURITE FOOD OF THE ANCIENT SENTINALESE ISLANDERS';
 
 export const DJ_TRICKS = [
   { id: 'comp', name: 'MAD COMPRESSION', keys: ['KeyZ', 'KeyX'] },
@@ -39,6 +40,12 @@ export const CUTS = {
     lines: [KIM_LINE],
     phone: true,
   },
+  doughnut: {
+    title: 'LOADING',
+    lines: [DONUT_LINE],
+    donuts: true,
+    loading: true,
+  },
   atari: {
     title: 'HOMAGE HOUR',
     lines: [
@@ -53,6 +60,8 @@ export const CUTS = {
 
 export const CAMPAIGN = [
   { id: 'nightout', kind: 'nightout' },
+  { id: 'doughnut', kind: 'cut', cut: 'doughnut' },
+  { id: 'drive', kind: 'drive' },
   { id: 'lana', kind: 'cut', cut: 'lana' },
   { id: 'pac', kind: 'pac' },
   { id: 'kim', kind: 'cut', cut: 'kim' },
