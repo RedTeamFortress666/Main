@@ -1,10 +1,7 @@
 package com.polybius.doomsday_clock
 
-import android.app.role.RoleManager
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Build
-import android.os.Process
 import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -89,7 +86,7 @@ class MainActivity : FlutterActivity() {
         val dnsMode = Settings.Global.getString(cr, "private_dns_mode") ?: "off"
         val dnsHost = Settings.Global.getString(cr, "private_dns_specifier") ?: ""
         val mac = Settings.Global.getInt(cr, "wifi_connected_mac_randomization_enabled", 1) == 1
-        val wifiScan = Settings.Global.getInt(cr, Settings.Global.WIFI_SCAN_ALWAYS_AVAILABLE, 0) == 1
+        val wifiScan = Settings.Global.getInt(cr, "wifi_scan_always_enabled", 0) == 1
         val bleScan = Settings.Global.getInt(cr, "ble_scan_always_enabled", 0) == 1
         val loc = Settings.Secure.getInt(cr, Settings.Secure.LOCATION_MODE, 0)
         val captive = Settings.Global.getInt(cr, "captive_portal_mode", 1)
@@ -105,7 +102,7 @@ class MainActivity : FlutterActivity() {
             "captivePortalOff" to (captive == 0),
             "vpnPackage" to vpn,
             "vpnLockdown" to lockdown,
-            "browserRole" to browserRoleHolder(),
+            "browserRole" to if (isInstalled("com.brave.browser")) "com.brave.browser" else "",
         )
     }
 
@@ -129,7 +126,7 @@ class MainActivity : FlutterActivity() {
                     cr, "wifi_connected_mac_randomization_enabled", if (value) 1 else 0
                 )
                 "wifiScanOff" -> Settings.Global.putInt(
-                    cr, Settings.Global.WIFI_SCAN_ALWAYS_AVAILABLE, if (value) 0 else 1
+                    cr, "wifi_scan_always_enabled", if (value) 0 else 1
                 )
                 "bleScanOff" -> Settings.Global.putInt(
                     cr, "ble_scan_always_enabled", if (value) 0 else 1
@@ -155,35 +152,6 @@ class MainActivity : FlutterActivity() {
         ok = setRouteFlag("bleScanOff", true) && ok
         ok = setRouteFlag("locationOff", true) && ok
         ok = setRouteFlag("captiveOff", true) && ok
-        assignBraveBrowserRole()
         return ok
-    }
-
-    private fun browserRoleHolder(): String {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return ""
-        return try {
-            val rm = getSystemService(RoleManager::class.java) ?: return ""
-            if (!rm.isRoleAvailable(RoleManager.ROLE_BROWSER)) return ""
-            rm.getRoleHolders(RoleManager.ROLE_BROWSER).firstOrNull() ?: ""
-        } catch (_: Exception) {
-            ""
-        }
-    }
-
-    private fun assignBraveBrowserRole() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
-        if (!isInstalled("com.brave.browser")) return
-        try {
-            val rm = getSystemService(RoleManager::class.java) ?: return
-            rm.addRoleHolderAsUser(
-                RoleManager.ROLE_BROWSER,
-                "com.brave.browser",
-                0,
-                Process.myUserHandle(),
-                java.util.concurrent.Executor { r -> r.run() },
-            ) { _ -> }
-        } catch (_: Exception) {
-            // Needs MANAGE_ROLE_HOLDERS; desk still launches Brave explicitly.
-        }
     }
 }

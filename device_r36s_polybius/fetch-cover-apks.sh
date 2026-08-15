@@ -63,13 +63,16 @@ PY
   rm -rf "$tmp"
 fi
 
-# Proton Mail: official site if they still publish a direct APK; else drop by hand.
+# Proton Mail: last official GitHub APK (3.0.17). Newer Play builds can replace it.
 if [[ -n "${PROTONMAIL_APK_URL:-}" ]]; then
   fetch_url "$PROTONMAIL_APK_URL" "$SRC/ProtonMail/ProtonMail.apk"
 else
-  echo "Proton Mail is not mirrored here (Play/Proton CDN). Drop ProtonMail.apk by hand:"
-  echo "  device_r36s_polybius/prebuilts/ProtonMail/ProtonMail.apk"
-  echo "  package: ch.protonmail.android"
+  echo "Fetching Proton Mail 3.0.17 from ProtonMail/proton-mail-android..."
+  mkdir -p "$SRC/ProtonMail"
+  gh release download 3.0.17 -R ProtonMail/proton-mail-android \
+    -p 'ProtonMail-3.0.17.apk' -D /tmp --clobber
+  cp -a /tmp/ProtonMail-3.0.17.apk "$SRC/ProtonMail/ProtonMail.apk"
+  file "$SRC/ProtonMail/ProtonMail.apk"
 fi
 
 if [[ -d "$ROOT/device/gameconsole/r36s/prebuilts" ]]; then
