@@ -178,6 +178,11 @@ sync_tree() {
 apply_overlay() {
   echo "Applying CRYPT3X overlay into $ANDROID_ROOT"
   ANDROID_ROOT="$ANDROID_ROOT" "$ROOT/device_r36s_polybius/apply.sh"
+  if [[ -f "$ANDROID_ROOT/kernel/gameconsole/r36s/.gitmodules" \
+     && ! -f "$ANDROID_ROOT/kernel/gameconsole/r36s/drivers/net/wireless/realtek/rtl8188eus/Kconfig" ]]; then
+    echo "Initializing kernel submodules (rtl8188eus, exfat)"
+    git -C "$ANDROID_ROOT/kernel/gameconsole/r36s" submodule update --init --recursive
+  fi
 }
 
 mka_images() {
