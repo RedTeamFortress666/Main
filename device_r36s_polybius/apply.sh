@@ -5,13 +5,15 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SRC="$ROOT/device_r36s_polybius"
-DT="$ROOT/device/gameconsole/r36s"
-KERNEL_DEFCONFIG="$ROOT/kernel/gameconsole/r36s/arch/arm64/configs/lineageos_r36s_defconfig"
-UEVENTD="$ROOT/device/gameconsole/common/ueventd.rk30board.rc"
+ANDROID_ROOT="${ANDROID_ROOT:-$ROOT}"
+DT="$ANDROID_ROOT/device/gameconsole/r36s"
+KERNEL_DEFCONFIG="$ANDROID_ROOT/kernel/gameconsole/r36s/arch/arm64/configs/lineageos_r36s_defconfig"
+UEVENTD="$ANDROID_ROOT/device/gameconsole/common/ueventd.rk30board.rc"
 
 if [[ ! -d "$DT" ]]; then
   echo "Device tree not found at $DT" >&2
   echo "Clone android_device_gameconsole_r36s first (see ANDR36OID.md)." >&2
+  echo "Or set ANDROID_ROOT to the AndR36oid tree (mka-lite.sh uses /opt/android/andr36oid)." >&2
   exit 1
 fi
 

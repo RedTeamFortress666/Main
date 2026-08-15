@@ -68,7 +68,17 @@ vault setup. Do not pick an operator PIN.
 
 Optional Orbot/WireGuard still drop in by hand for a device-wide IP path.
 
-## Build (after a full Lineage sync — ask before downloading)
+## Build (after a full Lineage sync)
+
+Host driver (dedicated tree at `/opt/android/andr36oid`, Java 11, 32GiB swap, `-j2`):
+
+```bash
+./device_r36s_polybius/mka-lite.sh
+```
+
+Override `ANDROID_ROOT`, `BUILD_JOBS`, or `REPO_SYNC_JOBS` as needed. Log: `/opt/android/mka-lite.log`.
+
+Manual, after sync:
 
 ```bash
 source build/envsetup.sh
