@@ -178,14 +178,25 @@ apply_overlay() {
 
 mka_images() {
   cd "$ANDROID_ROOT"
+  export TOP="$ANDROID_ROOT"
   set +u
   # shellcheck disable=SC1091
   source build/envsetup.sh
   lunch "$BUILD_TARGET"
-  set -u
   echo "mka -j${BUILD_JOBS} bootimage systemimage started $(date -u +%Y-%m-%dT%H:%M:%SZ)"
   mka -j"${BUILD_JOBS}" bootimage systemimage
-  echo "mka finished $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  local st=$?
+  set -u
+  echo "mka finished $(date -u +%Y-%m-%dT%H:%M:%SZ) exit=$st"
+  if [[ "$st" -ne 0 ]]; then
+    echo "mka failed with $st" >&2
+    exit "$st"
+  fi
+  local out="${OUT:-$ANDROID_ROOT/out/target/product/r36s}"
+  if [[ ! -f "$out/system.img" ]]; then
+    echo "mka did not produce $out/system.img" >&2
+    exit 1
+  fi
 }
 
 pack_sd() {
@@ -205,9 +216,13 @@ ensure_java11
 ensure_swap
 ensure_toolchain
 mkdir -p "$CCACHE_DIR"
-seed_existing_trees
-ensure_repo
-sync_tree
+if [[ "${FORCE_REPO_SYNC:-0}" == 1 || ! -f "$ANDROID_ROOT/build/envsetup.sh" || ! -f "$ANDROID_ROOT/device/gameconsole/r36s/BoardConfig.mk" ]]; then
+  seed_existing_trees
+  ensure_repo
+  sync_tree
+else
+  echo "AndR36oid tree present; skip repo sync (FORCE_REPO_SYNC=1 to refresh)"
+fi
 apply_overlay
 mka_images
 pack_sd
