@@ -36,6 +36,9 @@ flutter test
 flutter build apk --release --target-platform=android-arm64
 ```
 
+Download (arm64, 1.6.0):
+https://github.com/RedTeamFortress666/Main/raw/cursor/r36s-polybius-product-0346/polybius/dist/polybius-flasher-1.6.0-android-arm64.apk
+
 Dist: `polybius/dist/polybius-flasher-1.6.0-android-arm64.apk`
 
 ## CRYPT3X OS LITE (8 GiB)

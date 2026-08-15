@@ -3,6 +3,11 @@
 `polybius-1.0.0-beta.1-android-arm64.apk` — Android **arm64-v8a** release APK
 (debug-signed for BETA side-loading). Works on modern ARM Android devices.
 
+`polybius-flasher-1.6.0-android-arm64.apk` — **PØLYBÎŪS FLASHER** 1.6.0
+(CRYPT3X OS LITE + R36S USB/SD + CYD/T-Deck + OTG ADB). Direct download:
+
+https://github.com/RedTeamFortress666/Main/raw/cursor/r36s-polybius-product-0346/polybius/dist/polybius-flasher-1.6.0-android-arm64.apk
+
 ## Install (Android / ARM handheld)
 
 1. Download the `.apk` file.
