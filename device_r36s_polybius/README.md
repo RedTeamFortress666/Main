@@ -17,9 +17,9 @@ Lunch: `lineage_r36s_crypt3x-userdebug` (`lineage_r36s_polybius-*` is an alias).
 
 | | `lineage_r36s` (stock) | CRYPT3X OS |
 | --- | --- | --- |
-| Launcher | Daijishou | Doomsday Clock vault (HOME) |
-| Browser | Cromite | Cromite (kept) |
-| Extra apps | game-fronted | Polybius + optional Orbot/WireGuard |
+| Launcher | Daijishou | Vault HOME — desk is Mail / F-Droid / Brave |
+| Browser | Cromite | Brave (Cromite removed) |
+| Extra apps | game-fronted | Proton Mail, F-Droid, concealed Polybius |
 | GApps | inherit-if-exists | explicitly overridden away |
 | Screen | stay-on 24h | 2 min timeout |
 | Bluetooth | off at boot | on (mesh) |
@@ -40,26 +40,28 @@ in `lineageos_r36s_defconfig`, and adds `/dev/ttyACM*` to common `ueventd`.
 
 ```bash
 ./device_r36s_polybius/fetch-apks.sh
+./device_r36s_polybius/fetch-cover-apks.sh
 ```
-
-That pulls from `cursor/v1-stable-logins-ios-b952`:
 
 | Module | applicationId | Role |
 | --- | --- | --- |
-| Polybius | `com.polybius.polybius.user` | V1 USER STABLE (operators) |
-| PolybiusHq | `com.polybius.polybius.hq` | EMOJINIGMA HQ (portal/admin) |
-| DoomsdayClock | `com.polybius.doomsday_clock` | Calendar vault 2.0.2 (HOME) |
+| ProtonMail | `ch.protonmail.android` | Desk mail |
+| FDroid | `org.fdroid.fdroid` | Desk catalogue (adaptability) |
+| Brave | `com.brave.browser` | Desk browser + default http(s) |
+| Polybius | `com.polybius.polybius.user` | Concealed (ritual OPEN) |
+| PolybiusHq | `com.polybius.polybius.hq` | Concealed HQ |
+| DoomsdayClock | `com.polybius.doomsday_clock` | HOME 2.0.3 — desk + Route |
 
-APKs are gitignored. Different package IDs, so user + HQ both preinstall.
-Doomsday Clock 2.0.2 is HOME: it replaces Daijishou/Trebuchet. Ritual OPEN
-launches concealed `com.polybius.polybius.user` (no player/APK cards).
-Strip drawer icons after a fresh fetch:
+The public home is three apps. Route (in the vault) sets Android 11 Private
+DNS (DoT), MAC randomization, scan/location/captive-portal flags, and tries
+to grant Brave `ROLE_BROWSER`. F-Droid is how you add or replace anything
+later without flashing.
 
 ```bash
 ./device_r36s_polybius/conceal-prebuilts.sh
 ```
 
-Optional Orbot/WireGuard still drop in by hand.
+Optional Orbot/WireGuard still drop in by hand for a device-wide IP path.
 
 ## Build (after a full Lineage sync — ask before downloading)
 
@@ -80,7 +82,6 @@ BUILD_TARGET=lineage_r36s_crypt3x-userdebug docker compose up
 
 Already in stock AndR36oid (kept):
 
-- Cromite prebuilt (Tor/SOCKS/custom DNS capable)
 - BLE + classic BT (`android.hardware.bluetooth@1.1-service.btlinux`)
 - Wi-Fi Direct permission + `p2p_supplicant.conf`
 - USB host + accessory + `config_disableUsbPermissionDialogs`
@@ -90,8 +91,9 @@ Already in stock AndR36oid (kept):
 
 Added by this product:
 
-- New lunch target and prebuilt slots
-- Strip Daijishou / gallery / music / camera / print / GMS names
+- New lunch target and prebuilt slots (Brave, F-Droid, Proton Mail)
+- Strip Daijishou / Cromite / gallery / music / camera / print / GMS names
+- Android 11 hardening defaults (Quad9 DoT fallback, no captive portal, no Play verifier)
 - USB ACM + USB-UART kernel options (needed for ESP32-S3 CDC)
 - `init.polybius.rc` + `polybius_bridge.py` reference
 - Battery-friendlier SettingsProvider defaults
@@ -102,7 +104,7 @@ Not in the AndR36oid tree today (do not invent them in the ROM):
 - Reticulum / `rns` / `lxmf` — not present. Run later via Termux or a
   native `polybius_bridge` binary talking to `rnsd`.
 - System-wide “force all traffic through Tor” without a VPN app.
-  Use Orbot VPN mode + always-on VPN. Cromite SOCKS is per-app.
+  Use Orbot VPN mode + always-on VPN. Brave is per-app until then.
 - Python on `/system` — the bridge script is a reference only.
 
 ## Files you will edit later

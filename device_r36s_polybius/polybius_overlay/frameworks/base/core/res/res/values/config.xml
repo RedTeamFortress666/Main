@@ -7,4 +7,11 @@
 
     <!-- Wi-Fi Direct is already declared in common; keep P2P available. -->
     <bool name="config_wifi_fast_bss_transition_supported">true</bool>
+
+    <!-- Fingerprint: randomize STA MAC when the firmware allows (common already true). -->
+    <bool name="config_wifi_connected_mac_randomization_supported">true</bool>
+
+    <!-- No microG on this product — do not load fused/network location stubs. -->
+    <bool name="config_enableNetworkLocationOverlay">false</bool>
+    <bool name="config_enableFusedLocationOverlay">false</bool>
 </resources>

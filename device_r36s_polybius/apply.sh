@@ -30,7 +30,9 @@ copy_into_dt AndroidProducts.mk
 copy_into_dt lineage_r36s_crypt3x.mk
 copy_into_dt lineage_r36s_polybius.mk
 copy_into_dt polybius.mk
+copy_into_dt hardening.mk
 copy_into_dt permissions
+copy_into_dt sysconfig
 copy_into_dt polybius_overlay
 copy_into_dt prebuilts
 copy_into_dt rootdir
@@ -86,5 +88,5 @@ else
 fi
 
 echo "Done. Lunch target: lineage_r36s_crypt3x-userdebug  (CRYPT3X OS)"
-echo "Drop APKs under $DT/prebuilts/{Polybius,DoomsdayClock,Orbot,WireGuard}/"
+echo "Drop APKs under $DT/prebuilts/{Polybius,DoomsdayClock,Brave,FDroid,ProtonMail,Orbot,WireGuard}/"
 echo "Boot animation: $DT/media/bootanimation.zip (python3 device_r36s_polybius/media/render_bootanim.py to rebuild)"

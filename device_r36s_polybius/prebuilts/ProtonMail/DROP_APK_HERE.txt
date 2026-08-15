@@ -1,0 +1,8 @@
+Proton Mail lands here as ProtonMail.apk
+
+  applicationId: ch.protonmail.android
+  role: desk mail
+  source: Proton's Android build (not on f-droid.org main repo)
+
+Drop the official APK, or:
+  PROTONMAIL_APK_URL=... ./device_r36s_polybius/fetch-cover-apks.sh

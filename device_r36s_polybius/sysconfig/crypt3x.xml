@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Lightweight allowlist for the three desk apps. Adapt via F-Droid. -->
+<config>
+    <allow-in-power-save package="com.brave.browser" />
+    <allow-in-data-usage-save package="com.brave.browser" />
+    <allow-in-power-save package="ch.protonmail.android" />
+    <allow-in-data-usage-save package="ch.protonmail.android" />
+    <allow-in-power-save package="org.fdroid.fdroid" />
+</config>

@@ -1,7 +1,11 @@
 package com.polybius.doomsday_clock
 
+import android.app.role.RoleManager
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
+import android.os.Process
+import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -25,6 +29,22 @@ class MainActivity : FlutterActivity() {
                             ?: "com.polybius.polybius.MainActivity"
                         result.success(launchPayload(pkg, activity))
                     }
+                    "launchPackage" -> {
+                        val pkg = call.argument<String>("package") ?: ""
+                        result.success(pkg.isNotBlank() && launchPackage(pkg))
+                    }
+                    "routeStatus" -> result.success(routeStatus())
+                    "setPrivateDns" -> {
+                        val mode = call.argument<String>("mode") ?: "hostname"
+                        val host = call.argument<String>("hostname") ?: ""
+                        result.success(setPrivateDns(mode, host))
+                    }
+                    "setRouteFlag" -> {
+                        val key = call.argument<String>("key") ?: ""
+                        val value = call.argument<Boolean>("value") ?: false
+                        result.success(setRouteFlag(key, value))
+                    }
+                    "applyHardenedProfile" -> result.success(applyHardenedProfile())
                     else -> result.notImplemented()
                 }
             }
@@ -42,13 +62,128 @@ class MainActivity : FlutterActivity() {
     private fun launchPayload(packageName: String, activity: String): Boolean {
         if (!isInstalled(packageName)) return false
         return try {
-            // Explicit component — Polybius has no LAUNCHER icon.
             val launch = Intent().setClassName(packageName, activity)
             launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             startActivity(launch)
             true
         } catch (_: Exception) {
             false
+        }
+    }
+
+    private fun launchPackage(packageName: String): Boolean {
+        if (!isInstalled(packageName)) return false
+        return try {
+            val launch = packageManager.getLaunchIntentForPackage(packageName)
+                ?: return false
+            launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(launch)
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun routeStatus(): Map<String, Any> {
+        val cr = contentResolver
+        val dnsMode = Settings.Global.getString(cr, "private_dns_mode") ?: "off"
+        val dnsHost = Settings.Global.getString(cr, "private_dns_specifier") ?: ""
+        val mac = Settings.Global.getInt(cr, "wifi_connected_mac_randomization_enabled", 1) == 1
+        val wifiScan = Settings.Global.getInt(cr, Settings.Global.WIFI_SCAN_ALWAYS_AVAILABLE, 0) == 1
+        val bleScan = Settings.Global.getInt(cr, "ble_scan_always_enabled", 0) == 1
+        val loc = Settings.Secure.getInt(cr, Settings.Secure.LOCATION_MODE, 0)
+        val captive = Settings.Global.getInt(cr, "captive_portal_mode", 1)
+        val vpn = Settings.Secure.getString(cr, "always_on_vpn_app") ?: ""
+        val lockdown = Settings.Secure.getInt(cr, "always_on_vpn_lockdown", 0) == 1
+        return mapOf(
+            "dnsMode" to dnsMode,
+            "dnsHost" to dnsHost,
+            "macRandom" to mac,
+            "wifiScanAlways" to wifiScan,
+            "bleScanAlways" to bleScan,
+            "locationOff" to (loc == 0),
+            "captivePortalOff" to (captive == 0),
+            "vpnPackage" to vpn,
+            "vpnLockdown" to lockdown,
+            "browserRole" to browserRoleHolder(),
+        )
+    }
+
+    private fun setPrivateDns(mode: String, hostname: String): Boolean {
+        return try {
+            Settings.Global.putString(contentResolver, "private_dns_mode", mode)
+            if (hostname.isNotBlank()) {
+                Settings.Global.putString(contentResolver, "private_dns_specifier", hostname)
+            }
+            true
+        } catch (_: SecurityException) {
+            false
+        }
+    }
+
+    private fun setRouteFlag(key: String, value: Boolean): Boolean {
+        return try {
+            val cr = contentResolver
+            when (key) {
+                "macRandom" -> Settings.Global.putInt(
+                    cr, "wifi_connected_mac_randomization_enabled", if (value) 1 else 0
+                )
+                "wifiScanOff" -> Settings.Global.putInt(
+                    cr, Settings.Global.WIFI_SCAN_ALWAYS_AVAILABLE, if (value) 0 else 1
+                )
+                "bleScanOff" -> Settings.Global.putInt(
+                    cr, "ble_scan_always_enabled", if (value) 0 else 1
+                )
+                "locationOff" -> Settings.Secure.putInt(
+                    cr, Settings.Secure.LOCATION_MODE, if (value) 0 else Settings.Secure.LOCATION_MODE_HIGH_ACCURACY
+                )
+                "captiveOff" -> Settings.Global.putInt(
+                    cr, "captive_portal_mode", if (value) 0 else 1
+                )
+                else -> return false
+            }
+            true
+        } catch (_: SecurityException) {
+            false
+        }
+    }
+
+    private fun applyHardenedProfile(): Boolean {
+        var ok = setPrivateDns("hostname", "dns.quad9.net")
+        ok = setRouteFlag("macRandom", true) && ok
+        ok = setRouteFlag("wifiScanOff", true) && ok
+        ok = setRouteFlag("bleScanOff", true) && ok
+        ok = setRouteFlag("locationOff", true) && ok
+        ok = setRouteFlag("captiveOff", true) && ok
+        assignBraveBrowserRole()
+        return ok
+    }
+
+    private fun browserRoleHolder(): String {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return ""
+        return try {
+            val rm = getSystemService(RoleManager::class.java) ?: return ""
+            if (!rm.isRoleAvailable(RoleManager.ROLE_BROWSER)) return ""
+            rm.getRoleHolders(RoleManager.ROLE_BROWSER).firstOrNull() ?: ""
+        } catch (_: Exception) {
+            ""
+        }
+    }
+
+    private fun assignBraveBrowserRole() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
+        if (!isInstalled("com.brave.browser")) return
+        try {
+            val rm = getSystemService(RoleManager::class.java) ?: return
+            rm.addRoleHolderAsUser(
+                RoleManager.ROLE_BROWSER,
+                "com.brave.browser",
+                0,
+                Process.myUserHandle(),
+                java.util.concurrent.Executor { r -> r.run() },
+            ) { _ -> }
+        } catch (_: Exception) {
+            // Needs MANAGE_ROLE_HOLDERS; desk still launches Brave explicitly.
         }
     }
 }

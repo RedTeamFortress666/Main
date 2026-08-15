@@ -24,3 +24,11 @@ Upstream v1-stable blobs (before conceal):
 
 User and HQ are separate packages, so both can be preinstalled.
 The vault starts them by class name (`com.polybius.polybius.MainActivity`).
+
+Desk cover apps (see `fetch-cover-apks.sh`):
+
+| Module | applicationId | Upstream |
+| --- | --- | --- |
+| F-Droid | `org.fdroid.fdroid` | f-droid.org repo (1.23.x suggested) |
+| Brave | `com.brave.browser` | brave-browser-apk-release.s3.brave.com F-Droid repo |
+| Proton Mail | `ch.protonmail.android` | Proton official APK (drop by hand if CDN blocks) |

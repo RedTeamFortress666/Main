@@ -5,6 +5,9 @@
         <permission name="android.permission.CHANGE_COMPONENT_ENABLED_STATE"/>
         <permission name="android.permission.INTERACT_ACROSS_USERS"/>
         <permission name="android.permission.START_ACTIVITIES_FROM_BACKGROUND"/>
+        <permission name="android.permission.WRITE_SETTINGS"/>
+        <permission name="android.permission.MANAGE_ROLE_HOLDERS"/>
+        <permission name="android.permission.OBSERVE_ROLE_HOLDERS"/>
     </privapp-permissions>
 
     <privapp-permissions package="com.polybius.polybius.user">

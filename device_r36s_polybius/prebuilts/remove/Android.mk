@@ -119,3 +119,8 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := remove-Velvet
 EXECUTABLES.remove-Velvet.OVERRIDES := Velvet
 include $(BUILD_PHONY_PACKAGE)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := remove-Cromite
+EXECUTABLES.remove-Cromite.OVERRIDES := Cromite
+include $(BUILD_PHONY_PACKAGE)

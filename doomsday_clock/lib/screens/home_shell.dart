@@ -8,7 +8,9 @@ import 'alarm_tab.dart';
 import 'auth_gate.dart';
 import 'bulletin_tab.dart';
 import 'clock_tab.dart';
+import 'desk_tab.dart';
 import 'planner_tab.dart';
+import 'route_tab.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -20,34 +22,112 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   AuthSession? _session;
   bool _vaultSetupPending = false;
+  bool _showLogin = false;
   int _index = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _restore();
+  }
+
+  Future<void> _restore() async {
+    final s = await AuthService().currentSession();
+    if (s == null || !mounted) return;
+    final needs = await AuthService().needsVaultSetup(s.username);
+    setState(() {
+      _session = s;
+      _vaultSetupPending = needs;
+    });
+  }
 
   void _onAuth(AuthSession session, {required bool needsVaultSetup}) {
     setState(() {
       _session = session;
       _vaultSetupPending = needsVaultSetup;
+      _showLogin = false;
       _index = 0;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_session == null) {
-      return AuthGate(onAuthenticated: _onAuth);
+    if (_showLogin && _session == null) {
+      return AuthGate(
+        onAuthenticated: _onAuth,
+      );
     }
-    if (_vaultSetupPending) {
+    if (_session != null && _vaultSetupPending) {
       return VaultSetupScreen(
         session: _session!,
         onDone: () => setState(() => _vaultSetupPending = false),
       );
     }
 
-    final pages = [
-      const BulletinTab(),
-      const ClockTab(),
-      PlannerTab(session: _session!),
-      const AlarmTab(),
-    ];
+    final operator = _session != null;
+    final pages = operator
+        ? <Widget>[
+            DeskTab(onOpenRoute: () => setState(() => _index = 1)),
+            const RouteTab(),
+            const BulletinTab(),
+            PlannerTab(session: _session!),
+            const AlarmTab(),
+          ]
+        : <Widget>[
+            DeskTab(onOpenRoute: () => setState(() => _index = 1)),
+            const RouteTab(),
+            const ClockTab(),
+          ];
+
+    final destinations = operator
+        ? const [
+            NavigationDestination(
+              icon: Icon(Icons.grid_view_outlined),
+              selectedIcon: Icon(Icons.grid_view),
+              label: 'Desk',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.alt_route_outlined),
+              selectedIcon: Icon(Icons.alt_route),
+              label: 'Route',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.article_outlined),
+              selectedIcon: Icon(Icons.article),
+              label: 'Bulletin',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.calendar_month_outlined),
+              selectedIcon: Icon(Icons.calendar_month),
+              label: 'Planner',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.alarm_outlined),
+              selectedIcon: Icon(Icons.alarm),
+              label: 'Alarm',
+            ),
+          ]
+        : const [
+            NavigationDestination(
+              icon: Icon(Icons.grid_view_outlined),
+              selectedIcon: Icon(Icons.grid_view),
+              label: 'Desk',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.alt_route_outlined),
+              selectedIcon: Icon(Icons.alt_route),
+              label: 'Route',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.schedule_outlined),
+              selectedIcon: Icon(Icons.schedule),
+              label: 'Clock',
+            ),
+          ];
+
+    if (_index >= pages.length) {
+      _index = 0;
+    }
 
     return MatrixRainBackground(
       child: Scaffold(
@@ -67,7 +147,7 @@ class _HomeShellState extends State<HomeShell> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'DOOMSDAY CLOCK 2.0',
+                            'CRYPT3X OS',
                             style: Theme.of(context)
                                 .textTheme
                                 .displayLarge
@@ -83,7 +163,9 @@ class _HomeShellState extends State<HomeShell> {
                                 ),
                           ),
                           Text(
-                            '${_session!.displayName} · ${_session!.tier} · BNE AEST',
+                            operator
+                                ? '${_session!.displayName} · ${_session!.tier} · BNE AEST'
+                                : 'DESK · MAIL / F-DROID / BRAVE',
                             style: Theme.of(context)
                                 .textTheme
                                 .labelLarge
@@ -93,15 +175,23 @@ class _HomeShellState extends State<HomeShell> {
                       ),
                     ),
                     IconButton(
-                      tooltip: 'Logout',
+                      tooltip: operator ? 'Logout' : 'Operator vault',
                       onPressed: () async {
-                        await AuthService().logout();
-                        setState(() {
-                          _session = null;
-                          _vaultSetupPending = false;
-                        });
+                        if (operator) {
+                          await AuthService().logout();
+                          setState(() {
+                            _session = null;
+                            _vaultSetupPending = false;
+                            _index = 0;
+                          });
+                        } else {
+                          setState(() => _showLogin = true);
+                        }
                       },
-                      icon: const Icon(Icons.logout, color: NoirTheme.crimson),
+                      icon: Icon(
+                        operator ? Icons.logout : Icons.lock_outline,
+                        color: NoirTheme.crimson,
+                      ),
                     ),
                   ],
                 ),
@@ -115,28 +205,7 @@ class _HomeShellState extends State<HomeShell> {
           indicatorColor: NoirTheme.matrix.withValues(alpha: 0.2),
           selectedIndex: _index,
           onDestinationSelected: (i) => setState(() => _index = i),
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.article_outlined),
-              selectedIcon: Icon(Icons.article),
-              label: 'Bulletin',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.schedule_outlined),
-              selectedIcon: Icon(Icons.schedule),
-              label: 'Clock',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.calendar_month_outlined),
-              selectedIcon: Icon(Icons.calendar_month),
-              label: 'Planner',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.alarm_outlined),
-              selectedIcon: Icon(Icons.alarm),
-              label: 'Alarm',
-            ),
-          ],
+          destinations: destinations,
         ),
       ),
     );

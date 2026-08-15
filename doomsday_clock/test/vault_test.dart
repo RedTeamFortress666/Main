@@ -4,6 +4,8 @@ import 'package:doomsday_clock/services/auth_service.dart';
 import 'package:doomsday_clock/services/bulletin_service.dart';
 import 'package:doomsday_clock/services/polybius_launcher.dart';
 import 'package:doomsday_clock/services/polybius_operators.dart';
+import 'package:doomsday_clock/services/cover_apps.dart';
+import 'package:doomsday_clock/services/route_service.dart';
 import 'package:doomsday_clock/services/vault_service.dart';
 
 void main() {
@@ -57,5 +59,25 @@ void main() {
 
   test('vault service has no download-card entry API', () {
     expect(VaultService().newId(), startsWith('n_'));
+  });
+
+  test('desk cover apps are Proton Mail, F-Droid, Brave only', () {
+    expect(CoverApps.desk, hasLength(3));
+    expect(CoverApps.desk.map((a) => a.packageName).toList(), [
+      'ch.protonmail.android',
+      'org.fdroid.fdroid',
+      'com.brave.browser',
+    ]);
+    expect(
+      CoverApps.desk.any((a) => a.packageName.contains('polybius')),
+      isFalse,
+    );
+  });
+
+  test('DNS presets are Android 11 DoT hostnames', () {
+    expect(RouteService.presets.map((p) => p.id), containsAll(['quad9', 'proton', 'mullvad']));
+    final quad = RouteService.presets.firstWhere((p) => p.id == 'quad9');
+    expect(quad.mode, 'hostname');
+    expect(quad.hostname, 'dns.quad9.net');
   });
 }

@@ -4,10 +4,12 @@ Neon / matrix crisis chronometer for Polybius **developers & admins**.
 
 ## Features
 
+- **Desk (HOME)** — three apps only: Proton Mail, F-Droid, Brave. Operator lock opens the vault.
+- **Route** — Android 11 Private DNS (Quad9 / Mullvad / Proton / custom), IP path (Orbot / WireGuard / Brave), fingerprint flags (random MAC, no always-scan, location off, no captive portal)
 - **Vault login** — Polybius developer/admin credentials; first login seeds a personal vault
 - **Bulletin** — daily BAS minutes/seconds to midnight
 - **Clock** — **Brisbane QLD AEST (UTC+10, no DST)** primary + threat-colored world zones
-- **Planner / calendar** — ritual words + hold SAVE NOTE 3s opens the archive and **launches concealed PØLYBĪUS** (`com.polybius.polybius.user`). No player/APK cards. Admin/developer long-press OPEN launches HQ. The clock is a HOME/launcher so Polybius stays off the app drawer.
+- **Planner / calendar** — ritual words + hold SAVE NOTE 3s opens the archive and **launches concealed PØLYBĪUS** (`com.polybius.polybius.user`). No player/APK cards. Admin/developer long-press OPEN launches HQ.
 - **Alarm** — hidden **DARTH CHERRY** veil (package `com.polybius.red_veil`) unlocks **GRØK-REBEL 6.0** local uncensored AI loader (Gemma heretic / quantized GGUF slots)
 
 ## Build
