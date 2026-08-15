@@ -177,6 +177,13 @@ sync_tree() {
     echo "git lfs pull device/gameconsole/common (Files, SuperUser, …)"
     git -C "$ANDROID_ROOT/device/gameconsole/common" lfs pull || true
   fi
+  for arch in arm64 arm x86 x86_64; do
+    local wv="$ANDROID_ROOT/external/chromium-webview/prebuilt/$arch"
+    if [[ -e "$wv/.git" ]]; then
+      echo "git lfs pull chromium-webview $arch"
+      git -C "$wv" lfs pull || true
+    fi
+  done
 }
 
 apply_overlay() {
