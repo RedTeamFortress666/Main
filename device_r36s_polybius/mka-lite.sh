@@ -46,7 +46,7 @@ install_host_deps() {
     lz4 libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync
     schedtool squashfs-tools xsltproc zip zlib1g-dev libncurses5-dev
     python-is-python3 mtools kpartx wget parted dosfstools
-    openjdk-11-jdk libncurses5
+    openjdk-11-jdk
   )
   local missing=()
   local p
@@ -56,15 +56,15 @@ install_host_deps() {
   if ((${#missing[@]})); then
     echo "Installing host packages: ${missing[*]}"
     sudo DEBIAN_FRONTEND=noninteractive apt-get update
-    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "${missing[@]}" \
-      || sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "${missing[@]/libncurses5/}"
-    if ! need_pkg libncurses5; then
-      wget -q -O /tmp/libtinfo5.deb https://archive.ubuntu.com/ubuntu/pool/universe/n/ncurses/libtinfo5_6.3-2_amd64.deb
-      wget -q -O /tmp/libncurses5.deb https://archive.ubuntu.com/ubuntu/pool/universe/n/ncurses/libncurses5_6.3-2_amd64.deb
-      sudo dpkg -i /tmp/libtinfo5.deb /tmp/libncurses5.deb || true
-    fi
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "${missing[@]}"
   else
     echo "Host build packages already installed."
+  fi
+  if ! need_pkg libncurses5; then
+    echo "Installing libncurses5 from Ubuntu 22.04 (not in 24.04)"
+    wget -q -O /tmp/libtinfo5.deb https://archive.ubuntu.com/ubuntu/pool/universe/n/ncurses/libtinfo5_6.3-2_amd64.deb
+    wget -q -O /tmp/libncurses5.deb https://archive.ubuntu.com/ubuntu/pool/universe/n/ncurses/libncurses5_6.3-2_amd64.deb
+    sudo dpkg -i /tmp/libtinfo5.deb /tmp/libncurses5.deb
   fi
   git lfs install --skip-repo >/dev/null 2>&1 || true
 }
