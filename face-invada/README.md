@@ -6,7 +6,9 @@ The slack motel opener is gone. You start on the packed night street.
 
 ## Opening level
 
-Walk right through a neon block. Grab everything. Combine. Talk.
+Walk the neon route. Tall grass starts wild battles. Stomp roaming beats, then TAKE to tin them. Springs launch you. DO on green pipes to warp.
+
+Catch **Mintmites**, **Spicegrubs**, **Glowbats**, and **Basslings**. They drop the junk you combine. Trainers roast your party.
 
 - **MINT + GUM + MARKER** → wristband (`CURIOUSLY STRONG. ALL NIGHT LONG.`)
 - **GLOW + BATTERY** → lamp (lights the alley so lipstick shows)
@@ -18,7 +20,7 @@ Pipe, Mouth, Brick, Nix, and Bolt roast you. USE mint to grow (`PILLS THAT MAKE 
 
 ## After the club
 
-LANAAAAAA motorcycle cut, Face-head Pac vs rave vampires, Kim/Kanye phone, Sentinel Isle coffee run, Atari roast, Pong homage, later motel nights, club DJ set, Grammys, Don Trumpet bribe, credits.
+LANAAAAAA motorcycle cut, Face-head Pac vs rave vampires, Kim/Kanye phone, Sentinel Safari (chase Brewcrab and Glazemoth to the hut gym), Atari roast, Pong homage, later motel nights, club DJ set, fleeing Grammy statuettes, Don Trumpet bribe, credits.
 
 ## Play
 

@@ -14,6 +14,7 @@ import {
   drawPixelText, drawNeonCity, drawFighter, drawHighway, lifeBarWidth,
   drawMysteryRoom, drawClueBanner, drawFaceHead, drawRaveVampire,
   paintNightStreet, paintPickup, paintRaveBat, drawNightNpc,
+  paintBeat, paintGrass, paintSpring, paintWarpPipe, paintPartyBalls,
 } from './pixel.js';
 import {
   emptyMysteryState, setVerb, tapAt, canFight,
@@ -32,7 +33,9 @@ import {
   emptyNightState, stepNight, tapNight, selectNightItem, nightCam,
   hitNightInv, ITEM_LABEL, PLATFORMS, NPCS, NIGHT_W, FLOOR_Y,
   BAG_X, BAG_Y, BAG_SLOT_W, BAG_SLOT_H, BAG_GAP, BAG_SLOTS,
+  GRASS, SPRINGS, PIPES, platY,
 } from './nightout.js';
+import { beatName } from './catch.js';
 
 const VERB_KEYS = { KeyZ: 'look', KeyX: 'talk', KeyC: 'take', KeyV: 'use' };
 
@@ -397,7 +400,8 @@ export class Game {
       const dir = (this.input.held('KeyD') || this.input.held('ArrowRight') ? 1 : 0)
         - (this.input.held('KeyA') || this.input.held('ArrowLeft') ? 1 : 0);
       const jump = this.input.just('KeyW') || this.input.just('ArrowUp');
-      this.arcade = stepGrammy(this.arcade, dir, jump);
+      const take = this.input.just('KeyC') || this.input.just('KeyS') || this.input.just('KeyZ');
+      this.arcade = stepGrammy(this.arcade, dir, jump, take);
       if (this.arcade.won) this.advanceCampaign();
       return;
     }
@@ -537,15 +541,26 @@ export class Game {
     const cam = nightCam(n, CANVAS_W);
     paintNightStreet(ctx, this.time, cam, NIGHT_W, n.alleyLit);
 
+    for (const g of GRASS) {
+      paintGrass(ctx, g.x - cam, FLOOR_Y, g.w, this.time);
+    }
+    for (const sp of SPRINGS) {
+      paintSpring(ctx, sp.x - cam, sp.y, this.time);
+    }
+    for (const pipe of PIPES) {
+      paintWarpPipe(ctx, pipe.x - cam, FLOOR_Y);
+    }
+
     for (const p of PLATFORMS) {
+      const py = platY(p, n.frame || 0);
       const x = p.x - cam;
       if (x < -200 || x > CANVAS_W + 40) continue;
       ctx.fillStyle = '#0a0808';
-      ctx.fillRect(x - 2, p.y - 2, p.w + 4, 18);
-      ctx.fillStyle = '#8a5020';
-      ctx.fillRect(x, p.y, p.w, 14);
-      ctx.fillStyle = '#c87838';
-      ctx.fillRect(x, p.y, p.w, 4);
+      ctx.fillRect(x - 2, py - 2, p.w + 4, 18);
+      ctx.fillStyle = p.amp ? '#3df0ff' : '#8a5020';
+      ctx.fillRect(x, py, p.w, 14);
+      ctx.fillStyle = p.amp ? '#ffe566' : '#c87838';
+      ctx.fillRect(x, py, p.w, 4);
     }
 
     for (const p of n.pickups) {
@@ -565,6 +580,14 @@ export class Game {
       drawPixelText(ctx, npc.name, x, FLOOR_Y - 240, 2, '#ffe566', 'center');
     }
 
+    for (const w of n.wilds || []) {
+      if (w.caught) continue;
+      const x = w.x - cam;
+      if (x < -40 || x > CANVAS_W + 40) continue;
+      paintBeat(ctx, w.id, x, w.y, this.time, (w.vx || 1) >= 0 ? 1 : -1);
+      drawPixelText(ctx, beatName(w.id), x, w.y - 36, 1, w.dazed ? '#ffe566' : '#7cff6b', 'center');
+    }
+
     for (const b of n.bats) {
       const x = b.x - cam;
       if (x < -40 || x > CANVAS_W + 40) continue;
@@ -581,7 +604,18 @@ export class Game {
     drawClueBanner(ctx, n.banner || n.log, this.time);
     ctx.fillStyle = 'rgba(6,4,14,0.88)';
     ctx.fillRect(0, 84, CANVAS_W, 36);
-    drawPixelText(ctx, 'CURIOUSLY STRONG ALL NIGHT LONG   TAP BAG THEN USE', 16, 92, 2, '#3df0ff');
+    drawPixelText(ctx, 'STOMP + TAKE TO CATCH    GRASS STARTS BATTLES    DO ON PIPES', 16, 92, 2, '#3df0ff');
+    drawPixelText(ctx, 'PARTY', 16, 128, 1, '#888');
+    paintPartyBalls(ctx, n.party || [], 80, 134);
+
+    if (n.encounter) {
+      ctx.fillStyle = 'rgba(0,0,20,0.72)';
+      ctx.fillRect(200, 180, 880, 280);
+      drawPixelText(ctx, `WILD ${beatName(n.encounter.id)}`, CANVAS_W / 2, 210, 3, '#ffe566', 'center');
+      paintBeat(ctx, n.encounter.id, CANVAS_W / 2, 340, this.time, 1);
+      drawPixelText(ctx, n.encounter.hp <= 1 ? 'WOBBLING  TAKE TO CATCH' : 'JUMP TO WEAKEN   TAKE TO THROW TIN', CANVAS_W / 2, 400, 2, '#fff', 'center');
+      drawPixelText(ctx, 'WALK TO FLEE', CANVAS_W / 2, 430, 1, '#bbb', 'center');
+    }
 
     drawPixelText(ctx, 'BAG', BAG_X, BAG_Y - 16, 1, '#888888');
     for (let i = 0; i < BAG_SLOTS; i++) {
@@ -866,32 +900,37 @@ export class Game {
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
     ctx.fillStyle = '#c8b070';
     ctx.fillRect(0, 500, CANVAS_W, 220);
+    paintGrass(ctx, 300, 500, 640, this.time);
     ctx.fillStyle = '#3a2010';
     ctx.fillRect(1000, 300, 180, 200);
+    drawPixelText(ctx, 'GYM', 1050, 320, 2, '#ffe566');
     const a = this.arcade;
-    drawPixelText(ctx, 'SENTINEL ISLE  COFFEE AND DOUGHNUTS', 24, 20, 2, '#ffe566');
+    drawPixelText(ctx, 'SENTINEL SAFARI  CATCH BREAKFAST', 24, 20, 2, '#ffe566');
     if (a.breakShown && !a.won) {
-      drawPixelText(ctx, 'FETCH BREAK: THEY DO NOT WANT YOUR PLAYLIST', 24, 56, 2, '#ff4ad2');
+      drawPixelText(ctx, 'HUT: NICE CRAB. STILL WANT THE MOTH. NOT YOUR PLAYLIST.', 24, 56, 2, '#ff4ad2');
     }
-    drawPixelText(ctx, `HOLDING ${a.holding || 'NOTHING'}  HUT WANTS BOTH`, 24, 88, 2, '#fff');
-    if (a.coffee) drawPixelText(ctx, 'COFFEE', 120, 460, 2, '#6a4010');
-    if (a.donut) drawPixelText(ctx, 'DONUT', 200, 460, 2, '#e87880');
+    drawPixelText(ctx, a.banner || `HOLDING ${a.holding || 'NOTHING'}  HUT WANTS BOTH CATCHES`, 24, 88, 2, '#fff');
+    paintPartyBalls(ctx, a.party || [], 80, 130);
+    for (const w of a.wilds || []) {
+      if (w.caught) continue;
+      paintBeat(ctx, w.beat || w.id, w.x, 500 + w.y, this.time, (w.vx || 1) >= 0 ? 1 : -1);
+      drawPixelText(ctx, (w.beat || w.id).toUpperCase(), w.x, 454 + w.y, 1, '#ffe566', 'center');
+    }
     drawFighter(ctx, 'face', a.px, 500 + a.py, 1, { t: this.time }, 2.4);
-    drawPixelText(ctx, 'WALK  JUMP  TAKE/DO TO PICK UP AND DELIVER', 24, 620, 1, '#ddd');
+    drawPixelText(ctx, 'CHASE  JUMP TO DAZE  TAKE TO CATCH  DELIVER AT THE HUT', 24, 620, 1, '#ddd');
   }
 
   _drawGrammy(ctx) {
     drawNeonCity(ctx, CANVAS_W, CANVAS_H, this.time);
     const a = this.arcade;
-    drawPixelText(ctx, 'GRAMMY NIGHT  JUMP THE TROPHIES', 24, 20, 2, '#ffe566');
-    drawPixelText(ctx, `GOT ${a.got} / 4`, 24, 56, 2, '#3df0ff');
+    drawPixelText(ctx, 'GRAMMY NIGHT  CATCH THE FLEEING STATUETTES', 24, 20, 2, '#ffe566');
+    drawPixelText(ctx, `CAUGHT ${a.got} / 4`, 24, 56, 2, '#3df0ff');
     for (const t of a.trophies) {
       if (t.got) continue;
-      ctx.fillStyle = '#ffe566';
-      ctx.fillRect(t.x - 16, 500 + t.y - 28, 32, 36);
-      drawPixelText(ctx, 'G', t.x - 8, 500 + t.y - 20, 2, '#120c00');
+      paintBeat(ctx, 'statuette', t.x, 500 + t.y, this.time, (t.vx || 1) >= 0 ? 1 : -1);
     }
     drawFighter(ctx, 'face', a.px, 500 + a.py, 1, { t: this.time, blade: 0.4 }, 2.6);
+    drawPixelText(ctx, 'THEY RUN. JUMP ON THEM OR TAKE TO TIN THEM.', 24, 620, 1, '#ddd');
   }
 
   _drawBribe(ctx) {

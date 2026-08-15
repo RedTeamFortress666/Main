@@ -20,8 +20,9 @@ import {
 } from './js/arcade.js';
 import {
   emptyNightState, stepNight, tryRecipe, talkNearest, useSelected, has,
-  selectNightItem, tapNight, hitNightInv, BAG_X, BAG_Y,
+  selectNightItem, tapNight, hitNightInv, BAG_X, BAG_Y, PIPES,
 } from './js/nightout.js';
+import { resolveEncounter, makeEncounter, addToParty, beatName } from './js/catch.js';
 
 describe('title and hero', () => {
   it('is FACE INVADA\'s BEAT BOXING', () => {
@@ -321,16 +322,23 @@ describe('campaign arcade', () => {
     expect(s.cheer).toBeGreaterThan(50);
   });
 
-  it('delivers coffee and doughnuts on Sentinel Isle', () => {
+  it('catches roaming breakfast and delivers it to the hut gym', () => {
     let s = emptySentinelState();
+    const crab = s.wilds.find((w) => w.id === 'coffee');
+    s.px = crab.x;
+    s.py = crab.y;
     s = stepSentinel(s, 0, false, true);
     expect(s.holding).toBe('coffee');
+    expect(s.party).toContain('brewcrab');
     s.px = 1000;
     s = stepSentinel(s, 0, false, true);
     expect(s.deliveredC).toBe(true);
     expect(s.breakShown).toBe(true);
-    s.px = 160;
+    const moth = s.wilds.find((w) => w.id === 'donut');
+    s.px = moth.x;
+    s.py = moth.y;
     s = stepSentinel(s, 0, false, true);
+    expect(s.holding).toBe('donut');
     s.px = 1000;
     s = stepSentinel(s, 0, false, true);
     expect(s.won).toBe(true);
@@ -429,5 +437,39 @@ describe('curiously strong night out', () => {
     s.px = 4010;
     s = stepNight(s, { dir: 1 });
     expect(s.won).toBe(true);
+  });
+
+  it('tins a dazed wild beat and warps through a pipe', () => {
+    let s = emptyNightState();
+    const mite = s.wilds.find((w) => w.id === 'mintmite');
+    s.px = mite.x;
+    mite.dazed = 40;
+    s = stepNight(s, { take: true });
+    expect(s.party).toContain('mintmite');
+    expect(has(s, 'mint')).toBe(true);
+    s.px = PIPES[0].x;
+    s.onGround = true;
+    s = stepNight(s, { take: true });
+    expect(s.px).toBe(PIPES[0].to);
+  });
+});
+
+describe('wild beats', () => {
+  it('names original critters and fills a party', () => {
+    expect(beatName('mintmite')).toBe('MINTMITE');
+    expect(addToParty([], 'glowbat')).toEqual(['glowbat']);
+    expect(addToParty(['glowbat'], 'glowbat')).toEqual(['glowbat']);
+  });
+
+  it('catches only after a stomp wobble', () => {
+    let enc = makeEncounter('spicegrub', 2);
+    let r = resolveEncounter(enc, 'throw');
+    expect(r.caught).toBe(null);
+    r = resolveEncounter(r.enc, 'stomp');
+    expect(r.enc.hp).toBe(1);
+    r = resolveEncounter(r.enc, 'throw');
+    expect(r.caught).toBe('spicegrub');
+    r = resolveEncounter(makeEncounter('glowbat', 2), 'flee');
+    expect(r.fled).toBe(true);
   });
 });

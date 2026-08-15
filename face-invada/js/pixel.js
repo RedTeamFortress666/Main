@@ -783,3 +783,106 @@ export const NIGHT_NPC_PAINT = {
   bolt: paintBolt,
 };
 
+export function paintGrass(ctx, x, y, w, t) {
+  for (let i = 0; i < w; i += 10) {
+    const h = 16 + ((i + (t | 0)) % 7);
+    ctx.fillStyle = i % 20 === 0 ? '#3dcc5a' : '#2a8840';
+    ctx.fillRect(x + i, y - h, 6, h);
+  }
+}
+
+export function paintSpring(ctx, x, y, t) {
+  const squash = 4 + Math.round(Math.abs(Math.sin(t * 0.2)) * 6);
+  ctx.fillStyle = '#c0c8d0';
+  ctx.fillRect(x - 16, y - squash - 8, 32, 8);
+  ctx.fillStyle = '#ff4ad2';
+  ctx.fillRect(x - 14, y - squash, 28, squash);
+}
+
+export function paintWarpPipe(ctx, x, y) {
+  ctx.fillStyle = '#1a6a28';
+  ctx.fillRect(x - 22, y - 70, 44, 70);
+  ctx.fillStyle = '#2a9a38';
+  ctx.fillRect(x - 28, y - 84, 56, 20);
+  ctx.fillStyle = '#0a3010';
+  ctx.fillRect(x - 12, y - 78, 24, 10);
+}
+
+export function paintBeat(ctx, id, x, y, t, facing = 1) {
+  const bob = Math.sin(t * 0.2 + x * 0.01) * 4;
+  ctx.save();
+  ctx.translate(x, y + bob);
+  ctx.scale(facing, 1);
+  if (id === 'mintmite') {
+    ctx.fillStyle = '#0a0808';
+    ctx.fillRect(-12, -10, 24, 20);
+    ctx.fillStyle = '#7cff6b';
+    ctx.fillRect(-10, -8, 20, 16);
+    ctx.fillStyle = '#111';
+    ctx.fillRect(-6, -4, 3, 3);
+    ctx.fillRect(3, -4, 3, 3);
+    ctx.fillStyle = '#ffe566';
+    ctx.fillRect(-2, 2, 4, 3);
+  } else if (id === 'spicegrub') {
+    ctx.fillStyle = '#8b1e3f';
+    ctx.fillRect(-14, -8, 28, 16);
+    ctx.fillStyle = '#c44';
+    ctx.fillRect(-12, -6, 24, 12);
+    ctx.fillStyle = '#111';
+    ctx.fillRect(4, -3, 3, 3);
+  } else if (id === 'glowbat' || id === 'bassling') {
+    paintRaveBat(ctx, 0, 0, t, 1);
+    if (id === 'bassling') {
+      ctx.fillStyle = '#3df0ff';
+      ctx.fillRect(-6, -6, 12, 12);
+    }
+  } else if (id === 'brewcrab') {
+    ctx.fillStyle = '#6a4010';
+    ctx.fillRect(-14, -10, 28, 18);
+    ctx.fillStyle = '#c8b070';
+    ctx.fillRect(-8, -18, 16, 10);
+    ctx.fillStyle = '#111';
+    ctx.fillRect(-6, -4, 3, 3);
+    ctx.fillRect(3, -4, 3, 3);
+    ctx.fillStyle = '#3a2010';
+    ctx.fillRect(-18, -2, 8, 4);
+    ctx.fillRect(10, -2, 8, 4);
+  } else if (id === 'glazemoth') {
+    ctx.fillStyle = '#e87880';
+    ctx.fillRect(-16, -8 + Math.sin(t * 0.3) * 3, 12, 10);
+    ctx.fillRect(4, -8 - Math.sin(t * 0.3) * 3, 12, 10);
+    ctx.fillStyle = '#fff4c2';
+    ctx.fillRect(-6, -6, 12, 12);
+  } else {
+    ctx.fillStyle = '#0a0808';
+    ctx.fillRect(-10, -16, 20, 28);
+    ctx.fillStyle = '#ffe566';
+    ctx.fillRect(-8, -14, 16, 24);
+    ctx.fillStyle = '#120c00';
+    ctx.fillRect(-4, -6, 8, 8);
+  }
+  ctx.restore();
+}
+
+export function paintPartyBalls(ctx, party, x, y) {
+  party.forEach((id, i) => {
+    const colors = {
+      mintmite: '#7cff6b',
+      spicegrub: '#c44',
+      glowbat: '#9b6bff',
+      brewcrab: '#6a4010',
+      glazemoth: '#e87880',
+      statuette: '#ffe566',
+      bassling: '#3df0ff',
+    };
+    ctx.fillStyle = '#111';
+    ctx.beginPath();
+    ctx.arc(x + i * 28, y, 11, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = colors[id] || '#fff';
+    ctx.beginPath();
+    ctx.arc(x + i * 28, y, 8, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+

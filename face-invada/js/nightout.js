@@ -1,8 +1,9 @@
 /**
  * CURIOUSLY STRONG ALL NIGHT LONG — homage structure, original street.
- * Mario walk/jump/stomp + packed combinable objects + sarcastic NPCs.
- * Android: walk, jump, tap to take/talk, bag USE to combine.
+ * Mario jump + Pokemon-like wild beats + packed combinable objects.
+ * Android: walk, jump, tap to take/talk/catch, bag USE to combine.
  */
+import { BEATS, addToParty, beatName, inGrass, makeEncounter, resolveEncounter, roam } from './catch.js';
 
 export const NIGHT_W = 4200;
 export const FLOOR_Y = 508;
@@ -53,16 +54,39 @@ export const PLATFORMS = [
   { x: 1000, y: 280, w: 160 },
   { x: 1220, y: 360, w: 150 },
   { x: 1460, y: 270, w: 200 },
-  { x: 1760, y: 340, w: 150 },
+  { x: 1760, y: 340, w: 150, amp: 36, period: 50 },
   { x: 1980, y: 250, w: 180 },
-  { x: 2220, y: 320, w: 170 },
+  { x: 2220, y: 320, w: 170, amp: 28, period: 40 },
   { x: 2480, y: 240, w: 160 },
   { x: 2720, y: 330, w: 150 },
   { x: 2960, y: 260, w: 180 },
   { x: 3220, y: 350, w: 160 },
-  { x: 3480, y: 280, w: 190 },
+  { x: 3480, y: 280, w: 190, amp: 24, period: 45 },
   { x: 3760, y: 380, w: 150 },
 ];
+
+export const GRASS = [
+  { x: 300, w: 220 },
+  { x: 860, w: 210 },
+  { x: 1880, w: 240 },
+  { x: 2580, w: 220 },
+];
+
+export const SPRINGS = [
+  { x: 640, y: 508 },
+  { x: 1840, y: 508 },
+  { x: 3040, y: 508 },
+];
+
+export const PIPES = [
+  { x: 900, to: 2360 },
+  { x: 2360, to: 900 },
+];
+
+export function platY(p, frame) {
+  if (!p.amp) return p.y;
+  return p.y + Math.round(Math.sin(frame / (p.period || 50)) * p.amp);
+}
 
 const START_PICKUPS = [
   { id: 'coin', x: 210, y: 480 },
@@ -86,14 +110,14 @@ export const NPCS = [
     paint: 'pipe',
     name: 'PIPE',
     x: 560,
-    line: 'JUMP THE AWNINGS, CAP. GUM AINT FREE. BRIBE THE BAR WITH FIRE AND SPICE.',
+    line: 'TALL GRASS HIDES MINTMITES. STOMP THEN TIN THEM. BAR STILL WANTS FIRE AND SPICE.',
   },
   {
     id: 'prophet',
     paint: 'mouth',
     name: 'MOUTH',
     x: 980,
-    line: 'KEYS ON THE HIGH LEDGE. GLOW PLUS A DEAD BATTERY MAKES A LAMP. I PEAK AT 4AM.',
+    line: 'CATCH A GLOWBAT IN THE NEON WEEDS. OR CRAFT A LAMP LIKE A COWARD.',
   },
   {
     id: 'bar',
@@ -137,10 +161,21 @@ export function emptyNightState() {
       { x: 2900, y: 300, vx: -2 },
       { x: 3500, y: 320, vx: 2.1 },
     ],
+    wilds: [
+      { id: 'mintmite', x: 340, y: 480, vx: 1.6, dazed: 0 },
+      { id: 'spicegrub', x: 920, y: 480, vx: -1.5, dazed: 0 },
+      { id: 'glowbat', x: 1960, y: 280, vx: 2.1, dazed: 0 },
+      { id: 'bassling', x: 2680, y: 300, vx: -1.8, dazed: 0 },
+      { id: 'mintmite', x: 3180, y: 480, vx: 1.3, dazed: 0 },
+    ],
+    party: [],
+    encounter: null,
+    grassSteps: 0,
+    frame: 0,
     alleyLit: false,
     talked: {},
-    banner: 'CURIOUSLY STRONG ALL NIGHT LONG. JUMP. GRAB. COMBINE.',
-    log: 'WALK THE STREET. TAP STUFF. USE ITEMS ON PEOPLE.',
+    banner: 'NEON GRASS. STOMP WILD BEATS. THROW A TIN. GET IN THE CLUB.',
+    log: 'WALK THE STREET. CATCH CRITTERS. COMBINE JUNK.',
     won: false,
     dead: false,
   };
@@ -150,8 +185,11 @@ function clone(s) {
   return {
     ...s,
     inv: s.inv.slice(),
+    party: s.party.slice(),
     pickups: s.pickups.map((p) => ({ ...p })),
     bats: s.bats.map((b) => ({ ...b })),
+    wilds: s.wilds.map((w) => ({ ...w })),
+    encounter: s.encounter ? { ...s.encounter } : null,
     talked: { ...s.talked },
   };
 }
@@ -177,11 +215,28 @@ function onPlatform(s) {
   const fx = s.px;
   const fy = FLOOR_Y + s.py;
   for (const p of PLATFORMS) {
-    if (fx > p.x && fx < p.x + p.w && fy >= p.y - 8 && fy <= p.y + 14 && s.vy >= 0) {
-      return p;
+    const y = platY(p, s.frame || 0);
+    if (fx > p.x && fx < p.x + p.w && fy >= y - 8 && fy <= y + 14 && s.vy >= 0) {
+      return { ...p, y };
     }
   }
   return null;
+}
+
+function onSpring(s) {
+  return SPRINGS.find((sp) => Math.abs(s.px - sp.x) < 28 && Math.abs((FLOOR_Y + s.py) - sp.y) < 16);
+}
+
+function onPipe(s) {
+  return PIPES.find((p) => Math.abs(s.px - p.x) < 36 && s.onGround);
+}
+
+function grantCatch(s, id) {
+  s.party = addToParty(s.party, id);
+  const item = BEATS[id]?.item;
+  if (item) give(s, item);
+  s.banner = `CAUGHT ${beatName(id)}. ${item ? `IT DROPPED ${ITEM_LABEL[item]}.` : 'NO LOOT. JUST ATTITUDE.'}`;
+  s.log = s.banner;
 }
 
 export function tryRecipe(inv) {
@@ -207,6 +262,23 @@ function hiddenPickup(s, p) {
 export function stepNight(s, input) {
   if (s.won) return s;
   const next = clone(s);
+  next.frame = (next.frame || 0) + 1;
+
+  if (next.encounter) {
+    let action = null;
+    if (input.dir) action = 'flee';
+    else if (input.jump) action = 'stomp';
+    else if (input.take || input.use) action = 'throw';
+    if (action) {
+      const r = resolveEncounter(next.encounter, action);
+      next.encounter = r.enc;
+      next.banner = r.line;
+      next.log = r.line;
+      if (r.caught) grantCatch(next, r.caught);
+    }
+    return next;
+  }
+
   const dir = input.dir || 0;
   next.vx = dir * RUN * (next.grown ? 1.15 : 1);
   if (dir) next.facing = dir;
@@ -227,6 +299,57 @@ export function stepNight(s, input) {
     next.onGround = true;
   } else {
     next.onGround = false;
+  }
+
+  const spring = onSpring(next);
+  if (spring && next.onGround) {
+    next.vy = JUMP_V * 1.45;
+    next.onGround = false;
+    next.banner = 'SPRING. TRY NOT TO LOOK PLEASED.';
+  }
+
+  if (input.take && onPipe(next)) {
+    const pipe = onPipe(next);
+    next.px = pipe.to;
+    next.py = 0;
+    next.vy = 0;
+    next.banner = 'PIPE WARP. YOU SMELL LIKE SOMEONE ELSES DRAIN.';
+    return next;
+  }
+
+  if (next.onGround && dir && inGrass(next.px, GRASS)) {
+    next.grassSteps = (next.grassSteps || 0) + 1;
+    if (next.grassSteps % 42 === 0) {
+      const roster = ['mintmite', 'spicegrub', 'glowbat', 'bassling'];
+      const id = roster[Math.abs(Math.floor(next.px / 80)) % roster.length];
+      next.encounter = makeEncounter(id, 2);
+      next.banner = `WILD ${beatName(id)} JUMPED OUT OF THE NEON GRASS.`;
+      return next;
+    }
+  }
+
+  next.wilds = next.wilds.map((w) => {
+    if (w.caught) return w;
+    const moved = roam(w, 80, NIGHT_W - 80);
+    moved.dazed = Math.max(0, (w.dazed || 0) - 1);
+    const stomp = Math.abs(next.px - moved.x) < 40
+      && Math.abs(FLOOR_Y + next.py - moved.y) < 50
+      && next.vy > 2;
+    if (stomp) {
+      next.vy = -10;
+      moved.dazed = 90;
+      next.banner = `${beatName(moved.id)} IS DAZED. TAKE TO TIN IT.`;
+    }
+    return moved;
+  });
+
+  if (input.take) {
+    const w = next.wilds.find((c) => !c.caught && Math.abs(next.px - c.x) < 52
+      && Math.abs(FLOOR_Y + next.py - 20 - c.y) < 64);
+    if (w && (w.dazed > 0 || Math.abs(next.vy) < 2)) {
+      w.caught = true;
+      grantCatch(next, w.id);
+    }
   }
 
   next.bats = next.bats.map((b) => {
@@ -308,6 +431,12 @@ export function lookNearest(s) {
     s.log = s.banner;
     return s;
   }
+  const w = s.wilds.find((c) => !c.caught && Math.abs(s.px - c.x) < 70);
+  if (w) {
+    s.banner = `${beatName(w.id)}. STOMP IT, THEN TAKE. OR WALK THE GRASS AND BATTLE.`;
+    s.log = s.banner;
+    return s;
+  }
   const p = nearestPickup(s);
   if (p) {
     s.banner = `${ITEM_LABEL[p.id]}. USEFUL. TAP TAKE OR WALK INTO IT.`;
@@ -325,7 +454,11 @@ export function talkNearest(s) {
     return s;
   }
   s.talked[n.id] = true;
-  if (n.id === 'skater' && has(s, 'coin')) {
+  if (n.id === 'skater' && s.party.includes('mintmite')) {
+    s.banner = 'PIPE: NICE MINTMITE. STILL UGLY. BAR WANTS FIRE PLUS SPICE.';
+  } else if (n.id === 'prophet' && s.party.includes('glowbat')) {
+    s.banner = 'MOUTH: THAT BAT IS A LAMP WITH WINGS. I PEAK AT 4AM.';
+  } else if (n.id === 'skater' && has(s, 'coin')) {
     s.banner = 'PIPE: A COIN. ROMANTIC. BAR WANTS FIRE PLUS SPICE. KEYS ARE UP HIGH.';
   } else if (n.id === 'bar' && has(s, 'hotshot')) {
     s.banner = 'BRICK: THAT SMELLS ILLEGAL. HERE. GUM. NOW LEAVE.';
@@ -397,6 +530,14 @@ export function useSelected(s) {
 
 export function tapNight(s, worldX, worldY) {
   const next = clone(s);
+  for (const w of next.wilds) {
+    if (w.caught) continue;
+    if (Math.abs(worldX - w.x) < 56 && Math.abs(worldY - w.y) < 56) {
+      next.px = w.x;
+      w.dazed = 90;
+      return stepNight(next, { take: true });
+    }
+  }
   for (const p of next.pickups) {
     if (p.got || hiddenPickup(next, p)) continue;
     if (Math.abs(worldX - p.x) < 56 && Math.abs(worldY - p.y) < 56) {

@@ -249,12 +249,22 @@ export function emptySentinelState() {
     holding: null,
     breakShown: false,
     won: false,
+    party: [],
+    banner: 'SAFARI HUT. CATCH BREWCRAB AND GLAZEMOTH IN THE TALL GRASS.',
+    wilds: [
+      { id: 'coffee', beat: 'brewcrab', x: 420, y: 0, vx: 2.4, dazed: 0 },
+      { id: 'donut', beat: 'glazemoth', x: 720, y: -50, vx: -2.2, hop: 40, baseY: -50, dazed: 0 },
+    ],
   };
 }
 
 export function stepSentinel(state, dir, jump, take) {
   if (state.won) return state;
-  const next = { ...state };
+  const next = {
+    ...state,
+    wilds: (state.wilds || []).map((w) => ({ ...w })),
+    party: (state.party || []).slice(),
+  };
   next.px = Math.max(80, Math.min(1180, next.px + dir * 8));
   const ground = next.py >= 0;
   if (jump && ground) next.vy = -12;
@@ -264,13 +274,33 @@ export function stepSentinel(state, dir, jump, take) {
     next.py = 0;
     next.vy = 0;
   }
-  if (take && next.px < 280 && !next.holding) {
-    if (next.coffee) {
-      next.holding = 'coffee';
-      next.coffee = false;
-    } else if (next.donut) {
-      next.holding = 'donut';
-      next.donut = false;
+
+  next.wilds = next.wilds.map((w) => {
+    if (w.caught) return w;
+    let x = w.x + (w.vx || 0);
+    let vx = w.vx || 0;
+    if (x < 300 || x > 940) vx *= -1;
+    let y = w.y;
+    if (w.hop) y = (w.baseY || 0) + Math.sin(x * 0.05) * w.hop;
+    const dazed = Math.max(0, (w.dazed || 0) - 1);
+    const stomp = Math.abs(next.px - x) < 44 && Math.abs(next.py - y) < 46 && next.vy > 1;
+    if (stomp) {
+      next.vy = -8;
+      next.banner = `${(w.beat || w.id).toUpperCase()} DAZED. TAKE TO TIN IT.`;
+      return { ...w, x, vx, y, dazed: 80 };
+    }
+    return { ...w, x, vx, y, dazed };
+  });
+
+  if (take && !next.holding) {
+    const w = next.wilds.find((c) => !c.caught && Math.abs(next.px - c.x) < 56 && Math.abs(next.py - c.y) < 56);
+    if (w) {
+      w.caught = true;
+      next.holding = w.id;
+      next.party.push(w.beat || w.id);
+      if (w.id === 'coffee') next.coffee = false;
+      if (w.id === 'donut') next.donut = false;
+      next.banner = `CAUGHT ${(w.beat || w.id).toUpperCase()}. RUN IT TO THE HUT.`;
     }
   }
   if (take && next.px > 980 && next.holding) {
@@ -278,6 +308,9 @@ export function stepSentinel(state, dir, jump, take) {
     if (next.holding === 'donut') next.deliveredD = true;
     next.holding = null;
     if (next.deliveredC && !next.deliveredD) next.breakShown = true;
+    next.banner = next.breakShown && !next.deliveredD
+      ? 'HUT: NICE CRAB. STILL WANT THE MOTH. NOT YOUR PLAYLIST.'
+      : 'HUT TAKES THE CATCH.';
   }
   if (next.deliveredC && next.deliveredD) next.won = true;
   return next;
@@ -290,16 +323,16 @@ export function emptyGrammyState() {
     vy: 0,
     got: 0,
     trophies: [
-      { x: 360, y: -80, got: false },
-      { x: 560, y: -40, got: false },
-      { x: 780, y: -100, got: false },
-      { x: 1000, y: -50, got: false },
+      { x: 360, y: -80, vx: 2.2, got: false },
+      { x: 560, y: -40, vx: -2, got: false },
+      { x: 780, y: -100, vx: 1.8, got: false },
+      { x: 1000, y: -50, vx: -2.4, got: false },
     ],
     won: false,
   };
 }
 
-export function stepGrammy(state, dir, jump) {
+export function stepGrammy(state, dir, jump, take = false) {
   if (state.won) return state;
   const next = {
     ...state,
@@ -319,6 +352,21 @@ export function stepGrammy(state, dir, jump) {
     if (Math.abs(next.px - t.x) < 50 && Math.abs(next.py - t.y) < 40) {
       t.got = true;
       next.got += 1;
+    }
+  }
+  for (const t of next.trophies) {
+    if (t.got) continue;
+    t.x += t.vx || 0;
+    if (t.x < 200 || t.x > 1100) t.vx = -(t.vx || 2);
+    t.y += Math.sin((t.x || 0) * 0.08) * 0.8;
+  }
+  if (take) {
+    for (const t of next.trophies) {
+      if (t.got) continue;
+      if (Math.abs(next.px - t.x) < 64 && Math.abs(next.py - t.y) < 56) {
+        t.got = true;
+        next.got += 1;
+      }
     }
   }
   if (next.got >= 4) next.won = true;
