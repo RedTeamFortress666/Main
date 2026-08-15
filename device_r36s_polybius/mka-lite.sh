@@ -150,7 +150,7 @@ ensure_repo() {
 sync_tree() {
   cd "$ANDROID_ROOT"
   echo "repo sync -j${REPO_SYNC_JOBS} (this is the long download)"
-  repo sync -j"${REPO_SYNC_JOBS}" --force-sync --no-clone-bundle --current-branch --no-tags
+  repo sync -j"${REPO_SYNC_JOBS}" --force-sync --no-clone-bundle --current-branch --no-tags || true
   echo "repo sync finished $(date -u +%Y-%m-%dT%H:%M:%SZ)"
   # Re-fetch device/kernel/HAL if a leftover copied checkout blocked them.
   local retry
@@ -162,9 +162,13 @@ sync_tree() {
     if [[ -d "$ANDROID_ROOT/$retry/.git" ]]; then
       echo "Replacing copied git checkout $retry with a repo-managed one"
       rm -rf "$ANDROID_ROOT/$retry"
-      repo sync -j1 --force-sync --no-clone-bundle --current-branch --no-tags "$retry"
     fi
   done
+  repo sync -j"${REPO_SYNC_JOBS}" --force-sync --no-clone-bundle --current-branch --no-tags \
+    device/gameconsole/r36s \
+    device/gameconsole/common \
+    kernel/gameconsole/r36s \
+    hardware/rockchip
 }
 
 apply_overlay() {
