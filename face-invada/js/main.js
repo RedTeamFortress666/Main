@@ -21,7 +21,7 @@ window.FaceInvada = game;
 game.start();
 
 function syncPad(mode) {
-  const mysteryModes = ['title', 'briefing', 'mystery', 'journal', 'credits', 'cut', 'sentinel', 'grammy'];
+  const mysteryModes = ['title', 'briefing', 'mystery', 'journal', 'credits', 'cut', 'sentinel', 'grammy', 'nightout'];
   const mystery = mysteryModes.includes(mode);
   document.body.classList.toggle('mode-mystery', mystery && mode !== 'title');
   document.body.classList.toggle('mode-fight', mode === 'fight' || mode === 'club' || mode === 'bribe' || mode === 'pac' || mode === 'pong');

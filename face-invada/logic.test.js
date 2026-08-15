@@ -18,6 +18,10 @@ import {
   emptyBribeState, stepBribe, emptySentinelState, stepSentinel,
   emptyGrammyState, stepGrammy,
 } from './js/arcade.js';
+import {
+  emptyNightState, stepNight, tryRecipe, talkNearest, useSelected, has,
+  selectNightItem, tapNight, hitNightInv, BAG_X, BAG_Y,
+} from './js/nightout.js';
 
 describe('title and hero', () => {
   it('is FACE INVADA\'s BEAT BOXING', () => {
@@ -281,6 +285,8 @@ describe('campaign arcade', () => {
     expect(PONG_DISCLAIMER).toMatch(/HOMAGE/);
     expect(KIM_LINE).toMatch(/KANYE/);
     expect(LANA_LINE).toBe('LANAAAAAA');
+    expect(CAMPAIGN[0].kind).toBe('nightout');
+    expect(CAMPAIGN.some((s) => s.kind === 'mystery' && s.day === 1)).toBe(false);
     expect(CAMPAIGN.some((s) => s.kind === 'pac')).toBe(true);
     expect(CAMPAIGN[CAMPAIGN.length - 1].kind).toBe('credits');
   });
@@ -349,5 +355,79 @@ describe('campaign arcade', () => {
     const boss = s.boss;
     s = stepBribe(s, 0, false, true);
     expect(s.boss).toBeLessThan(boss);
+  });
+});
+
+describe('curiously strong night out', () => {
+  it('picks up street junk by walking into it', () => {
+    let s = emptyNightState();
+    s.px = 210;
+    s.py = 0;
+    s = stepNight(s, { dir: 0 });
+    expect(has(s, 'coin')).toBe(true);
+    expect(s.banner).toMatch(/COIN/);
+  });
+
+  it('hides alley lipstick until a lamp exists', () => {
+    let s = emptyNightState();
+    const lip = s.pickups.find((p) => p.id === 'lipstick');
+    expect(lip.dark).toBe(true);
+    s.px = lip.x;
+    s.py = lip.y - 508;
+    s = stepNight(s, { take: true });
+    expect(has(s, 'lipstick')).toBe(false);
+    s.alleyLit = true;
+    s = stepNight(s, { take: true });
+    expect(has(s, 'lipstick')).toBe(true);
+  });
+
+  it('crafts lamp, hotshot, and wristband', () => {
+    expect(tryRecipe(['glow', 'battery']).out).toBe('lamp');
+    expect(tryRecipe(['lighter', 'cinnamon']).out).toBe('hotshot');
+    expect(tryRecipe(['matches', 'cinnamon']).out).toBe('hotshot');
+    expect(tryRecipe(['mint', 'gum', 'marker']).out).toBe('wristband');
+    expect(tryRecipe(['mint', 'gum', 'marker']).line).toMatch(/CURIOUSLY STRONG/);
+  });
+
+  it('trades hotshot for gum and lipstick for marker, then Bolt lets you in', () => {
+    let s = emptyNightState();
+    s.inv = ['hotshot'];
+    s.selected = 'hotshot';
+    s.px = 1680;
+    talkNearest(s);
+    expect(has(s, 'gum')).toBe(true);
+    s.inv = ['lipstick'];
+    s.px = 2480;
+    talkNearest(s);
+    expect(has(s, 'marker')).toBe(true);
+    s.inv = ['wristband'];
+    s.px = 3920;
+    talkNearest(s);
+    expect(s.won).toBe(true);
+  });
+
+  it('grows on mint USE and maps bag taps', () => {
+    let s = emptyNightState();
+    s.inv = ['mint'];
+    s.selected = 'mint';
+    s = useSelected(s);
+    expect(s.grown).toBe(true);
+    expect(s.banner).toMatch(/PILLS THAT MAKE ME LARGER/);
+    s = emptyNightState();
+    s.inv = ['glow'];
+    s = selectNightItem(s, 0);
+    expect(s.selected).toBe('glow');
+    expect(hitNightInv(BAG_X + 10, BAG_Y + 10)).toBe(0);
+    const lip = s.pickups.find((p) => p.id === 'flyer');
+    s = tapNight(s, lip.x, lip.y);
+    expect(has(s, 'flyer')).toBe(true);
+  });
+
+  it('wins by walking in with a wristband', () => {
+    let s = emptyNightState();
+    s.inv = ['wristband'];
+    s.px = 4010;
+    s = stepNight(s, { dir: 1 });
+    expect(s.won).toBe(true);
   });
 });

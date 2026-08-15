@@ -13,6 +13,7 @@ import { AudioBus } from './audio.js';
 import {
   drawPixelText, drawNeonCity, drawFighter, drawHighway, lifeBarWidth,
   drawMysteryRoom, drawClueBanner, drawFaceHead, drawRaveVampire,
+  paintNightStreet, paintPickup, paintRaveBat, drawNightNpc,
 } from './pixel.js';
 import {
   emptyMysteryState, setVerb, tapAt, canFight,
@@ -21,12 +22,17 @@ import {
   stepWalk, interactNearest, stepPhysics, seekDay,
 } from './mystery.js';
 import {
-  CAMPAIGN, campaignStep, CUTS, CREDITS_BY, MISSION, PONG_DISCLAIMER,
+  CAMPAIGN, campaignStep, CUTS, CREDITS_BY, PONG_DISCLAIMER,
   LANA_LINE, KIM_LINE, DJ_TRICKS,
   emptyPacState, stepPac, emptyPongState, stepPong,
   emptyClubState, clubPress, emptySentinelState, stepSentinel,
   emptyGrammyState, stepGrammy, emptyBribeState, stepBribe,
 } from './arcade.js';
+import {
+  emptyNightState, stepNight, tapNight, selectNightItem, nightCam,
+  hitNightInv, ITEM_LABEL, PLATFORMS, NPCS, NIGHT_W, FLOOR_Y,
+  BAG_X, BAG_Y, BAG_SLOT_W, BAG_SLOT_H, BAG_GAP, BAG_SLOTS,
+} from './nightout.js';
 
 const VERB_KEYS = { KeyZ: 'look', KeyX: 'talk', KeyC: 'take', KeyV: 'use' };
 
@@ -54,6 +60,7 @@ export class Game {
     this.cut = null;
     this.cutLine = 0;
     this.arcade = null;
+    this.night = emptyNightState();
   }
 
   setMode(mode) {
@@ -89,6 +96,20 @@ export class Game {
       this.audio.ui();
       return;
     }
+    if (this.mode === 'nightout') {
+      const bag = hitNightInv(x, y);
+      if (bag >= 0) {
+        this.night = selectNightItem(this.night, bag);
+        this.audio.ensure();
+        this.audio.ui();
+        return;
+      }
+      const cam = nightCam(this.night, CANVAS_W);
+      this.night = tapNight(this.night, x + cam, y);
+      this.audio.ensure();
+      this.audio.ui();
+      return;
+    }
     if (this.mode === 'cut' || this.mode === 'title' || this.mode === 'briefing'
         || this.mode === 'result' || this.mode === 'credits' || this.mode === 'journal') {
       this.input.setVirtual('Enter', true);
@@ -99,6 +120,7 @@ export class Game {
   beginCampaign() {
     this.camp = 0;
     this.mystery = emptyMysteryState();
+    this.night = emptyNightState();
     this.audio.ensure();
     this.beginStep();
   }
@@ -114,6 +136,12 @@ export class Game {
       this.cutLine = 0;
       this.setMode('cut');
       this.audio.vocal();
+      return;
+    }
+    if (step.kind === 'nightout') {
+      this.night = emptyNightState();
+      this.setMode('nightout');
+      this.say('CURIOUSLY STRONG', 70, 'ALL NIGHT LONG');
       return;
     }
     if (step.kind === 'mystery') {
@@ -261,6 +289,23 @@ export class Game {
           this.beginFight();
         }
       }
+      return;
+    }
+
+    if (this.mode === 'nightout') {
+      const left = this.input.held('KeyA') || this.input.held('ArrowLeft');
+      const right = this.input.held('KeyD') || this.input.held('ArrowRight');
+      const dir = (right ? 1 : 0) - (left ? 1 : 0);
+      const jump = this.input.just('KeyW') || this.input.just('ArrowUp');
+      const take = this.input.just('KeyC') || this.input.just('KeyS');
+      const talk = this.input.just('KeyX');
+      const use = this.input.just('KeyV');
+      const look = this.input.just('KeyZ');
+      this.night = stepNight(this.night, { dir, jump, take, talk, use, look });
+      if (dir) this.facePose.walk = this.time * 0.4;
+      else this.facePose.walk = 0;
+      if (jump) this.audio.ui();
+      if (this.night.won) this.advanceCampaign();
       return;
     }
 
@@ -455,6 +500,7 @@ export class Game {
     const ctx = this.ctx;
     ctx.imageSmoothingEnabled = false;
     if (this.mode === 'title') this._drawTitle(ctx);
+    else if (this.mode === 'nightout') this._drawNightout(ctx);
     else if (this.mode === 'briefing') this._drawBriefing(ctx);
     else if (this.mode === 'cut') this._drawCut(ctx);
     else if (this.mode === 'mystery') this._drawMystery(ctx);
@@ -475,15 +521,85 @@ export class Game {
     ctx.fillStyle = 'rgba(0,0,0,0.45)';
     ctx.fillRect(0, 80, CANVAS_W, 240);
     drawPixelText(ctx, "FACE INVADA'S", CANVAS_W / 2, 100, 4, '#ff4ad2', 'center');
-    drawPixelText(ctx, '5 DAYS A STRANGER', CANVAS_W / 2, 150, 4, '#ffe566', 'center');
-    drawPixelText(ctx, GAME_TITLE, CANVAS_W / 2, 200, 2, '#3df0ff', 'center');
-    drawPixelText(ctx, MISSION, CANVAS_W / 2, 234, 2, '#ffe566', 'center');
-    drawPixelText(ctx, GAME_SUBTITLE, CANVAS_W / 2, 268, 2, '#e878ff', 'center');
+    drawPixelText(ctx, 'CURIOUSLY STRONG', CANVAS_W / 2, 150, 4, '#ffe566', 'center');
+    drawPixelText(ctx, 'ALL NIGHT LONG', CANVAS_W / 2, 196, 4, '#3df0ff', 'center');
+    drawPixelText(ctx, GAME_TITLE, CANVAS_W / 2, 250, 2, '#e878ff', 'center');
+    drawPixelText(ctx, 'JUMP. GRAB. COMBINE. GET IN THE CLUB.', CANVAS_W / 2, 284, 2, '#fff4c2', 'center');
     drawFighter(ctx, 'face', 640, 540, 1, { t: this.time, punch: Math.max(0, Math.sin(this.time * 0.08)), blade: 0.35 }, 4.8);
     if (Math.sin(this.time * 0.12) > -0.2) {
       drawPixelText(ctx, 'PRESS START', CANVAS_W / 2, 580, 3, '#ffffff', 'center');
     }
     drawPixelText(ctx, 'ITALY  37  SILAT + BLADE', CANVAS_W / 2, 620, 2, '#bbbbbb', 'center');
+  }
+
+  _drawNightout(ctx) {
+    const n = this.night;
+    const cam = nightCam(n, CANVAS_W);
+    paintNightStreet(ctx, this.time, cam, NIGHT_W, n.alleyLit);
+
+    for (const p of PLATFORMS) {
+      const x = p.x - cam;
+      if (x < -200 || x > CANVAS_W + 40) continue;
+      ctx.fillStyle = '#0a0808';
+      ctx.fillRect(x - 2, p.y - 2, p.w + 4, 18);
+      ctx.fillStyle = '#8a5020';
+      ctx.fillRect(x, p.y, p.w, 14);
+      ctx.fillStyle = '#c87838';
+      ctx.fillRect(x, p.y, p.w, 4);
+    }
+
+    for (const p of n.pickups) {
+      if (p.got) continue;
+      if (p.dark && !n.alleyLit) continue;
+      const x = p.x - cam;
+      if (x < -40 || x > CANVAS_W + 40) continue;
+      paintPickup(ctx, x, p.y, p.id, this.time);
+      drawPixelText(ctx, ITEM_LABEL[p.id] || p.id, x, p.y - 28, 1, '#fff4c2', 'center');
+    }
+
+    for (const npc of NPCS) {
+      const x = npc.x - cam;
+      if (x < -80 || x > CANVAS_W + 80) continue;
+      const face = n.px < npc.x ? -1 : 1;
+      drawNightNpc(ctx, npc.paint, x, FLOOR_Y, face, { t: this.time }, 2.7);
+      drawPixelText(ctx, npc.name, x, FLOOR_Y - 240, 2, '#ffe566', 'center');
+    }
+
+    for (const b of n.bats) {
+      const x = b.x - cam;
+      if (x < -40 || x > CANVAS_W + 40) continue;
+      paintRaveBat(ctx, x, b.y, this.time, b.vx >= 0 ? 1 : -1);
+    }
+
+    const grow = n.grown ? 1.5 : 1;
+    drawFighter(ctx, 'face', n.px - cam, FLOOR_Y + n.py, n.facing || 1, {
+      t: this.time,
+      walk: this.facePose.walk || 0,
+      blade: 0.25,
+    }, 2.6 * grow);
+
+    drawClueBanner(ctx, n.banner || n.log, this.time);
+    ctx.fillStyle = 'rgba(6,4,14,0.88)';
+    ctx.fillRect(0, 84, CANVAS_W, 36);
+    drawPixelText(ctx, 'CURIOUSLY STRONG ALL NIGHT LONG   TAP BAG THEN USE', 16, 92, 2, '#3df0ff');
+
+    drawPixelText(ctx, 'BAG', BAG_X, BAG_Y - 16, 1, '#888888');
+    for (let i = 0; i < BAG_SLOTS; i++) {
+      const x = BAG_X + i * (BAG_SLOT_W + BAG_GAP);
+      const id = n.inv[i];
+      const on = id && n.selected === id;
+      ctx.fillStyle = on ? '#ff4ad2' : '#2a2438';
+      ctx.fillRect(x - 2, BAG_Y - 2, BAG_SLOT_W + 4, BAG_SLOT_H + 4);
+      ctx.fillStyle = '#100c18';
+      ctx.fillRect(x, BAG_Y, BAG_SLOT_W, BAG_SLOT_H);
+      drawPixelText(ctx, id ? ITEM_LABEL[id] || id : '--', x + 6, BAG_Y + 12, 1, id ? '#fff4c2' : '#444');
+    }
+
+    if (this.announce.text) {
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      ctx.fillRect(0, 200, CANVAS_W, 48);
+      drawPixelText(ctx, this.announce.text, CANVAS_W / 2, 210, 3, '#ffffff', 'center');
+    }
   }
 
   _drawBriefing(ctx) {

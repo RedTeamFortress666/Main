@@ -52,9 +52,7 @@ export const CUTS = {
 };
 
 export const CAMPAIGN = [
-  { id: 'mission', kind: 'cut', cut: 'mission' },
-  { id: 'n1', kind: 'mystery', day: 1 },
-  { id: 'f1', kind: 'fight' },
+  { id: 'nightout', kind: 'nightout' },
   { id: 'lana', kind: 'cut', cut: 'lana' },
   { id: 'pac', kind: 'pac' },
   { id: 'kim', kind: 'cut', cut: 'kim' },

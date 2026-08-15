@@ -1,26 +1,24 @@
-# FACE INVADA — Track the funkiest bassline
+# FACE INVADA — Curiously Strong All Night Long
 
-Android campaign. **Face Invada** (Italy, 37) jumps for clues, eats tablets, slays rave vampires, and fetches coffee for Sentinel Isle. Drum-and-bass bed throughout. Credits: **made by some bastard**.
+Android-first street crawl. **Face Invada** (Italy, 37) jumps Mario platforms, stomps rave bats, and combines junk into a club wristband. Sarcastic NPCs are drawn at the same pixel budget as Face. Credits: **made by some bastard**.
 
-## Campaign
+The slack motel opener is gone. You start on the packed night street.
 
-1. Mission cut
-2. Night 1 motel case + fight
-3. Motorcycle cut: LANAAAAAA
-4. Level 2 Pac — Face Invada's head vs rave vampires
-5. Phone cut: Kim / Kanye
-6. Sentinel Isle — coffee and doughnuts (fetch break mid-level)
-7. Atari / 64 homage roast
-8. Pong (disclaimer: don't sue, it's an homage)
-9. Night 2 fetch + fight
-10. Club set — MAD COMPRESSION, BASS WUBZ, GLITTTCHHH, HEAPS SIC AYE, VINYL SCRATCH, HIPPY HATE
-11. Night 3 + fight
-12. Grammy night (jump the trophies)
-13. Nights 4–5 + fights
-14. Don Trumpet — cash bribes hurt you
-15. Credits
+## Opening level
 
-Tablets: JUMP to the high ledge, TAKE, USE. On-screen: `PILLS THAT MAKE ME LARGER? YEAH RIGHT.`
+Walk right through a neon block. Grab everything. Combine. Talk.
+
+- **MINT + GUM + MARKER** → wristband (`CURIOUSLY STRONG. ALL NIGHT LONG.`)
+- **GLOW + BATTERY** → lamp (lights the alley so lipstick shows)
+- **LIGHTER or MATCHES + CINNAMON** → hot shot (bribe Brick for gum)
+- Lipstick to **NIX** for the marker
+- Wristband to **BOLT** to get in the club
+
+Pipe, Mouth, Brick, Nix, and Bolt roast you. USE mint to grow (`PILLS THAT MAKE ME LARGER? YEAH RIGHT.`). Jump on bat heads.
+
+## After the club
+
+LANAAAAAA motorcycle cut, Face-head Pac vs rave vampires, Kim/Kanye phone, Sentinel Isle coffee run, Atari roast, Pong homage, later motel nights, club DJ set, Grammys, Don Trumpet bribe, credits.
 
 ## Play
 
@@ -28,5 +26,7 @@ Tablets: JUMP to the high ledge, TAKE, USE. On-screen: `PILLS THAT MAKE ME LARGE
 cd face-invada
 python3 -m http.server 4174 --bind 0.0.0.0
 ```
+
+Android pad: JUMP / WALK / DO / LOOK / TALK / TAKE / USE. Tap the bag, then USE. Tap world objects to pick them up.
 
 APK: `downloads/FaceInvadaBeatBoxing.apk`

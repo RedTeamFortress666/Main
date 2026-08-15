@@ -442,3 +442,344 @@ export function drawMysteryRoom(ctx, room, t) {
     drawPixelText(ctx, hs.label, hs.x + 10, hs.y + 10, 1, '#3df0ff');
   }
 }
+
+/** Packed Mario-night street — original blocks, signs, bins, neon. */
+export function paintNightStreet(ctx, t, camX, worldW, alleyLit) {
+  const sky = ctx.createLinearGradient(0, 0, 0, 720);
+  sky.addColorStop(0, '#050214');
+  sky.addColorStop(0.55, '#140628');
+  sky.addColorStop(1, '#2a0830');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, 1280, 720);
+
+  for (let i = 0; i < 90; i++) {
+    const sx = ((i * 137 - camX * 0.12) % 1400 + 1400) % 1400 - 40;
+    const sy = 20 + ((i * 53) % 280);
+    ctx.fillStyle = i % 7 === 0 ? '#ffe566' : '#fff';
+    ctx.fillRect(sx, sy, 2, 2);
+  }
+
+  for (let i = 0; i < 12; i++) {
+    const bx = i * 380 - (camX * 0.35) % 380;
+    const h = 220 + (i % 4) * 40;
+    rect(ctx, bx, 508 - h, 160, h, i % 2 ? '#1a1030' : '#120c24');
+    for (let wy = 0; wy < 5; wy++) {
+      for (let wx = 0; wx < 3; wx++) {
+        const on = (i + wx + wy + Math.floor(t / 20)) % 4 !== 0;
+        rect(ctx, bx + 18 + wx * 46, 508 - h + 20 + wy * 36, 22, 18, on ? '#ffe566' : '#221833');
+      }
+    }
+  }
+
+  rect(ctx, 0, 508, 1280, 212, '#141018');
+  for (let i = 0; i < 24; i++) {
+    const tx = ((i * 80 - camX) % 1280 + 1280) % 1280;
+    rect(ctx, tx, 508, 46, 10, '#2a2038');
+    rect(ctx, tx + 8, 518, 30, 6, '#1a1428');
+  }
+
+  const worldToScreen = (wx) => wx - camX;
+  const props = [
+    [80, 430, 70, 78, '#3a2418', 'BIN'],
+    [220, 400, 90, 108, '#4a2010', 'BOX'],
+    [400, 440, 50, 68, '#2a2030', 'METER'],
+    [640, 390, 36, 118, '#2a2a2a', 'POLE'],
+    [720, 360, 40, 148, '#2a2a2a', 'POLE'],
+    [880, 450, 60, 58, '#3a2418', 'BIN'],
+    [1100, 420, 80, 88, '#6a1818', 'FIRE'],
+    [1320, 430, 70, 78, '#201018', 'CRATE'],
+    [1480, 380, 220, 128, '#201018', 'BAR'],
+    [1860, 440, 48, 68, '#2a2030', 'METER'],
+    [2100, 300, 50, 208, '#1a1a22', 'LAMP'],
+    [2320, 420, 80, 88, '#302010', 'BENCH'],
+    [2680, 410, 90, 98, '#302010', 'DUMP'],
+    [3100, 250, 280, 80, '#ff2bd6', 'CLUB'],
+    [3420, 430, 70, 78, '#3a2418', 'BIN'],
+    [3600, 200, 40, 308, '#222', 'ROPE'],
+    [3780, 360, 90, 148, '#1a1020', 'DOOR'],
+  ];
+  for (const [wx, y, w, h, c, lab] of props) {
+    const x = worldToScreen(wx);
+    if (x < -300 || x > 1400) continue;
+    rect(ctx, x, y, w, h, c);
+    if (lab === 'CLUB') {
+      drawPixelText(ctx, 'CLUB NIGHTCLUB', x + 10, y + 28, 2, '#ffe566');
+      drawPixelText(ctx, 'TONIGHT ONLY', x + 40, y + 52, 1, '#3df0ff');
+    } else if (lab === 'BAR') {
+      drawPixelText(ctx, 'BRICKS', x + 50, y + 16, 2, '#ff6b6b');
+    } else if (lab === 'FIRE') {
+      const flick = 0.5 + Math.sin(t * 0.3) * 0.3;
+      ctx.fillStyle = `rgba(255,120,40,${flick})`;
+      ctx.fillRect(x + 10, y - 20, 60, 24);
+    } else if (lab === 'DOOR') {
+      drawPixelText(ctx, 'IN', x + 28, y + 60, 2, '#ffe566');
+    } else if (lab === 'BIN' || lab === 'BOX' || lab === 'DUMP') {
+      drawPixelText(ctx, lab, x + 8, y + 10, 1, '#ffe566');
+    }
+  }
+
+  if (!alleyLit) {
+    ctx.fillStyle = 'rgba(0,0,0,0.72)';
+    ctx.fillRect(worldToScreen(2550), 200, 420, 320);
+    drawPixelText(ctx, 'DARK ALLEY', worldToScreen(2660), 340, 2, '#666');
+  } else {
+    ctx.fillStyle = 'rgba(255,230,100,0.12)';
+    ctx.fillRect(worldToScreen(2550), 200, 420, 320);
+  }
+
+  for (let i = 0; i < 8; i++) {
+    const px = worldToScreen(400 + i * 480);
+    rect(ctx, px, 360, 120, 18, '#6a3a18');
+    rect(ctx, px + 8, 348, 104, 14, '#8a5020');
+  }
+}
+
+/** 56x88 street NPCs — same pixel budget as Face Invada. */
+export function paintPipe(ctx, pose = {}) {
+  const t = pose.t || 0;
+  ctx.clearRect(0, 0, SPRITE_W, SPRITE_H);
+  const cx = 28;
+  const foot = SPRITE_H - 2;
+  const step = Math.round(Math.sin((t || 0) * 0.12) * 3);
+  const skin = '#e8c4a8';
+  const skinSh = '#c9a288';
+  rect(ctx, cx - 11, foot - 24 + step, 10, 20, '#0a0808');
+  rect(ctx, cx - 10, foot - 23 + step, 8, 18, '#3a2a18');
+  rect(ctx, cx + 2, foot - 24 - step, 10, 20, '#0a0808');
+  rect(ctx, cx + 3, foot - 23 - step, 8, 18, '#3a2a18');
+  rect(ctx, cx - 12, foot - 6 + step, 14, 6, '#c44');
+  rect(ctx, cx + 2, foot - 6 - step, 14, 6, '#c44');
+  rect(ctx, cx - 13, foot - 52, 26, 30, '#0a0808');
+  rect(ctx, cx - 12, foot - 51, 24, 28, '#c44');
+  rect(ctx, cx - 10, foot - 48, 8, 22, '#e05050');
+  rect(ctx, cx - 4, foot - 46, 10, 16, '#111');
+  rect(ctx, cx - 8, foot - 40, 16, 4, '#888');
+  const ax = cx + 12;
+  rect(ctx, ax, foot - 50, 8, 16, '#0a0808');
+  rect(ctx, ax + 1, foot - 49, 6, 14, '#c44');
+  rect(ctx, ax + 2, foot - 35, 10, 5, skin);
+  rect(ctx, cx - 18, foot - 48, 8, 16, '#0a0808');
+  rect(ctx, cx - 17, foot - 47, 6, 14, '#c44');
+  rect(ctx, cx - 22, foot - 36, 16, 5, '#6a6a70');
+  rect(ctx, cx - 20, foot - 38, 12, 3, '#888');
+  const hx = cx;
+  const hy = foot - 70;
+  rect(ctx, hx - 10, hy + 2, 20, 18, '#0a0808');
+  rect(ctx, hx - 9, hy + 3, 18, 16, skin);
+  rect(ctx, hx - 8, hy + 14, 16, 4, skinSh);
+  rect(ctx, hx - 5, hy + 12, 10, 2, '#2a221c');
+  rect(ctx, hx - 4, hy + 16, 8, 2, '#8a4030');
+  rect(ctx, hx - 11, hy - 4, 22, 10, '#0a0808');
+  rect(ctx, hx - 10, hy - 3, 20, 8, '#2a1810');
+  rect(ctx, hx - 6, hy - 6, 12, 4, '#3a2418');
+  rect(ctx, hx - 7, hy + 6, 5, 5, '#111');
+  rect(ctx, hx + 2, hy + 6, 5, 5, '#111');
+  rect(ctx, hx - 6, hy + 7, 2, 2, '#3df0ff');
+  rect(ctx, hx + 3, hy + 7, 2, 2, '#3df0ff');
+}
+
+export function paintMouth(ctx, pose = {}) {
+  const t = pose.t || 0;
+  ctx.clearRect(0, 0, SPRITE_W, SPRITE_H);
+  const cx = 28;
+  const foot = SPRITE_H - 2;
+  const bob = Math.round(Math.sin(t * 0.08) * 2);
+  const skin = '#d4a888';
+  rect(ctx, cx - 10, foot - 22 + bob, 9, 20, '#1a1020');
+  rect(ctx, cx + 3, foot - 22 - bob, 9, 20, '#1a1020');
+  rect(ctx, cx - 12, foot - 6 + bob, 12, 6, '#4a2060');
+  rect(ctx, cx + 2, foot - 6 - bob, 12, 6, '#4a2060');
+  rect(ctx, cx - 14, foot - 54, 28, 34, '#0a0808');
+  rect(ctx, cx - 13, foot - 53, 26, 32, '#4a2060');
+  rect(ctx, cx - 10, foot - 50, 20, 18, '#2a1040');
+  rect(ctx, cx - 8, foot - 46, 16, 6, '#8b1e3f');
+  rect(ctx, cx - 16, foot - 48, 6, 20, '#6a3080');
+  rect(ctx, cx + 12, foot - 48, 6, 20, '#6a3080');
+  rect(ctx, cx - 18, foot - 36, 6, 6, '#c9a050');
+  rect(ctx, cx + 14, foot - 36, 6, 6, '#c9a050');
+  const hx = cx;
+  const hy = foot - 72;
+  rect(ctx, hx - 11, hy + 2, 22, 20, '#0a0808');
+  rect(ctx, hx - 10, hy + 3, 20, 18, skin);
+  rect(ctx, hx - 12, hy - 6, 24, 12, '#111');
+  rect(ctx, hx - 8, hy - 8, 16, 4, '#222');
+  rect(ctx, hx - 7, hy + 6, 5, 4, '#111');
+  rect(ctx, hx + 2, hy + 6, 5, 4, '#111');
+  rect(ctx, hx - 6, hy + 12, 14, 8, '#8b1e3f');
+  rect(ctx, hx - 4, hy + 14, 10, 4, '#fff4c2');
+  if ((t | 0) % 40 < 8) rect(ctx, hx - 3, hy + 15, 8, 3, '#3df0ff');
+}
+
+export function paintBrick(ctx, pose = {}) {
+  const t = pose.t || 0;
+  ctx.clearRect(0, 0, SPRITE_W, SPRITE_H);
+  const cx = 28;
+  const foot = SPRITE_H - 2;
+  const skin = '#c88870';
+  const skinSh = '#a06850';
+  rect(ctx, cx - 10, foot - 22, 9, 20, '#1a1020');
+  rect(ctx, cx + 3, foot - 22, 9, 20, '#1a1020');
+  rect(ctx, cx - 12, foot - 6, 12, 6, '#3a2010');
+  rect(ctx, cx + 2, foot - 6, 12, 6, '#3a2010');
+  rect(ctx, cx - 14, foot - 54, 28, 34, '#0a0808');
+  rect(ctx, cx - 13, foot - 53, 26, 32, '#8b1e3f');
+  rect(ctx, cx - 8, foot - 48, 16, 20, '#fff8e8');
+  rect(ctx, cx - 6, foot - 40, 12, 8, '#8b1e3f');
+  rect(ctx, cx + 12, foot - 50, 8, 18, '#8b1e3f');
+  rect(ctx, cx + 13, foot - 34, 10, 8, '#fff8e8');
+  rect(ctx, cx - 18, foot - 48, 8, 16, '#8b1e3f');
+  rect(ctx, cx - 17, foot - 34, 7, 6, skin);
+  const hx = cx;
+  const hy = foot - 70;
+  rect(ctx, hx - 10, hy + 2, 20, 18, '#0a0808');
+  rect(ctx, hx - 9, hy + 3, 18, 16, skin);
+  rect(ctx, hx - 8, hy + 14, 16, 4, skinSh);
+  rect(ctx, hx - 6, hy + 11, 12, 3, '#3a2010');
+  rect(ctx, hx - 1, hy + 14, 3, 3, '#3a2010');
+  rect(ctx, hx - 10, hy - 2, 20, 8, '#3a2010');
+  rect(ctx, hx - 6, hy - 4, 12, 4, '#4a2a14');
+  rect(ctx, hx - 7, hy + 6, 5, 5, '#111');
+  rect(ctx, hx + 2, hy + 6, 5, 5, '#111');
+  rect(ctx, hx - 6, hy + 7, 2, 2, '#ffe566');
+  if ((t | 0) % 60 < 4) rect(ctx, hx - 3, hy + 16, 2, 1, '#8a4030');
+}
+
+export function paintNix(ctx, pose = {}) {
+  const t = pose.t || 0;
+  ctx.clearRect(0, 0, SPRITE_W, SPRITE_H);
+  const cx = 28;
+  const foot = SPRITE_H - 2;
+  const step = Math.round(Math.sin(t * 0.1) * 2);
+  const skin = '#f0d0c0';
+  rect(ctx, cx - 10, foot - 24 + step, 9, 22, '#0a0808');
+  rect(ctx, cx - 9, foot - 23 + step, 7, 20, '#111');
+  rect(ctx, cx + 3, foot - 24 - step, 9, 22, '#0a0808');
+  rect(ctx, cx + 4, foot - 23 - step, 7, 20, '#111');
+  rect(ctx, cx - 12, foot - 6 + step, 12, 6, '#ff2bd6');
+  rect(ctx, cx + 2, foot - 6 - step, 12, 6, '#ff2bd6');
+  rect(ctx, cx - 13, foot - 54, 26, 32, '#0a0808');
+  rect(ctx, cx - 12, foot - 53, 24, 30, '#111');
+  rect(ctx, cx - 8, foot - 48, 16, 14, '#ff2bd6');
+  rect(ctx, cx - 6, foot - 44, 12, 4, '#111');
+  rect(ctx, cx + 11, foot - 50, 8, 16, '#111');
+  rect(ctx, cx + 12, foot - 36, 8, 6, skin);
+  rect(ctx, cx - 18, foot - 50, 8, 16, '#111');
+  rect(ctx, cx - 20, foot - 40, 6, 14, '#ff2bd6');
+  const hx = cx;
+  const hy = foot - 72;
+  rect(ctx, hx - 10, hy + 4, 20, 18, '#0a0808');
+  rect(ctx, hx - 9, hy + 5, 18, 16, skin);
+  rect(ctx, hx - 12, hy - 6, 6, 16, '#111');
+  rect(ctx, hx - 4, hy - 10, 5, 14, '#111');
+  rect(ctx, hx + 4, hy - 8, 6, 16, '#111');
+  rect(ctx, hx + 10, hy - 2, 5, 12, '#111');
+  rect(ctx, hx - 8, hy + 2, 16, 4, '#ff2bd6');
+  rect(ctx, hx - 5, hy + 12, 10, 3, '#8b1e3f');
+  rect(ctx, hx - 7, hy + 8, 5, 5, '#111');
+  rect(ctx, hx + 2, hy + 8, 5, 5, '#111');
+  rect(ctx, hx - 6, hy + 9, 2, 2, '#ff2bd6');
+  rect(ctx, hx - 4, hy + 18, 8, 3, '#111');
+}
+
+export function paintBolt(ctx, pose = {}) {
+  ctx.clearRect(0, 0, SPRITE_W, SPRITE_H);
+  const cx = 28;
+  const foot = SPRITE_H - 2;
+  const skin = '#8a6048';
+  rect(ctx, cx - 12, foot - 26, 11, 24, '#0a0808');
+  rect(ctx, cx - 11, foot - 25, 9, 22, '#222');
+  rect(ctx, cx + 3, foot - 26, 11, 24, '#0a0808');
+  rect(ctx, cx + 4, foot - 25, 9, 22, '#222');
+  rect(ctx, cx - 14, foot - 6, 14, 6, '#111');
+  rect(ctx, cx + 2, foot - 6, 14, 6, '#111');
+  rect(ctx, cx - 16, foot - 58, 32, 36, '#0a0808');
+  rect(ctx, cx - 15, foot - 57, 30, 34, '#111');
+  rect(ctx, cx - 10, foot - 50, 20, 16, '#ffe566');
+  rect(ctx, cx - 6, foot - 46, 12, 8, '#111');
+  rect(ctx, cx - 20, foot - 54, 8, 22, '#111');
+  rect(ctx, cx + 14, foot - 54, 8, 22, '#111');
+  rect(ctx, cx - 19, foot - 34, 8, 6, skin);
+  rect(ctx, cx + 13, foot - 34, 8, 6, skin);
+  const hx = cx;
+  const hy = foot - 74;
+  rect(ctx, hx - 12, hy + 4, 24, 20, '#0a0808');
+  rect(ctx, hx - 11, hy + 5, 22, 18, skin);
+  rect(ctx, hx - 10, hy + 2, 20, 6, '#111');
+  rect(ctx, hx - 8, hy + 8, 6, 6, '#111');
+  rect(ctx, hx + 2, hy + 8, 6, 6, '#111');
+  rect(ctx, hx + 10, hy + 10, 4, 4, '#3df0ff');
+  rect(ctx, hx - 4, hy + 16, 8, 3, '#3a2010');
+}
+
+export function drawNightNpc(ctx, paintId, x, y, facing, pose, scale = 2.6) {
+  const c = sheet();
+  const octx = c.getContext && c.getContext('2d');
+  if (!octx) return;
+  octx.imageSmoothingEnabled = false;
+  const fn = NIGHT_NPC_PAINT[paintId] || paintPipe;
+  fn(octx, pose);
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  ctx.translate(Math.round(x), Math.round(y));
+  const s = paintId === 'bolt' ? scale * 1.22 : scale;
+  ctx.scale(facing * s, s);
+  ctx.drawImage(c, -SPRITE_W / 2, -SPRITE_H);
+  ctx.restore();
+}
+
+export function paintPickup(ctx, x, y, id, t) {
+  const bob = Math.sin(t * 0.15 + x * 0.02) * 6;
+  const colors = {
+    mint: '#7cff6b',
+    lighter: '#ff8844',
+    cinnamon: '#c44',
+    keys: '#ffe566',
+    battery: '#3df0ff',
+    glow: '#9b6bff',
+    lipstick: '#ff2bd6',
+    gum: '#ff88aa',
+    marker: '#ffe566',
+    lamp: '#fff8a0',
+    hotshot: '#ff6b6b',
+    wristband: '#7cff6b',
+    matches: '#ffaa44',
+    flyer: '#fff4c2',
+    coin: '#ffe566',
+    note: '#e8d080',
+    badge: '#c0c8d0',
+    spray: '#3df0ff',
+  };
+  const py = y + bob;
+  ctx.fillStyle = '#0a0808';
+  ctx.fillRect(x - 12, py - 12, 24, 24);
+  ctx.fillStyle = colors[id] || '#fff';
+  ctx.fillRect(x - 10, py - 10, 20, 20);
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x - 10, py - 10, 20, 20);
+}
+
+export function paintRaveBat(ctx, x, y, t, facing = 1) {
+  const flap = Math.sin(t * 0.4) * 8;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(facing, 1);
+  ctx.fillStyle = '#2a1040';
+  ctx.fillRect(-18, -4 + flap, 16, 8);
+  ctx.fillRect(4, -4 - flap, 16, 8);
+  ctx.fillStyle = '#ff2bd6';
+  ctx.fillRect(-8, -8, 16, 16);
+  ctx.fillStyle = '#ffe566';
+  ctx.fillRect(-4, -4, 3, 3);
+  ctx.fillRect(2, -4, 3, 3);
+  ctx.restore();
+}
+
+export const NIGHT_NPC_PAINT = {
+  pipe: paintPipe,
+  mouth: paintMouth,
+  brick: paintBrick,
+  nix: paintNix,
+  bolt: paintBolt,
+};
+

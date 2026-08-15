@@ -54,8 +54,8 @@ html, body {
 
 .dpad {
   display: grid;
-  grid-template-columns: 76px 76px 76px;
-  grid-template-rows: 76px 76px;
+  grid-template-columns: 84px 84px 84px;
+  grid-template-rows: 84px 84px;
   gap: 8px;
 }
 .dpad-up { grid-column: 2; grid-row: 1; }
@@ -66,13 +66,13 @@ html, body {
 .touch-row { display: flex; gap: 10px; }
 
 .tbtn {
-  width: 76px;
-  height: 76px;
+  width: 84px;
+  height: 84px;
   border-radius: 18px;
   border: 2px solid #e878ff;
   background: rgba(8, 6, 16, 0.78);
   color: #f4d0ff;
-  font: bold 13px Impact, sans-serif;
+  font: bold 14px Impact, sans-serif;
   letter-spacing: 0.5px;
   pointer-events: auto;
   -webkit-tap-highlight-color: transparent;
