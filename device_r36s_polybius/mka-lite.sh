@@ -21,7 +21,9 @@ export CCACHE_MAXSIZE="${CCACHE_MAXSIZE:-15G}"
 export ANDROID_JACK_VM_ARGS="${ANDROID_JACK_VM_ARGS:--Dfile.encoding=UTF-8 -XX:+TieredCompilation -Xmx4G}"
 export PATH="${JAVA_HOME}/bin:/usr/bin:${PATH}"
 
-mkdir -p /opt/android "$(dirname "$LOG")"
+sudo mkdir -p /opt/android /opt/android/ccache "$(dirname "$LOG")"
+sudo chown -R "$(id -u):$(id -g)" /opt/android
+mkdir -p "$(dirname "$LOG")"
 exec > >(tee -a "$LOG") 2>&1
 
 echo "========================================"
