@@ -3,6 +3,9 @@
     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS"/>
     <uses-permission android:name="android.permission.WRITE_SETTINGS"/>
     <uses-permission android:name="android.permission.CHANGE_COMPONENT_ENABLED_STATE"/>
+    <uses-permission android:name="android.permission.MASTER_CLEAR"/>
+    <uses-permission android:name="android.permission.FACTORY_RESET"/>
+    <uses-permission android:name="android.permission.REBOOT"/>
     <application
         android:label="doomsday_clock"
         android:name="${applicationName}"

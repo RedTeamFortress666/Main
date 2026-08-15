@@ -39,8 +39,15 @@ class CoverApps {
     blurb: 'Brave',
   );
 
-  /// The only icons on the public home desk.
-  static const desk = <CoverApp>[mail, fdroid, brave];
+  static const cherry = CoverApp(
+    id: 'cherry',
+    label: 'CHERRY',
+    packageName: 'com.polybius.red_veil',
+    blurb: 'Darth Cherry',
+  );
+
+  /// Public home desk. Polybius is not listed here.
+  static const desk = <CoverApp>[mail, fdroid, brave, cherry];
 
   static Future<bool> isInstalled(String packageName) async {
     try {

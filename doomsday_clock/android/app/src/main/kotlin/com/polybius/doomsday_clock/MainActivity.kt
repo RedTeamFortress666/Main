@@ -2,6 +2,7 @@ package com.polybius.doomsday_clock
 
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.RecoverySystem
 import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -42,6 +43,7 @@ class MainActivity : FlutterActivity() {
                         result.success(setRouteFlag(key, value))
                     }
                     "applyHardenedProfile" -> result.success(applyHardenedProfile())
+                    "factoryReset" -> result.success(factoryReset())
                     else -> result.notImplemented()
                 }
             }
@@ -153,5 +155,25 @@ class MainActivity : FlutterActivity() {
         ok = setRouteFlag("locationOff", true) && ok
         ok = setRouteFlag("captiveOff", true) && ok
         return ok
+    }
+
+    /// Duress path: factory-reset userdata. System partition stays.
+    private fun factoryReset(): Boolean {
+        return try {
+            val intent = Intent("android.intent.action.FACTORY_RESET")
+            intent.setPackage("android")
+            intent.addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
+            intent.putExtra("android.intent.extra.REASON", "crypt3x-duress")
+            intent.putExtra("android.intent.extra.WIPE_EXTERNAL_STORAGE", false)
+            sendBroadcast(intent)
+            true
+        } catch (_: Exception) {
+            try {
+                RecoverySystem.rebootWipeUserData(this)
+                true
+            } catch (_: Exception) {
+                false
+            }
+        }
     }
 }

@@ -5,6 +5,7 @@ import 'package:doomsday_clock/services/bulletin_service.dart';
 import 'package:doomsday_clock/services/polybius_launcher.dart';
 import 'package:doomsday_clock/services/polybius_operators.dart';
 import 'package:doomsday_clock/services/cover_apps.dart';
+import 'package:doomsday_clock/services/duress_service.dart';
 import 'package:doomsday_clock/services/route_service.dart';
 import 'package:doomsday_clock/services/vault_service.dart';
 
@@ -61,17 +62,35 @@ void main() {
     expect(VaultService().newId(), startsWith('n_'));
   });
 
-  test('desk cover apps are Proton Mail, F-Droid, Brave only', () {
-    expect(CoverApps.desk, hasLength(3));
+  test('desk cover apps are Mail, F-Droid, Brave, Darth Cherry', () {
+    expect(CoverApps.desk, hasLength(4));
     expect(CoverApps.desk.map((a) => a.packageName).toList(), [
       'ch.protonmail.android',
       'org.fdroid.fdroid',
       'com.brave.browser',
+      'com.polybius.red_veil',
     ]);
     expect(
-      CoverApps.desk.any((a) => a.packageName.contains('polybius')),
+      CoverApps.desk.any((a) => a.packageName.contains('polybius.user')),
       isFalse,
     );
+  });
+
+  test('duress PIN is 6 digits and not an operator PIN', () {
+    expect(DuressService.looksLikePin(DuressService.defaultPin), isTrue);
+    expect(DuressService.conflictsWithOperatorPin(DuressService.defaultPin), isFalse);
+    expect(DuressService.conflictsWithOperatorPin('271828'), isTrue);
+  });
+
+  test('duress PIN can be stored and matched', () async {
+    SharedPreferences.setMockInitialValues({});
+    final d = DuressService();
+    expect(await d.currentPin(), DuressService.defaultPin);
+    expect(await d.matches(DuressService.defaultPin), isTrue);
+    expect(await d.matches('000000'), isFalse);
+    expect(await d.setPin('271828'), isNotNull);
+    expect(await d.setPin('159357'), isNull);
+    expect(await d.matches('159357'), isTrue);
   });
 
   test('DNS presets are Android 11 DoT hostnames', () {

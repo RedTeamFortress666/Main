@@ -49,10 +49,10 @@ class _DeskTabState extends State<DeskTab> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       children: [
-        Text('DESK · THREE APPS', style: Theme.of(context).textTheme.labelLarge),
+        Text('DESK · FOUR APPS', style: Theme.of(context).textTheme.labelLarge),
         const SizedBox(height: 8),
         Text(
-          'Mail, catalogue, browser. Adapt the rest through F-Droid.',
+          'Mail, catalogue, browser, Cherry. Adapt the rest through F-Droid.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: NoirTheme.mist.withValues(alpha: 0.55),
               ),
@@ -66,7 +66,11 @@ class _DeskTabState extends State<DeskTab> {
             child: InkWell(
               onTap: spinning ? null : () => _open(app),
               child: NeonPanel(
-                color: app.id == 'brave' ? NoirTheme.orange : NoirTheme.matrix,
+                color: app.id == 'cherry'
+                    ? NoirTheme.crimson
+                    : app.id == 'brave'
+                        ? NoirTheme.orange
+                        : NoirTheme.matrix,
                 child: Row(
                   children: [
                     Expanded(

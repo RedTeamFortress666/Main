@@ -17,6 +17,7 @@
 PRODUCT_MAKEFILES := \
 	$(LOCAL_DIR)/lineage_r36s.mk \
 	$(LOCAL_DIR)/lineage_r36s_crypt3x.mk \
+	$(LOCAL_DIR)/lineage_r36s_crypt3x_lite.mk \
 	$(LOCAL_DIR)/lineage_r36s_polybius.mk
 
 COMMON_LUNCH_CHOICES := \
@@ -26,6 +27,9 @@ COMMON_LUNCH_CHOICES := \
 	lineage_r36s_crypt3x-user \
 	lineage_r36s_crypt3x-userdebug \
 	lineage_r36s_crypt3x-eng \
+	lineage_r36s_crypt3x_lite-user \
+	lineage_r36s_crypt3x_lite-userdebug \
+	lineage_r36s_crypt3x_lite-eng \
 	lineage_r36s_polybius-user \
 	lineage_r36s_polybius-userdebug \
 	lineage_r36s_polybius-eng

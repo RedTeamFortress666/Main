@@ -28,8 +28,10 @@ copy_into_dt() {
 
 copy_into_dt AndroidProducts.mk
 copy_into_dt lineage_r36s_crypt3x.mk
+copy_into_dt lineage_r36s_crypt3x_lite.mk
 copy_into_dt lineage_r36s_polybius.mk
 copy_into_dt polybius.mk
+copy_into_dt mkimg_lite.sh
 copy_into_dt hardening.mk
 copy_into_dt permissions
 copy_into_dt sysconfig
@@ -87,6 +89,7 @@ else
   echo "ueventd already has ttyACM or file missing; skip"
 fi
 
-echo "Done. Lunch target: lineage_r36s_crypt3x-userdebug  (CRYPT3X OS)"
-echo "Drop APKs under $DT/prebuilts/{Polybius,DoomsdayClock,Brave,FDroid,ProtonMail,Orbot,WireGuard}/"
+echo "Done. Lunch: lineage_r36s_crypt3x-userdebug  or  lineage_r36s_crypt3x_lite-userdebug"
+echo "Drop APKs under $DT/prebuilts/{Polybius,DoomsdayClock,Brave,FDroid,ProtonMail,DarthCherry}/"
+chmod +x "$DT/mkimg_lite.sh" 2>/dev/null || true
 echo "Boot animation: $DT/media/bootanimation.zip (python3 device_r36s_polybius/media/render_bootanim.py to rebuild)"

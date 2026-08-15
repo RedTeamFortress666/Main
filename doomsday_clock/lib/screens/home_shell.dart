@@ -165,7 +165,7 @@ class _HomeShellState extends State<HomeShell> {
                           Text(
                             operator
                                 ? '${_session!.displayName} · ${_session!.tier} · BNE AEST'
-                                : 'DESK · MAIL / F-DROID / BRAVE',
+                                : 'DESK · MAIL / F-DROID / BRAVE / CHERRY',
                             style: Theme.of(context)
                                 .textTheme
                                 .labelLarge

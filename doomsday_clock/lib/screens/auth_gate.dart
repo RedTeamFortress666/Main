@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../services/auth_service.dart';
+import '../services/duress_service.dart';
 import '../theme/noir_theme.dart';
 import '../widgets/doomsday_logo.dart';
 import '../widgets/matrix_chrome.dart';
@@ -42,6 +43,15 @@ class _AuthGateState extends State<AuthGate> {
       _busy = true;
       _error = null;
     });
+    if (await DuressService().matches(_pin.text)) {
+      await DuressService().triggerReset();
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _error = 'ACCESS DENIED — Polybius developer/admin only';
+      });
+      return;
+    }
     final session = await _auth.login(
       username: _user.text,
       password: _pass.text,
@@ -172,9 +182,23 @@ class VaultSetupScreen extends StatefulWidget {
 
 class _VaultSetupScreenState extends State<VaultSetupScreen> {
   final _auth = AuthService();
+  final _duress = DuressService();
+  final _duressCtrl = TextEditingController(text: DuressService.defaultPin);
   bool _done = false;
+  String? _duressError;
+
+  @override
+  void dispose() {
+    _duressCtrl.dispose();
+    super.dispose();
+  }
 
   Future<void> _finish() async {
+    final err = await _duress.setPin(_duressCtrl.text);
+    if (err != null) {
+      setState(() => _duressError = err);
+      return;
+    }
     await _auth.seedUserVault(widget.session.username);
     await _auth.markVaultSetupComplete(widget.session.username);
     setState(() => _done = true);
@@ -212,6 +236,22 @@ class _VaultSetupScreenState extends State<VaultSetupScreen> {
                     'Planner notes stay on-device.\n'
                     'Hold SAVE NOTE on a ritual day to open the archive.',
                   ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _duressCtrl,
+                    obscureText: true,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(color: NoirTheme.mist),
+                    decoration: const InputDecoration(
+                      labelText: 'DURESS PIN · 6 DIGITS · WIPES DEVICE',
+                      labelStyle: TextStyle(color: NoirTheme.crimson),
+                    ),
+                  ),
+                  if (_duressError != null) ...[
+                    const SizedBox(height: 8),
+                    Text(_duressError!,
+                        style: const TextStyle(color: NoirTheme.crimson)),
+                  ],
                   const Spacer(),
                   SizedBox(
                     width: double.infinity,

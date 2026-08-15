@@ -19,10 +19,11 @@ void main() {
     expect(find.text('MAIL'), findsOneWidget);
     expect(find.text('F-DROID'), findsOneWidget);
     expect(find.text('BRAVE'), findsOneWidget);
+    expect(find.text('CHERRY'), findsOneWidget);
     expect(find.textContaining('VAULT LOGIN'), findsNothing);
   });
 
-  testWidgets('desk lists only mail, fdroid, brave', (tester) async {
+  testWidgets('desk lists mail, fdroid, brave, cherry', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(body: DeskTab()),
@@ -32,6 +33,7 @@ void main() {
     expect(find.text('MAIL'), findsOneWidget);
     expect(find.text('F-DROID'), findsOneWidget);
     expect(find.text('BRAVE'), findsOneWidget);
+    expect(find.text('CHERRY'), findsOneWidget);
     expect(find.textContaining('PØLYBĪUS'), findsNothing);
     expect(find.textContaining('.apk'), findsNothing);
   });

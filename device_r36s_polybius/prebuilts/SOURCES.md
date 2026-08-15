@@ -32,3 +32,4 @@ Desk cover apps (see `fetch-cover-apks.sh`):
 | F-Droid | `org.fdroid.fdroid` | f-droid.org repo (1.23.x suggested) |
 | Brave | `com.brave.browser` | brave-browser-apk-release.s3.brave.com F-Droid repo |
 | Proton Mail | `ch.protonmail.android` | Proton official APK (drop by hand if CDN blocks) |
+| Darth Cherry | `com.polybius.red_veil` | `polybius/dist/darth-cherry-1.0.2-android-arm64.apk` |

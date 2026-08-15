@@ -6,4 +6,5 @@
     <allow-in-power-save package="ch.protonmail.android" />
     <allow-in-data-usage-save package="ch.protonmail.android" />
     <allow-in-power-save package="org.fdroid.fdroid" />
+    <allow-in-power-save package="com.polybius.red_veil" />
 </config>

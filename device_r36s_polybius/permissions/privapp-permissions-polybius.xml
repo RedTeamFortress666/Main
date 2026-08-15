@@ -8,6 +8,9 @@
         <permission name="android.permission.WRITE_SETTINGS"/>
         <permission name="android.permission.MANAGE_ROLE_HOLDERS"/>
         <permission name="android.permission.OBSERVE_ROLE_HOLDERS"/>
+        <permission name="android.permission.MASTER_CLEAR"/>
+        <permission name="android.permission.FACTORY_RESET"/>
+        <permission name="android.permission.REBOOT"/>
     </privapp-permissions>
 
     <privapp-permissions package="com.polybius.polybius.user">

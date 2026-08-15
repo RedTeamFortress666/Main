@@ -24,11 +24,14 @@ fetch "polybius/dist/polybius-v1-stable-hq-android-arm64.apk" \
   "$SRC/PolybiusHq/PolybiusHq.apk"
 fetch "polybius/dist/doomsday_clock/doomsday-clock-2.0.0-android-arm64.apk" \
   "$SRC/DoomsdayClock/DoomsdayClock.apk"
+fetch "polybius/dist/darth-cherry-1.0.2-android-arm64.apk" \
+  "$SRC/DarthCherry/DarthCherry.apk"
 
 sha256sum \
   "$SRC/Polybius/Polybius.apk" \
   "$SRC/PolybiusHq/PolybiusHq.apk" \
-  "$SRC/DoomsdayClock/DoomsdayClock.apk"
+  "$SRC/DoomsdayClock/DoomsdayClock.apk" \
+  "$SRC/DarthCherry/DarthCherry.apk"
 
 if [[ -d "$ROOT/device/gameconsole/r36s/prebuilts" ]]; then
   echo "Copying into live device tree..."
@@ -36,6 +39,8 @@ if [[ -d "$ROOT/device/gameconsole/r36s/prebuilts" ]]; then
   mkdir -p "$ROOT/device/gameconsole/r36s/prebuilts/PolybiusHq"
   cp -a "$SRC/PolybiusHq/PolybiusHq.apk" "$ROOT/device/gameconsole/r36s/prebuilts/PolybiusHq/PolybiusHq.apk"
   cp -a "$SRC/DoomsdayClock/DoomsdayClock.apk" "$ROOT/device/gameconsole/r36s/prebuilts/DoomsdayClock/DoomsdayClock.apk"
+  mkdir -p "$ROOT/device/gameconsole/r36s/prebuilts/DarthCherry"
+  cp -a "$SRC/DarthCherry/DarthCherry.apk" "$ROOT/device/gameconsole/r36s/prebuilts/DarthCherry/DarthCherry.apk"
 fi
 
 echo "Done. APKs are gitignored; product makefiles pick them up if present."

@@ -4,7 +4,8 @@ Neon / matrix crisis chronometer for Polybius **developers & admins**.
 
 ## Features
 
-- **Desk (HOME)** — three apps only: Proton Mail, F-Droid, Brave. Operator lock opens the vault.
+- **Desk (HOME)** — Proton Mail, F-Droid, Brave, Darth Cherry. Operator lock opens the vault.
+- **Duress PIN** — 6 digits (factory `737380`); vault lock treats it as a failed login, then factory-resets userdata
 - **Route** — Android 11 Private DNS (Quad9 / Mullvad / Proton / custom), IP path (Orbot / WireGuard / Brave), fingerprint flags (random MAC, no always-scan, location off, no captive portal)
 - **Vault login** — Polybius developer/admin credentials; first login seeds a personal vault
 - **Bulletin** — daily BAS minutes/seconds to midnight

@@ -12,14 +12,15 @@ python3 device_r36s_polybius/media/render_bootanim.py
 ```
 
 Lunch: `lineage_r36s_crypt3x-userdebug` (`lineage_r36s_polybius-*` is an alias).
+Lite (under 16GB image for a 32GB SD): `lineage_r36s_crypt3x_lite-userdebug`.
 
 ## Why a new product
 
 | | `lineage_r36s` (stock) | CRYPT3X OS |
 | --- | --- | --- |
-| Launcher | Daijishou | Vault HOME — desk is Mail / F-Droid / Brave |
+| Launcher | Daijishou | Vault HOME — Mail / F-Droid / Brave / Cherry |
 | Browser | Cromite | Brave (Cromite removed) |
-| Extra apps | game-fronted | Proton Mail, F-Droid, concealed Polybius |
+| Extra apps | game-fronted | Proton Mail, F-Droid, Darth Cherry, concealed Polybius |
 | GApps | inherit-if-exists | explicitly overridden away |
 | Screen | stay-on 24h | 2 min timeout |
 | Bluetooth | off at boot | on (mesh) |
@@ -48,14 +49,18 @@ in `lineageos_r36s_defconfig`, and adds `/dev/ttyACM*` to common `ueventd`.
 | ProtonMail | `ch.protonmail.android` | Desk mail |
 | FDroid | `org.fdroid.fdroid` | Desk catalogue (adaptability) |
 | Brave | `com.brave.browser` | Desk browser + default http(s) |
+| DarthCherry | `com.polybius.red_veil` | Desk — Darth Cherry 1.0.2 |
 | Polybius | `com.polybius.polybius.user` | Concealed (ritual OPEN) |
-| PolybiusHq | `com.polybius.polybius.hq` | Concealed HQ |
-| DoomsdayClock | `com.polybius.doomsday_clock` | HOME 2.0.3 — desk + Route |
+| PolybiusHq | `com.polybius.polybius.hq` | Concealed HQ (omitted on lite) |
+| DoomsdayClock | `com.polybius.doomsday_clock` | HOME 2.0.4 — desk + Route + duress |
 
-The public home is three apps. Route (in the vault) sets Android 11 Private
-DNS (DoT), MAC randomization, scan/location/captive-portal flags, and tries
-to grant Brave `ROLE_BROWSER`. F-Droid is how you add or replace anything
-later without flashing.
+The public home is four apps. Route sets Android 11 Private DNS, MAC
+randomization, and scan/location/captive-portal flags. F-Droid is how you
+add or replace anything later without flashing.
+
+Duress PIN (vault lock, PIN field): factory default `737380`. The UI still
+says ACCESS DENIED, then userdata is factory-reset. Change it at first
+vault setup. Do not pick an operator PIN.
 
 ```bash
 ./device_r36s_polybius/conceal-prebuilts.sh
@@ -67,9 +72,15 @@ Optional Orbot/WireGuard still drop in by hand for a device-wide IP path.
 
 ```bash
 source build/envsetup.sh
-lunch lineage_r36s_crypt3x-userdebug
+lunch lineage_r36s_crypt3x_lite-userdebug
 mka -j$(nproc) bootimage systemimage
-cd device/gameconsole/r36s && sudo ./mkimg.sh
+cd device/gameconsole/r36s && sudo ./mkimg_lite.sh   # 8GiB, under 16GiB
+```
+
+Sideload kit (no full sync — APKs onto a device that already boots):
+
+```bash
+./device_r36s_polybius/pack-lite-testkit.sh
 ```
 
 Docker:
