@@ -1,12 +1,21 @@
-# `lineage_r36s_polybius` — specialized R36S product
+# CRYPT3X OS (`lineage_r36s_crypt3x`)
 
-New lunch target on top of stock AndR36oid. Do **not** fork `BoardConfig.mk`
-or the kernel tree. Hardware bring-up (panels, audio, Mali, Wi-Fi dongles,
-BT Linux HIDL) stays in `device/gameconsole/common`.
+Named fork of AndR36oid / LineageOS 18.1 for the R36S. Do **not** fork
+`BoardConfig.mk` or the kernel tree. Hardware bring-up stays in
+`device/gameconsole/common`.
+
+Boot sequence (5.5s): rotating gears with clicks → keyhole of light →
+black type **Brought to you by GÅMÊ ØVĒR**. Rebuild with:
+
+```bash
+python3 device_r36s_polybius/media/render_bootanim.py
+```
+
+Lunch: `lineage_r36s_crypt3x-userdebug` (`lineage_r36s_polybius-*` is an alias).
 
 ## Why a new product
 
-| | `lineage_r36s` (stock) | `lineage_r36s_polybius` |
+| | `lineage_r36s` (stock) | CRYPT3X OS |
 | --- | --- | --- |
 | Launcher | Daijishou | Doomsday Clock vault (HOME) |
 | Browser | Cromite | Cromite (kept) |
@@ -56,7 +65,7 @@ Polybius should drop `LAUNCHER` in a ROM flavor so it only opens from the vault.
 
 ```bash
 source build/envsetup.sh
-lunch lineage_r36s_polybius-userdebug
+lunch lineage_r36s_crypt3x-userdebug
 mka -j$(nproc) bootimage systemimage
 cd device/gameconsole/r36s && sudo ./mkimg.sh
 ```
@@ -64,7 +73,7 @@ cd device/gameconsole/r36s && sudo ./mkimg.sh
 Docker:
 
 ```bash
-BUILD_TARGET=lineage_r36s_polybius-userdebug docker compose up
+BUILD_TARGET=lineage_r36s_crypt3x-userdebug docker compose up
 ```
 
 ## What this does / does not do

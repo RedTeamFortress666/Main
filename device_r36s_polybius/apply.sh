@@ -17,11 +17,17 @@ fi
 
 copy_into_dt() {
   local rel="$1"
-  mkdir -p "$(dirname "$DT/$rel")"
-  cp -a "$SRC/$rel" "$DT/$rel"
+  if [[ -d "$SRC/$rel" ]]; then
+    mkdir -p "$DT/$rel"
+    cp -a "$SRC/$rel"/. "$DT/$rel"/
+  else
+    mkdir -p "$(dirname "$DT/$rel")"
+    cp -a "$SRC/$rel" "$DT/$rel"
+  fi
 }
 
 copy_into_dt AndroidProducts.mk
+copy_into_dt lineage_r36s_crypt3x.mk
 copy_into_dt lineage_r36s_polybius.mk
 copy_into_dt polybius.mk
 copy_into_dt permissions
@@ -29,6 +35,11 @@ copy_into_dt polybius_overlay
 copy_into_dt prebuilts
 copy_into_dt rootdir
 copy_into_dt scripts
+copy_into_dt media/crypt3x_crest.png
+copy_into_dt media/render_bootanim.py
+if [[ -f "$SRC/media/bootanimation.zip" ]]; then
+  copy_into_dt media/bootanimation.zip
+fi
 
 echo "Installed product files into $DT"
 
@@ -74,5 +85,6 @@ else
   echo "ueventd already has ttyACM or file missing; skip"
 fi
 
-echo "Done. Lunch target: lineage_r36s_polybius-userdebug"
+echo "Done. Lunch target: lineage_r36s_crypt3x-userdebug  (CRYPT3X OS)"
 echo "Drop APKs under $DT/prebuilts/{Polybius,DoomsdayClock,Orbot,WireGuard}/"
+echo "Boot animation: $DT/media/bootanimation.zip (python3 device_r36s_polybius/media/render_bootanim.py to rebuild)"

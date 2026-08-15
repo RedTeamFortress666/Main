@@ -161,16 +161,17 @@ kernel/gameconsole/r36s/
 `device/gameconsole/common/device.mk`. The R36S tree is a thin product overlay
 on that common RK3326 board.
 
-## Specialized product: `lineage_r36s_polybius`
+## Specialized product: CRYPT3X OS (`lineage_r36s_crypt3x`)
 
 A second lunch target lives in `device_r36s_polybius/`. It keeps stock
 AndR36oid hardware bring-up and adds Polybius + vault + mesh/privacy policy.
+The visible fork name is **CRYPT3X OS**, credited to GÅMÊ ØVĒR on the boot card.
 
 ```bash
 ./device_r36s_polybius/apply.sh
 # then, after a full repo sync:
 source build/envsetup.sh
-lunch lineage_r36s_polybius-userdebug
+lunch lineage_r36s_crypt3x-userdebug
 ```
 
 See `device_r36s_polybius/README.md` for APK drop-in paths and what is in/out
