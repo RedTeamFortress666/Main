@@ -276,7 +276,7 @@ export function stepNight(s, input) {
 
 function nearestNpc(s) {
   let best = null;
-  let d = 96;
+  let d = 150;
   for (const n of NPCS) {
     const dd = Math.abs(s.px - n.x);
     if (dd < d) {
