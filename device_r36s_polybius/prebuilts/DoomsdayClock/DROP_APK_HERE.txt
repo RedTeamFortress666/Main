@@ -2,9 +2,9 @@ Doomsday Clock Calendar Vault lands here as DoomsdayClock.apk
 
   applicationId: com.polybius.doomsday_clock
   source: flutter build apk --release in doomsday_clock/
-  versionName: 2.0.2
-  versionCode: 3
-  sha256: 8757019e8530aa24dbe981e27fdaa2d9f4bf6aa191f53a7954e9411c53b93009
+  versionName: 2.0.3
+  versionCode: 4
+  sha256: de219e8f9fa5c9a2394b7af4869c0a583dbb55f9c8ddedb3fd44947ffbe16d17
 
 2.0.2+ is HOME + LAUNCHER + DEFAULT. Ritual OPEN launches concealed
 Polybius (no player/APK cards). Android.mk overrides Daijishou/Trebuchet.
