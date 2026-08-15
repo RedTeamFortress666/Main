@@ -169,6 +169,10 @@ sync_tree() {
     device/gameconsole/common \
     kernel/gameconsole/r36s \
     hardware/rockchip
+  if [[ -f "$ANDROID_ROOT/kernel/gameconsole/r36s/.gitmodules" ]]; then
+    echo "Initializing kernel submodules (rtl8188eus, exfat)"
+    git -C "$ANDROID_ROOT/kernel/gameconsole/r36s" submodule update --init --recursive
+  fi
 }
 
 apply_overlay() {
