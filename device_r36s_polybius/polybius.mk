@@ -20,6 +20,10 @@ ifneq ($(wildcard $(POLYBIUS_DEVICE_PATH)/prebuilts/Polybius/Polybius.apk),)
 PRODUCT_PACKAGES += Polybius
 endif
 
+ifneq ($(wildcard $(POLYBIUS_DEVICE_PATH)/prebuilts/PolybiusHq/PolybiusHq.apk),)
+PRODUCT_PACKAGES += PolybiusHq
+endif
+
 ifneq ($(wildcard $(POLYBIUS_DEVICE_PATH)/prebuilts/Orbot/Orbot.apk),)
 PRODUCT_PACKAGES += Orbot
 endif

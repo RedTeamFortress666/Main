@@ -1,10 +1,7 @@
-Copy your release APK here as:
+V1 USER STABLE lands here as Polybius.apk
 
-  Polybius.apk
+  applicationId: com.polybius.polybius.user
+  source: polybius/dist/polybius-v1-stable-user-android-arm64.apk
+  sha256: bd20bf987f812937aafc9a5fe40870087ca7f03b78980c5932bd3b40c465dc4e
 
-Expected applicationId: com.polybius.polybius
-
-Recommended ROM flavor of the APK:
-  - Remove android.intent.category.LAUNCHER from MainActivity
-  - Keep the activity exported so the vault can start it
-  - Add BLE / Wi-Fi Direct / USB Host permissions when mesh lands
+./device_r36s_polybius/fetch-apks.sh

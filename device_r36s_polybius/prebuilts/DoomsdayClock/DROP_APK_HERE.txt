@@ -1,13 +1,11 @@
-Copy the Doomsday Clock Calendar Vault APK here as:
+Doomsday Clock Calendar Vault lands here as DoomsdayClock.apk
 
-  DoomsdayClock.apk
+  applicationId: com.polybius.doomsday_clock
+  source: polybius/dist/doomsday_clock/doomsday-clock-2.0.0-android-arm64.apk
+  versionName: 2.0.1
+  sha256: 509ae553b6948144659021fd2d6ce6b244144e9fdb1686f513f6cb5252653883
 
-Then set the real applicationId in
-  permissions/privapp-permissions-polybius.xml
-(default placeholder: com.doomsday.clock).
+This build is LAUNCHER only (not HOME). Trebuchet stays the system
+launcher until the vault APK adds CATEGORY_HOME.
 
-The vault should:
-  - Declare android.intent.category.HOME + DEFAULT (it becomes the launcher)
-  - Launch com.polybius.polybius/.MainActivity from the covert entry
-  - Optionally embed/store the Polybius APK in its own assets if you want
-    a single visible app; the ROM still preinstalls both
+./device_r36s_polybius/fetch-apks.sh

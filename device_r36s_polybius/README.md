@@ -36,30 +36,23 @@ Stock remains buildable: `lunch lineage_r36s-userdebug`.
 That copies these files to `device/gameconsole/r36s/`, enables USB ACM/serial
 in `lineageos_r36s_defconfig`, and adds `/dev/ttyACM*` to common `ueventd`.
 
-## Drop APKs (when you have them)
+## Drop / fetch APKs
 
 ```bash
-cp /path/to/Polybius.apk \
-  device/gameconsole/r36s/prebuilts/Polybius/Polybius.apk
-
-cp /path/to/DoomsdayClock.apk \
-  device/gameconsole/r36s/prebuilts/DoomsdayClock/DoomsdayClock.apk
-
-# optional
-cp /path/to/Orbot.apk \
-  device/gameconsole/r36s/prebuilts/Orbot/Orbot.apk
-cp /path/to/WireGuard.apk \
-  device/gameconsole/r36s/prebuilts/WireGuard/WireGuard.apk
+./device_r36s_polybius/fetch-apks.sh
 ```
 
-Makefiles skip a module if its APK is missing, so the product still lunches.
+That pulls from `cursor/v1-stable-logins-ios-b952`:
 
-Vault `applicationId` must be written into
-`permissions/privapp-permissions-polybius.xml` (placeholder `com.doomsday.clock`).
-Polybius is `com.polybius.polybius`.
+| Module | applicationId | Role |
+| --- | --- | --- |
+| Polybius | `com.polybius.polybius.user` | V1 USER STABLE (operators) |
+| PolybiusHq | `com.polybius.polybius.hq` | EMOJINIGMA HQ (portal/admin) |
+| DoomsdayClock | `com.polybius.doomsday_clock` | Calendar vault 2.0.1 |
 
-Vault APK needs `MAIN` + `HOME` + `DEFAULT` so it replaces Daijishou.
-Polybius should drop `LAUNCHER` in a ROM flavor so it only opens from the vault.
+APKs are gitignored. Different package IDs, so user + HQ both preinstall.
+Doomsday Clock is LAUNCHER-only today — Trebuchet stays HOME until the vault
+declares `CATEGORY_HOME`. Optional Orbot/WireGuard still drop in by hand.
 
 ## Build (after a full Lineage sync — ask before downloading)
 
