@@ -173,6 +173,10 @@ sync_tree() {
     echo "Initializing kernel submodules (rtl8188eus, exfat)"
     git -C "$ANDROID_ROOT/kernel/gameconsole/r36s" submodule update --init --recursive
   fi
+  if [[ -f "$ANDROID_ROOT/device/gameconsole/common/apps/Files/Files.apk" ]]; then
+    echo "git lfs pull Files.apk"
+    git -C "$ANDROID_ROOT/device/gameconsole/common" lfs pull --include='apps/Files/Files.apk' || true
+  fi
 }
 
 apply_overlay() {
