@@ -77,12 +77,27 @@ ensure_swap() {
   fi
   echo "Creating ${SWAP_GIB}GiB swap at $SWAPFILE"
   sudo mkdir -p "$(dirname "$SWAPFILE")"
-  if ! sudo fallocate -l "${SWAP_GIB}G" "$SWAPFILE" 2>/dev/null; then
-    sudo dd if=/dev/zero of="$SWAPFILE" bs=1M count=$((SWAP_GIB * 1024)) status=progress
+  if [[ ! -f "$SWAPFILE" ]]; then
+    if ! sudo dd if=/dev/zero of="$SWAPFILE" bs=1M count=$((SWAP_GIB * 1024)) status=progress; then
+      echo "WARN: could not allocate swap file; continuing without swap"
+      return
+    fi
   fi
   sudo chmod 600 "$SWAPFILE"
   sudo mkswap "$SWAPFILE"
-  sudo swapon "$SWAPFILE"
+  # OverlayFS rejects swapon on a file; bind it to a loop device first.
+  if ! sudo swapon "$SWAPFILE" 2>/dev/null; then
+    local loop
+    loop="$(sudo losetup --find --show --direct-io=on "$SWAPFILE" 2>/dev/null \
+      || sudo losetup --find --show "$SWAPFILE")"
+    sudo mkswap "$loop"
+    if ! sudo swapon "$loop"; then
+      echo "WARN: swapon failed on $loop; continuing without swap"
+      sudo losetup -d "$loop" || true
+      return
+    fi
+    echo "Swap on loop $loop"
+  fi
   swapon --show
 }
 
