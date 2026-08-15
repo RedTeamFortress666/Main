@@ -208,11 +208,9 @@ class _VaultSetupScreenState extends State<VaultSetupScreen> {
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    'Seeding personal vault:\n'
-                    '• PØLYBĪUS Admin APK slot\n'
-                    '• DARTH CHERRY companion slot\n'
-                    '• GRØK-REBEL 6.0 alarm interface hook\n\n'
-                    'Ritual notes still unlock daily vault view in Planner.',
+                    'Personal archive initialized.\n'
+                    'Planner notes stay on-device.\n'
+                    'Hold SAVE NOTE on a ritual day to open the archive.',
                   ),
                   const Spacer(),
                   SizedBox(

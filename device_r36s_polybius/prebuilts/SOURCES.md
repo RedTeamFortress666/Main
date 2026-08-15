@@ -17,5 +17,5 @@ SHA-256 (v1-stable branch blobs):
 
 User and HQ are separate packages, so both can be preinstalled.
 
-Doomsday Clock 2.0.1 is **LAUNCHER only**, not `HOME`. Trebuchet stays the
-system launcher until the vault APK adds `CATEGORY_HOME`.
+Rebuild Doomsday Clock from `doomsday_clock/` (2.0.2+) so HOME + concealed
+Polybius launch ship in the image. The 2.0.1 dist APK is LAUNCHER-only.

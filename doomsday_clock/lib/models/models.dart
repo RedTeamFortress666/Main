@@ -71,31 +71,3 @@ class PlannerNote {
         updatedAt: DateTime.parse(j['updatedAt'] as String),
       );
 }
-
-class VaultEntry {
-  VaultEntry({
-    required this.id,
-    required this.title,
-    required this.detail,
-    this.apkHint,
-  });
-
-  final String id;
-  final String title;
-  final String detail;
-  final String? apkHint;
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'title': title,
-        'detail': detail,
-        'apkHint': apkHint,
-      };
-
-  factory VaultEntry.fromJson(Map<String, dynamic> j) => VaultEntry(
-        id: j['id'] as String,
-        title: j['title'] as String,
-        detail: j['detail'] as String,
-        apkHint: j['apkHint'] as String?,
-      );
-}

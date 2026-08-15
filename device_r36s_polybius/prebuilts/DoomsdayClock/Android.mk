@@ -9,8 +9,15 @@ LOCAL_BUILT_MODULE_STEM := package.apk
 LOCAL_MODULE_SUFFIX := $(COMMON_ANDROID_PACKAGE_SUFFIX)
 LOCAL_CERTIFICATE := PRESIGNED
 LOCAL_PRIVILEGED_MODULE := true
-# 2.0.1 only declares LAUNCHER, not HOME. Do not override Trebuchet or
-# first boot has no launcher. Daijishou is stripped via remove-Daijishou.
+# 2.0.2+ declares HOME. Vault is the only launcher; Polybius stays concealed.
+LOCAL_OVERRIDES_PACKAGES := \
+    Daijishou \
+    Home \
+    TrebuchetQuickStepGo \
+    TrebuchetQuickStep \
+    Launcher2 \
+    Launcher3 \
+    Launcher3QuickStep
 LOCAL_SRC_FILES := DoomsdayClock.apk
 include $(BUILD_PREBUILT)
 endif

@@ -23,6 +23,8 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
+                <category android:name="android.intent.category.HOME"/>
+                <category android:name="android.intent.category.DEFAULT"/>
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
@@ -41,5 +43,8 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <package android:name="com.polybius.polybius.user"/>
+        <package android:name="com.polybius.polybius.hq"/>
+        <package android:name="com.polybius.red_veil"/>
     </queries>
 </manifest>

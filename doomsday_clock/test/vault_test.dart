@@ -1,7 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:doomsday_clock/services/vault_service.dart';
-import 'package:doomsday_clock/services/polybius_operators.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:doomsday_clock/services/auth_service.dart';
 import 'package:doomsday_clock/services/bulletin_service.dart';
+import 'package:doomsday_clock/services/polybius_launcher.dart';
+import 'package:doomsday_clock/services/polybius_operators.dart';
+import 'package:doomsday_clock/services/vault_service.dart';
 
 void main() {
   test('ritual words rotate by day and match contiguous input', () {
@@ -33,5 +36,26 @@ void main() {
 
   test('bulletin source is BAS', () {
     expect(BulletinService.sourceUrl, contains('thebulletin.org'));
+  });
+
+  test('concealed payload packages are user and HQ, not a card URL', () {
+    expect(PolybiusLauncher.userPackage, 'com.polybius.polybius.user');
+    expect(PolybiusLauncher.hqPackage, 'com.polybius.polybius.hq');
+    expect(PolybiusLauncher.activity, 'com.polybius.polybius.MainActivity');
+  });
+
+  test('vault seed stores no player cards or APK links', () async {
+    SharedPreferences.setMockInitialValues({});
+    final auth = AuthService();
+    await auth.seedUserVault('ART3MAS');
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('vault_entries_ART3MAS'), '[]');
+    expect(prefs.getString('vault_payload_ART3MAS'), 'polybius');
+    expect(prefs.getString('vault_entries_ART3MAS'), isNot(contains('apk')));
+    expect(prefs.getString('vault_entries_ART3MAS'), isNot(contains('http')));
+  });
+
+  test('vault service has no download-card entry API', () {
+    expect(VaultService().newId(), startsWith('n_'));
   });
 }

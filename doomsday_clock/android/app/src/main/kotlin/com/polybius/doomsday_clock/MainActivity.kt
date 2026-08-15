@@ -1,5 +1,6 @@
 package com.polybius.doomsday_clock
 
+import android.content.Intent
 import android.content.pm.PackageManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -12,15 +13,19 @@ class MainActivity : FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channel)
             .setMethodCallHandler { call, result ->
-                if (call.method == "isPackageInstalled") {
-                    val pkg = call.argument<String>("package")
-                    if (pkg.isNullOrBlank()) {
-                        result.success(false)
-                        return@setMethodCallHandler
+                when (call.method) {
+                    "isPackageInstalled" -> {
+                        val pkg = call.argument<String>("package")
+                        result.success(!pkg.isNullOrBlank() && isInstalled(pkg))
                     }
-                    result.success(isInstalled(pkg))
-                } else {
-                    result.notImplemented()
+                    "launchPolybius" -> {
+                        val pkg = call.argument<String>("package")
+                            ?: "com.polybius.polybius.user"
+                        val activity = call.argument<String>("activity")
+                            ?: "com.polybius.polybius.MainActivity"
+                        result.success(launchPayload(pkg, activity))
+                    }
+                    else -> result.notImplemented()
                 }
             }
     }
@@ -30,6 +35,19 @@ class MainActivity : FlutterActivity() {
             packageManager.getPackageInfo(packageName, 0)
             true
         } catch (_: PackageManager.NameNotFoundException) {
+            false
+        }
+    }
+
+    private fun launchPayload(packageName: String, activity: String): Boolean {
+        if (!isInstalled(packageName)) return false
+        return try {
+            // Explicit component — Polybius has no LAUNCHER icon.
+            val launch = Intent().setClassName(packageName, activity)
+            launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(launch)
+            true
+        } catch (_: Exception) {
             false
         }
     }

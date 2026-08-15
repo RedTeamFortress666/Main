@@ -7,7 +7,7 @@ Neon / matrix crisis chronometer for Polybius **developers & admins**.
 - **Vault login** — Polybius developer/admin credentials; first login seeds a personal vault
 - **Bulletin** — daily BAS minutes/seconds to midnight
 - **Clock** — **Brisbane QLD AEST (UTC+10, no DST)** primary + threat-colored world zones
-- **Planner / calendar** — browse past & future dates; ritual words + hold SAVE NOTE 3s → OPEN vault
+- **Planner / calendar** — ritual words + hold SAVE NOTE 3s opens the archive and **launches concealed PØLYBĪUS** (`com.polybius.polybius.user`). No player/APK cards. Admin/developer long-press OPEN launches HQ. The clock is a HOME/launcher so Polybius stays off the app drawer.
 - **Alarm** — hidden **DARTH CHERRY** veil (package `com.polybius.red_veil`) unlocks **GRØK-REBEL 6.0** local uncensored AI loader (Gemma heretic / quantized GGUF slots)
 
 ## Build

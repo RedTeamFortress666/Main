@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'polybius_operators.dart';
-import '../models/models.dart';
 
 class AuthSession {
   AuthSession({required this.username, required this.displayName, required this.tier});
@@ -75,35 +74,16 @@ class AuthService {
     );
   }
 
+  /// Marks the vault as armed. Does **not** seed player/APK cards —
+  /// PØLYBĪUS is launched from Planner OPEN, not listed as a download.
   Future<void> seedUserVault(String username) async {
     final prefs = await SharedPreferences.getInstance();
     final key = 'vault_entries_${username.toUpperCase()}';
     if (prefs.containsKey(key)) return;
-    final seed = [
-      VaultEntry(
-        id: 'polybius',
-        title: 'PØLYBĪUS Admin APK',
-        detail: 'Operator portal + cipher',
-        apkHint:
-            'https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/polybius-1.0.0-beta.2-android-arm64.apk',
-      ),
-      VaultEntry(
-        id: 'darth',
-        title: 'DARTH CHERRY',
-        detail: 'Required for GRØK-REBEL alarm veil',
-        apkHint:
-            'https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/darth-cherry-1.0.2-android-arm64.apk',
-      ),
-      VaultEntry(
-        id: 'grok',
-        title: 'GRØK-REBEL 6.0',
-        detail: 'Local uncensored AI loader (alarm veil)',
-        apkHint: null,
-      ),
-    ];
+    await prefs.setString(key, jsonEncode(<Map<String, dynamic>>[]));
     await prefs.setString(
-      key,
-      jsonEncode(seed.map((e) => e.toJson()).toList()),
+      'vault_payload_${username.toUpperCase()}',
+      'polybius',
     );
   }
 }

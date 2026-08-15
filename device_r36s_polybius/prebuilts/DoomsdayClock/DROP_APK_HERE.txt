@@ -5,7 +5,7 @@ Doomsday Clock Calendar Vault lands here as DoomsdayClock.apk
   versionName: 2.0.1
   sha256: 509ae553b6948144659021fd2d6ce6b244144e9fdb1686f513f6cb5252653883
 
-This build is LAUNCHER only (not HOME). Trebuchet stays the system
-launcher until the vault APK adds CATEGORY_HOME.
+2.0.2+ is HOME + LAUNCHER. Rebuild from doomsday_clock/ and drop here
+so the vault replaces Daijishou/Trebuchet and conceals Polybius.
 
 ./device_r36s_polybius/fetch-apks.sh

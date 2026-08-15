@@ -11,7 +11,6 @@ import '../models/models.dart';
 /// **hold SAVE NOTE for 3 seconds** until the control reads OPEN.
 class VaultService {
   static const _notesKey = 'planner_notes_v1';
-  static const _vaultKey = 'vault_entries_v1';
   static const _unlockedDayKey = 'vault_unlocked_day';
 
   /// Word lists rotate by calendar day — operator must enter the phrase for *today*.
@@ -101,30 +100,6 @@ class VaultService {
   Future<void> unlockVaultForToday() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_unlockedDayKey, dayKey());
-  }
-
-  Future<List<VaultEntry>> loadVault() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_vaultKey);
-    if (raw == null) return [];
-    final list = jsonDecode(raw) as List<dynamic>;
-    return list
-        .map((e) => VaultEntry.fromJson(Map<String, dynamic>.from(e as Map)))
-        .toList();
-  }
-
-  Future<void> saveVault(List<VaultEntry> entries) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      _vaultKey,
-      jsonEncode(entries.map((e) => e.toJson()).toList()),
-    );
-  }
-
-  Future<void> addVaultEntry(VaultEntry entry) async {
-    final list = await loadVault();
-    list.add(entry);
-    await saveVault(list);
   }
 
   String newId() =>

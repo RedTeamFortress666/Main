@@ -4,4 +4,7 @@ Portal / EMOJINIGMA HQ lands here as PolybiusHq.apk
   source: polybius/dist/polybius-v1-stable-hq-android-arm64.apk
   sha256: 75bf9fe9b4c5f8ef32791ee463d08efc2d7835b293041209ba0eb4851a0f35c3
 
+No LAUNCHER icon. Admin long-press OPEN in the vault starts this
+package. Rebuild without CATEGORY_LAUNCHER before flashing.
+
 ./device_r36s_polybius/fetch-apks.sh

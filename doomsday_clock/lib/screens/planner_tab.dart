@@ -1,12 +1,10 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/models.dart';
 import '../services/auth_service.dart';
+import '../services/polybius_launcher.dart';
 import '../services/vault_service.dart';
 import '../theme/noir_theme.dart';
 import '../widgets/matrix_chrome.dart';
@@ -25,11 +23,11 @@ class _PlannerTabState extends State<PlannerTab> {
   final _noteCtrl = TextEditingController();
   DateTime _selected = DateTime.now();
   List<PlannerNote> _notes = [];
-  List<VaultEntry> _vaultEntries = [];
   bool _vaultOpen = false;
   String _holdLabel = 'SAVE NOTE';
   bool _holding = false;
   DateTime? _holdStarted;
+  bool _launching = false;
 
   @override
   void initState() {
@@ -49,25 +47,25 @@ class _PlannerTabState extends State<PlannerTab> {
       widget.session.username,
       _selected,
     );
-    final entries = await _loadUserVault();
     if (!mounted) return;
     setState(() {
       _notes = notes;
       _vaultOpen = open;
-      _vaultEntries = entries;
       _holdLabel = open ? 'OPEN' : 'SAVE NOTE';
     });
   }
 
-  Future<List<VaultEntry>> _loadUserVault() async {
-    final prefs = await SharedPreferences.getInstance();
-    final key = 'vault_entries_${widget.session.username.toUpperCase()}';
-    final raw = prefs.getString(key);
-    if (raw == null) return [];
-    final list = jsonDecode(raw) as List<dynamic>;
-    return list
-        .map((e) => VaultEntry.fromJson(Map<String, dynamic>.from(e as Map)))
-        .toList();
+  Future<void> _openPayload({required bool hq}) async {
+    if (_launching) return;
+    setState(() => _launching = true);
+    final ok = await PolybiusLauncher.open(hq: hq);
+    if (!mounted) return;
+    setState(() => _launching = false);
+    if (!ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Archive offline.')),
+      );
+    }
   }
 
   Future<void> _pickDate() async {
@@ -98,8 +96,18 @@ class _PlannerTabState extends State<PlannerTab> {
     setState(() {
       _holding = true;
       _holdStarted = DateTime.now();
-      _holdLabel = '…';
+      _holdLabel = _vaultOpen ? 'OPEN' : '…';
     });
+    if (_vaultOpen) {
+      await Future<void>.delayed(const Duration(seconds: 2));
+      if (!_holding || !mounted) return;
+      final admin = widget.session.tier == 'admin' ||
+          widget.session.tier == 'developer';
+      if (admin) {
+        await _openPayload(hq: true);
+      }
+      return;
+    }
     await Future<void>.delayed(const Duration(seconds: 3));
     if (!_holding || _holdStarted == null) return;
     final body = _noteCtrl.text.trim();
@@ -127,13 +135,21 @@ class _PlannerTabState extends State<PlannerTab> {
       _holding = false;
     });
     if (unlocked) {
-      final entries = await _loadUserVault();
-      if (mounted) setState(() => _vaultEntries = entries);
+      await _openPayload(hq: false);
     }
   }
 
   void _onHoldEnd() {
-    if (_holdLabel == 'OPEN' && _vaultOpen) return;
+    if (_vaultOpen && _holdLabel == 'OPEN') {
+      // Short tap on OPEN launches the concealed user payload.
+      if (_holdStarted != null &&
+          DateTime.now().difference(_holdStarted!) <
+              const Duration(seconds: 2)) {
+        _openPayload(hq: false);
+      }
+      setState(() => _holding = false);
+      return;
+    }
     setState(() {
       _holding = false;
       _holdLabel = _vaultOpen ? 'OPEN' : 'SAVE NOTE';
@@ -235,41 +251,16 @@ class _PlannerTabState extends State<PlannerTab> {
         const SizedBox(height: 18),
         Text('NOTES · $dayKey', style: Theme.of(context).textTheme.labelLarge),
         ...dayNotes.map((n) => Text('• ${n.body}')),
-        if (_vaultOpen) ...[
-          const SizedBox(height: 18),
-          Text('VAULT · ${widget.session.displayName}',
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: NoirTheme.peace,
-                  )),
-          const SizedBox(height: 8),
-          ..._vaultEntries.map(
-            (e) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: NeonPanel(
-                color: NoirTheme.peace,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(e.title,
-                        style: const TextStyle(
-                          color: NoirTheme.peace,
-                          fontWeight: FontWeight.w700,
-                        )),
-                    if (e.detail.isNotEmpty) Text(e.detail),
-                    if (e.apkHint != null)
-                      SelectableText(e.apkHint!,
-                          style: const TextStyle(
-                            color: NoirTheme.cyan,
-                            fontSize: 11,
-                          )),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ] else
+        if (_vaultOpen)
           Text(
-            'VAULT SEALED — enter that day\'s ritual words, hold until OPEN.',
+            _launching ? 'Opening archive…' : 'Archive synchronized.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: NoirTheme.mist.withValues(alpha: 0.45),
+                ),
+          )
+        else
+          Text(
+            'Notes save on a long press. Nothing else is stored here.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: NoirTheme.mist.withValues(alpha: 0.45),
                 ),

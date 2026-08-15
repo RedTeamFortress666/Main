@@ -51,8 +51,10 @@ That pulls from `cursor/v1-stable-logins-ios-b952`:
 | DoomsdayClock | `com.polybius.doomsday_clock` | Calendar vault 2.0.1 |
 
 APKs are gitignored. Different package IDs, so user + HQ both preinstall.
-Doomsday Clock is LAUNCHER-only today — Trebuchet stays HOME until the vault
-declares `CATEGORY_HOME`. Optional Orbot/WireGuard still drop in by hand.
+Doomsday Clock 2.0.2+ is HOME: it replaces Daijishou/Trebuchet. Ritual OPEN
+launches concealed `com.polybius.polybius.user` (no player/APK cards). Rebuild
+the vault APK from `doomsday_clock/` and drop it in before flashing.
+Optional Orbot/WireGuard still drop in by hand.
 
 ## Build (after a full Lineage sync — ask before downloading)
 
@@ -105,7 +107,7 @@ Not in the AndR36oid tree today (do not invent them in the ROM):
 | `prebuilts/*/Name.apk` | APKs arrive |
 | `permissions/privapp-permissions-polybius.xml` | vault package name known |
 | `scripts/polybius_bridge.py` | real WS/serial/Reticulum gateway |
-| `polybius/android/app/src/main/AndroidManifest.xml` | hide LAUNCHER, add BLE/USB |
+| `polybius/android/app/src/main/AndroidManifest.xml` | rebuild APKs without LAUNCHER |
 | `kernel/.../lineageos_r36s_defconfig` | extra radios / HID quirks |
 | `device/gameconsole/r36s/mkimg.sh` | only if panel default should change |
 
