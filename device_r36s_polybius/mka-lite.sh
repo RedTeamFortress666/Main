@@ -123,13 +123,9 @@ ensure_java11() {
 
 seed_existing_trees() {
   mkdir -p "$ANDROID_ROOT"
-  if [[ -d "$ROOT/device/gameconsole/r36s/.git" && ! -d "$ANDROID_ROOT/device/gameconsole/r36s/.git" ]]; then
-    echo "Seeding device/kernel/hardware from workspace clones..."
-    mkdir -p "$ANDROID_ROOT/device" "$ANDROID_ROOT/kernel" "$ANDROID_ROOT/hardware"
-    rsync -a "$ROOT/device/" "$ANDROID_ROOT/device/"
-    rsync -a "$ROOT/kernel/" "$ANDROID_ROOT/kernel/"
-    rsync -a "$ROOT/hardware/" "$ANDROID_ROOT/hardware/"
-  fi
+  # Do not rsync workspace clones into the repo tree. repo(1) requires its
+  # own .git gitdirs under .repo/projects; a copied checkout is
+  # "unsupported checkout state" and breaks those four projects.
 }
 
 ensure_repo() {
@@ -156,6 +152,19 @@ sync_tree() {
   echo "repo sync -j${REPO_SYNC_JOBS} (this is the long download)"
   repo sync -j"${REPO_SYNC_JOBS}" --force-sync --no-clone-bundle --current-branch --no-tags
   echo "repo sync finished $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  # Re-fetch device/kernel/HAL if a leftover copied checkout blocked them.
+  local retry
+  for retry in \
+    device/gameconsole/r36s \
+    device/gameconsole/common \
+    kernel/gameconsole/r36s \
+    hardware/rockchip; do
+    if [[ -d "$ANDROID_ROOT/$retry/.git" ]]; then
+      echo "Replacing copied git checkout $retry with a repo-managed one"
+      rm -rf "$ANDROID_ROOT/$retry"
+      repo sync -j1 --force-sync --no-clone-bundle --current-branch --no-tags "$retry"
+    fi
+  done
 }
 
 apply_overlay() {
