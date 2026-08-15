@@ -1,0 +1,26 @@
+{
+  "id": "crypt3x_os_lite",
+  "label": "CRYPT3X OS LITE",
+  "lunch": "lineage_r36s_crypt3x_lite-userdebug",
+  "version": "20260815-1244",
+  "packageDir": "CRYPT3X_OS_LITE",
+  "bundledInApk": false,
+  "note": "8 GiB GPT image is too large for an APK. Pick the .img or .img.zip from storage; the flasher stages CRYPT3X_OS_LITE/ and verifies SHA-256. Flash the raw image with dd (see tool/flash_crypt3x_lite.sh).",
+  "image": {
+    "fileName": "lineage-18.1-20260815-1244-r36s-crypt3x-lite.img",
+    "bytes": 8589934592,
+    "displaySize": "8.0 GiB",
+    "sha256": "ece3a41fe3d5fed083c788a75cb912dc5c7013af9be26f52d7b4ecb94b95abcc"
+  },
+  "zip": {
+    "fileName": "lineage-18.1-20260815-1244-r36s-crypt3x-lite.img.zip",
+    "bytes": 965250113,
+    "displaySize": "921 MiB",
+    "sha256": "67493055e6bfad6a3c14b40b2723d19550eef99fde16cc23bf0250fdd7b61b38"
+  },
+  "flash": {
+    "requiresExfatForRawImg": true,
+    "fat32MaxBytes": 4294967295,
+    "dd": "sudo dd if=lineage-18.1-20260815-1244-r36s-crypt3x-lite.img of=/dev/sdX bs=4M status=progress conv=fsync"
+  }
+}

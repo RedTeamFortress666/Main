@@ -1,7 +1,7 @@
 name: polybius_flasher
-description: PØLYBÎŪS Android flasher — R36S SD prepare/format, CYD, ESP32-32E, T-Deck, Android OTG ADB
+description: PØLYBÎŪS Android flasher — R36S SD/USB, CRYPT3X OS lite 8GiB, CYD, T-Deck, OTG ADB
 publish_to: 'none'
-version: 1.5.2+9
+version: 1.6.0+10
 
 environment:
   sdk: ^3.12.2
@@ -28,6 +28,7 @@ flutter:
     - assets/firmware/polybius-cyd.bin
     - assets/firmware/polybius-tdeck.bin
     - assets/r36s/polybius-r36s-port.zip
+    - assets/r36s/crypt3x-lite.json
     - assets/apks/polybius-v1-stable-hq-android-arm64.apk
     - assets/apks/polybius-v1-stable-user-android-arm64.apk
     - assets/apks/darth-cherry-1.0.2-android-arm64.apk

@@ -1,6 +1,10 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:polybius_flasher/asset_integrity.dart';
 import 'package:polybius_flasher/board_presets.dart';
+import 'package:polybius_flasher/crypt3x_lite.dart';
 import 'package:polybius_flasher/flasher_bridge.dart';
 import 'package:polybius_flasher/flasher_event.dart';
 import 'package:polybius_flasher/main.dart';
@@ -18,6 +22,53 @@ void main() {
     expect(FlashTarget.cydClassic.title, 'CYD CLASSIC');
     expect(FlashTarget.androidOtg.isEsp, isFalse);
     expect(FlashTarget.androidOtg.isAndroidOtg, isTrue);
+    expect(FlashTarget.crypt3xLite.isEsp, isFalse);
+    expect(FlashTarget.crypt3xLite.isCrypt3xLite, isTrue);
+    expect(FlashTarget.crypt3xLite.title, 'CRYPT3X OS LITE');
+    expect(FlashTarget.crypt3xLite.subtitle, contains('8 GiB'));
+  });
+
+  test('crypt3x lite catalog matches sidecar json and official hashes', () {
+    expect(Crypt3xLiteCatalog.bytes, 8589934592);
+    expect(Crypt3xLiteCatalog.zipBytes, 965250113);
+    expect(Crypt3xLiteCatalog.sha256, matches(RegExp(r'^[a-f0-9]{64}$')));
+    expect(Crypt3xLiteCatalog.zipSha256, matches(RegExp(r'^[a-f0-9]{64}$')));
+    expect(Crypt3xLiteCatalog.bytes, lessThan(16 * 1024 * 1024 * 1024));
+    expect(Crypt3xLiteCatalog.bytes, greaterThan(Crypt3xLiteCatalog.fat32MaxBytes));
+    expect(
+      Crypt3xLiteCatalog.expectedSha256For(Crypt3xLiteCatalog.fileName),
+      Crypt3xLiteCatalog.sha256,
+    );
+    expect(
+      Crypt3xLiteCatalog.expectedSha256For(Crypt3xLiteCatalog.zipFileName),
+      Crypt3xLiteCatalog.zipSha256,
+    );
+    expect(
+      Crypt3xLiteCatalog.destFileNameFor('picked.img'),
+      Crypt3xLiteCatalog.fileName,
+    );
+    expect(
+      Crypt3xLiteCatalog.destFileNameFor('picked.img.zip'),
+      Crypt3xLiteCatalog.zipFileName,
+    );
+
+    final json = jsonDecode(
+      File('assets/r36s/crypt3x-lite.json').readAsStringSync(),
+    ) as Map<String, dynamic>;
+    expect(json['bundledInApk'], isFalse);
+    expect(json['packageDir'], Crypt3xLiteCatalog.packageDir);
+    expect((json['image'] as Map)['sha256'], Crypt3xLiteCatalog.sha256);
+    expect((json['image'] as Map)['bytes'], Crypt3xLiteCatalog.bytes);
+    expect((json['zip'] as Map)['sha256'], Crypt3xLiteCatalog.zipSha256);
+    expect((json['zip'] as Map)['bytes'], Crypt3xLiteCatalog.zipBytes);
+  });
+
+  test('crypt3x lite host flash script refuses missing image and documents dd', () {
+    final script = File('tool/flash_crypt3x_lite.sh').readAsStringSync();
+    expect(script, contains(Crypt3xLiteCatalog.sha256));
+    expect(script, contains('dd if='));
+    expect(script, contains('FLASH'));
+    expect(File('tool/flash_crypt3x_lite.sh').statSync().mode & 0x49, isNonZero);
   });
 
   test('bundled catalog includes Portal, V.1 USER, and Darth Cherry', () {

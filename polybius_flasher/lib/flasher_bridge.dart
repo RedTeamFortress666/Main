@@ -7,7 +7,22 @@ import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:polybius_flasher/asset_integrity.dart';
+import 'package:polybius_flasher/crypt3x_lite.dart';
 import 'package:polybius_flasher/flasher_event.dart';
+
+class PickedCrypt3xImage {
+  const PickedCrypt3xImage({required this.uri, required this.name});
+
+  final String uri;
+  final String name;
+
+  factory PickedCrypt3xImage.fromMap(Map<dynamic, dynamic> m) {
+    return PickedCrypt3xImage(
+      uri: (m['uri'] as String?) ?? '',
+      name: (m['name'] as String?) ?? 'crypt3x.img',
+    );
+  }
+}
 
 class UsbDeviceInfo {
   UsbDeviceInfo({
@@ -371,6 +386,17 @@ class FlasherBridge {
     return _methods.invokeMethod<String>('pickExtraFile');
   }
 
+  /// Returns a content URI — does not copy the 8 GiB image into app cache.
+  Future<PickedCrypt3xImage?> pickCrypt3xImage() async {
+    final raw = await _methods.invokeMethod<Map<dynamic, dynamic>>(
+      'pickCrypt3xImage',
+    );
+    if (raw == null) return null;
+    final picked = PickedCrypt3xImage.fromMap(raw);
+    if (picked.uri.isEmpty) return null;
+    return picked;
+  }
+
   Future<List<R36PathCandidate>> detectR36Paths(String treeUri) async {
     final raw = await _methods.invokeMethod<List<dynamic>>(
       'detectR36Paths',
@@ -415,6 +441,27 @@ class FlasherBridge {
         'treeUri': treeUri,
         'extraFilePath': ?extraFilePath,
         'includeZipCopy': includeZipCopy,
+      },
+    );
+    return NativeResult.fromMap(raw ?? {});
+  }
+
+  Future<NativeResult> writeCrypt3xLite({
+    required String source,
+    required String treeUri,
+    String? destFileName,
+    String? expectedSha256,
+    int expectedBytes = 0,
+  }) async {
+    ensureListening();
+    final raw = await _methods.invokeMethod<Map<dynamic, dynamic>>(
+      'writeCrypt3xLite',
+      {
+        'source': source,
+        'treeUri': treeUri,
+        'destFileName': destFileName ?? Crypt3xLiteCatalog.fileName,
+        'expectedSha256': ?expectedSha256,
+        'expectedBytes': expectedBytes,
       },
     );
     return NativeResult.fromMap(raw ?? {});

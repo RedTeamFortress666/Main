@@ -34,6 +34,7 @@ class MainActivity : FlutterFragmentActivity() {
     private var pendingTreeResult: MethodChannel.Result? = null
     private var pendingApkResult: MethodChannel.Result? = null
     private var pendingExtraFileResult: MethodChannel.Result? = null
+    private var pendingCrypt3xResult: MethodChannel.Result? = null
     private var activeFlasher: EspFlasher? = null
     private val adbCancel = AtomicBoolean(false)
     private val r36Cancel = AtomicBoolean(false)
@@ -104,6 +105,30 @@ class MainActivity : FlutterFragmentActivity() {
                     }
                 }
             }
+        }
+
+    private val crypt3xPicker =
+        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            val result = pendingCrypt3xResult
+            pendingCrypt3xResult = null
+            if (uri == null) {
+                result?.success(null)
+                return@registerForActivityResult
+            }
+            try {
+                contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                )
+            } catch (_: SecurityException) {
+            }
+            val name = uri.lastPathSegment?.substringAfterLast('/') ?: "crypt3x.img"
+            result?.success(
+                mapOf(
+                    "uri" to uri.toString(),
+                    "name" to name,
+                ),
+            )
         }
 
     private val usbReceiver =
@@ -240,6 +265,16 @@ class MainActivity : FlutterFragmentActivity() {
                         pendingExtraFileResult = result
                         extraFilePicker.launch(arrayOf("*/*"))
                     }
+                    "pickCrypt3xImage" -> {
+                        pendingCrypt3xResult = result
+                        crypt3xPicker.launch(
+                            arrayOf(
+                                "application/octet-stream",
+                                "application/zip",
+                                "*/*",
+                            ),
+                        )
+                    }
                     "detectR36Paths" -> {
                         val treeUri = call.argument<String>("treeUri")
                         if (treeUri.isNullOrBlank()) {
@@ -281,6 +316,26 @@ class MainActivity : FlutterFragmentActivity() {
                             return@setMethodCallHandler
                         }
                         writeR36UsbStick(zipPath, treeUri, extraFilePath, includeZipCopy, result)
+                    }
+                    "writeCrypt3xLite" -> {
+                        val source = call.argument<String>("source")
+                        val treeUri = call.argument<String>("treeUri")
+                        val destFileName = call.argument<String>("destFileName")
+                            ?: "lineage-18.1-20260815-1244-r36s-crypt3x-lite.img"
+                        val expectedSha256 = call.argument<String>("expectedSha256")
+                        val expectedBytes = (call.argument<Number>("expectedBytes")?.toLong()) ?: 0L
+                        if (source.isNullOrBlank() || treeUri.isNullOrBlank()) {
+                            result.error("bad_args", "source and treeUri required", null)
+                            return@setMethodCallHandler
+                        }
+                        writeCrypt3xLite(
+                            source = source,
+                            treeUri = treeUri,
+                            destFileName = destFileName,
+                            expectedSha256 = expectedSha256,
+                            expectedBytes = expectedBytes,
+                            result = result,
+                        )
                     }
                     "probeUsbWrite" -> {
                         val treeUri = call.argument<String>("treeUri")
@@ -719,6 +774,63 @@ class MainActivity : FlutterFragmentActivity() {
                 ok = writeResult.ok,
                 detail = writeResult.detail,
                 target = "r36s_usb",
+            )
+            mainHandler.post {
+                result.success(
+                    mapOf(
+                        "ok" to writeResult.ok,
+                        "message" to writeResult.message,
+                        "portsPath" to writeResult.portsPath,
+                        "verified" to writeResult.verified,
+                        "detail" to writeResult.detail,
+                    ),
+                )
+            }
+        }
+    }
+
+    private fun writeCrypt3xLite(
+        source: String,
+        treeUri: String,
+        destFileName: String,
+        expectedSha256: String?,
+        expectedBytes: Long,
+        result: MethodChannel.Result,
+    ) {
+        emitter.currentTarget = "crypt3x_lite"
+        r36Cancel.set(false)
+        io.execute {
+            val installer =
+                R36sInstaller(
+                    context = this,
+                    onLog = { msg ->
+                        emitter.log(msg, stage = "crypt3x_lite", target = "crypt3x_lite")
+                    },
+                    onProgress = { p, msg ->
+                        emitter.progress(p, msg, stage = "crypt3x_lite")
+                    },
+                    cancel = r36Cancel,
+                )
+            val writeResult =
+                try {
+                    installer.writeCrypt3xLite(
+                        source = source,
+                        treeUri = Uri.parse(treeUri),
+                        destFileName = destFileName,
+                        expectedSha256 = expectedSha256,
+                        expectedBytes = expectedBytes,
+                    )
+                } catch (e: Exception) {
+                    R36sInstaller.Result(false, e.message ?: e.toString())
+                }
+            emitter.emit(
+                stage = "crypt3x_lite",
+                message = writeResult.message,
+                percent = if (writeResult.ok) 1.0 else null,
+                level = if (writeResult.ok) "success" else "error",
+                ok = writeResult.ok,
+                detail = writeResult.detail,
+                target = "crypt3x_lite",
             )
             mainHandler.post {
                 result.success(

@@ -4,10 +4,13 @@ import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
 import android.os.ParcelFileDescriptor
+import android.provider.OpenableColumns
 import androidx.documentfile.provider.DocumentFile
 import java.io.BufferedInputStream
 import java.io.File
 import java.io.FileInputStream
+import java.io.InputStream
+import java.security.MessageDigest
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.zip.ZipInputStream
 
@@ -49,6 +52,10 @@ class R36sInstaller(
 
     /** USB OTG stick layout folder name (easy to spot in R36S file manager). */
     private val usbPackageDirName = "POLYBIUS_R36S_USB"
+
+    /** Staged CRYPT3X OS lite GPT image / zip (not a PortMaster unzip). */
+    private val crypt3xPackageDirName = "CRYPT3X_OS_LITE"
+    private val fat32MaxBytes = 4_294_967_295L
 
     fun probeStickWrite(treeUri: Uri): Result {
         val root = DocumentFile.fromTreeUri(context, treeUri)
@@ -184,6 +191,243 @@ class R36sInstaller(
             verified = verify.ok,
             detail = verify.detail,
         )
+    }
+
+    /**
+     * Stages the official 8 GiB CRYPT3X OS lite image (or its zip) onto a
+     * SAF tree — typically an OTG USB stick. Does **not** `dd` the card;
+     * unprivileged Android cannot write GPT to a block device.
+     *
+     * Layout:
+     * ```
+     * CRYPT3X_OS_LITE/
+     *   README.txt
+     *   FLASH.txt
+     *   SHA256.txt
+     *   lineage-18.1-…-crypt3x-lite.img[.zip]
+     *   CRYPT3X_LITE_READY.txt
+     * ```
+     */
+    fun writeCrypt3xLite(
+        source: String,
+        treeUri: Uri,
+        destFileName: String,
+        expectedSha256: String?,
+        expectedBytes: Long,
+    ): Result {
+        if (cancel.get()) return Result(false, "Cancelled")
+
+        val resolver = context.contentResolver
+        val stickRoot = DocumentFile.fromTreeUri(context, treeUri)
+            ?: return Result(false, "Could not open selected folder")
+        if (!stickRoot.canWrite()) {
+            return Result(false, "Destination is not writable. Use exFAT for the 8 GiB image (FAT32 max file is 4 GiB).")
+        }
+
+        onProgress(0.02, "Probing destination write access…")
+        val probe = probeWritable(stickRoot)
+        if (!probe.ok) return Result(false, probe.message)
+
+        val sourceLen = sourceLength(source)
+        if (sourceLen <= 0L) {
+            return Result(false, "Cannot read source size — pick the .img or .img.zip again")
+        }
+        if (expectedBytes > 0L && sourceLen != expectedBytes) {
+            return Result(
+                false,
+                "Size mismatch: source is $sourceLen bytes, catalog expects $expectedBytes",
+            )
+        }
+        if (sourceLen > fat32MaxBytes) {
+            onLog(
+                "Source is ${sourceLen / (1024L * 1024L * 1024L)} GiB — FAT32 cannot hold this file. " +
+                    "Use an exFAT stick, or stage the 921 MiB .img.zip instead.",
+            )
+        }
+
+        onProgress(0.06, "Preparing $crypt3xPackageDirName/…")
+        stickRoot.findFile(crypt3xPackageDirName)?.let { existing ->
+            onLog("Removing previous $crypt3xPackageDirName/…")
+            deleteTree(existing)
+        }
+        val packageDir = stickRoot.createDirectory(crypt3xPackageDirName)
+            ?: return Result(false, "Cannot create $crypt3xPackageDirName/")
+
+        onProgress(0.08, "Writing README + FLASH instructions…")
+        writeTextFile(packageDir, "README.txt", crypt3xReadmeText(destFileName, sourceLen), resolver)
+            ?: return Result(false, "Cannot write README.txt")
+        writeTextFile(packageDir, "FLASH.txt", crypt3xFlashText(destFileName), resolver)
+            ?: return Result(false, "Cannot write FLASH.txt")
+
+        packageDir.findFile(destFileName)?.delete()
+        val dest = packageDir.createFile(guessMime(destFileName), destFileName)
+            ?: return Result(false, "Cannot create $destFileName")
+
+        onProgress(0.10, "Copying $destFileName (${sourceLen / (1024L * 1024L)} MiB)…")
+        val digest = MessageDigest.getInstance("SHA-256")
+        val buf = ByteArray(1024 * 1024)
+        var written = 0L
+        try {
+            openSource(source)?.use { input ->
+                resolver.openOutputStream(dest.uri, "w")?.use { out ->
+                    while (true) {
+                        if (cancel.get()) {
+                            dest.delete()
+                            return Result(false, "Cancelled")
+                        }
+                        val n = input.read(buf)
+                        if (n <= 0) break
+                        out.write(buf, 0, n)
+                        digest.update(buf, 0, n)
+                        written += n
+                        val frac = 0.10 + 0.80 * (written.toDouble() / sourceLen.toDouble())
+                        onProgress(frac.coerceIn(0.10, 0.90), "Writing $destFileName")
+                    }
+                    out.flush()
+                } ?: return Result(false, "Cannot open output for $destFileName")
+            } ?: return Result(false, "Cannot open source image")
+        } catch (e: Exception) {
+            dest.delete()
+            val hint =
+                if (sourceLen > fat32MaxBytes) {
+                    " FAT32 rejects files over 4 GiB — format the stick as exFAT or stage the .img.zip."
+                } else {
+                    ""
+                }
+            return Result(false, "Copy failed after $written bytes: ${e.message}.$hint")
+        }
+
+        if (written != sourceLen) {
+            dest.delete()
+            return Result(false, "Short write: $written of $sourceLen bytes")
+        }
+
+        val hex = digest.digest().joinToString("") { b -> "%02x".format(b) }
+        val expect = expectedSha256?.lowercase()?.takeIf { it.length == 64 }
+        val hashOk = expect == null || hex == expect
+        if (!hashOk) {
+            dest.delete()
+            return Result(
+                false,
+                "SHA-256 mismatch for $destFileName\nexpected $expect\nactual   $hex",
+                detail = "sha256=$hex",
+            )
+        }
+
+        onProgress(0.92, "Writing SHA256 + ready marker…")
+        writeTextFile(
+            packageDir,
+            "SHA256.txt",
+            "$hex  $destFileName\n",
+            resolver,
+        ) ?: return Result(false, "Cannot write SHA256.txt")
+        writeTextFile(
+            packageDir,
+            "CRYPT3X_LITE_READY.txt",
+            "CRYPT3X OS LITE staged.\n" +
+                "file=$destFileName\n" +
+                "bytes=$written\n" +
+                "sha256=$hex\n" +
+                "verified=${expect != null}\n",
+            resolver,
+        ) ?: return Result(false, "Cannot write CRYPT3X_LITE_READY.txt")
+
+        onProgress(1.0, "CRYPT3X OS LITE staged")
+        val verifyNote = if (expect != null) "SHA-256 verified." else "SHA-256 recorded (catalog did not match this filename)."
+        return Result(
+            ok = true,
+            message =
+                "Wrote $crypt3xPackageDirName/$destFileName " +
+                    "(${written / (1024L * 1024L)} MiB). $verifyNote " +
+                    "Eject safely, then dd the .img onto the R36S SD from a PC " +
+                    "(see FLASH.txt). The phone cannot write GPT to /dev/block.",
+            portsPath = crypt3xPackageDirName,
+            verified = expect != null,
+            detail = "sha256=$hex bytes=$written",
+        )
+    }
+
+    private fun openSource(source: String): InputStream? {
+        return if (source.startsWith("content:") || source.startsWith("file:")) {
+            context.contentResolver.openInputStream(Uri.parse(source))
+        } else {
+            val f = File(source)
+            if (f.isFile) FileInputStream(f) else null
+        }
+    }
+
+    private fun sourceLength(source: String): Long {
+        if (source.startsWith("content:") || source.startsWith("file:")) {
+            val uri = Uri.parse(source)
+            try {
+                context.contentResolver.query(
+                    uri,
+                    arrayOf(OpenableColumns.SIZE),
+                    null,
+                    null,
+                    null,
+                )?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val idx = cursor.getColumnIndex(OpenableColumns.SIZE)
+                        if (idx >= 0) {
+                            val n = cursor.getLong(idx)
+                            if (n > 0L) return n
+                        }
+                    }
+                }
+            } catch (_: Exception) {
+            }
+            DocumentFile.fromSingleUri(context, uri)?.length()?.takeIf { it > 0L }?.let { return it }
+            return -1L
+        }
+        val f = File(source)
+        return if (f.isFile) f.length() else -1L
+    }
+
+    private fun crypt3xReadmeText(fileName: String, bytes: Long): String =
+        """
+        CRYPT3X OS LITE — staged image
+        ==============================
+
+        Prepared by PØLYBÎŪS FLASHER.
+
+        This folder holds the official 8 GiB CRYPT3X OS lite GPT image
+        (or its zip). It is NOT a PortMaster port. Copying these files
+        onto an ArkOS/JELOS card will not boot CRYPT3X.
+
+        ON A PC (required to flash the handheld):
+        1. If you have the .img.zip, unzip it first.
+        2. Identify the SD card device (lsblk / Disk Utility).
+        3. Write the raw image:
+              sudo dd if=$fileName of=/dev/sdX bs=4M status=progress conv=fsync
+        4. Eject and boot the R36S from that card.
+
+        FAT32 cannot store the raw 8 GiB .img (4 GiB file cap). Use exFAT
+        for the raw image, or carry the 921 MiB .img.zip on FAT32.
+
+        Source size: $bytes bytes
+        File: $fileName
+        """.trimIndent()
+
+    private fun crypt3xFlashText(fileName: String): String {
+        val rawName =
+            if (fileName.endsWith(".zip")) {
+                fileName.removeSuffix(".zip").removeSuffix(".img") + ".img"
+            } else {
+                fileName
+            }
+        val zipName = if (fileName.endsWith(".zip")) fileName else "$rawName.zip"
+        return """
+            # CRYPT3X OS LITE — flash the R36S SD
+            # WARNING: this erases the target device.
+
+            unzip -o $zipName   # skip if you already have the raw .img
+            sudo dd if=$rawName of=/dev/sdX bs=4M status=progress conv=fsync
+            sync
+
+            Or from the repo:
+              polybius_flasher/tool/flash_crypt3x_lite.sh /dev/sdX
+            """.trimIndent()
     }
 
     private data class ExtractResult(
@@ -612,6 +856,7 @@ class R36sInstaller(
             name.endsWith(".ttf") -> "font/ttf"
             name.endsWith(".dat") -> "application/octet-stream"
             name.endsWith(".zip") -> "application/zip"
+            name.endsWith(".img") -> "application/octet-stream"
             else -> "application/octet-stream"
         }
     }

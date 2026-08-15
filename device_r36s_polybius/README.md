@@ -87,6 +87,14 @@ mka -j$(nproc) bootimage systemimage
 cd device/gameconsole/r36s && sudo ./mkimg_lite.sh   # 8GiB, under 16GiB
 ```
 
+Stage that image from the phone with **PØLYBÎŪS FLASHER → CRYPT3X OS LITE**
+(`polybius_flasher/`, catalog in `assets/r36s/crypt3x-lite.json`). The APK
+cannot contain the 8 GiB file. Flash the card on a PC:
+
+```bash
+polybius_flasher/tool/flash_crypt3x_lite.sh /dev/sdX
+```
+
 Sideload kit (no full sync — APKs onto a device that already boots):
 
 ```bash

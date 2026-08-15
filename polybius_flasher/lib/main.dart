@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'asset_integrity.dart';
 import 'board_presets.dart';
+import 'crypt3x_lite.dart';
 import 'flasher_bridge.dart';
 import 'flasher_event.dart';
 
@@ -69,6 +70,7 @@ class FlasherColors {
 
 enum FlashTarget {
   r36s,
+  crypt3xLite,
   cydClassic,
   cyd2usb,
   esp32e,
@@ -81,6 +83,7 @@ extension FlashTargetX on FlashTarget {
   bool get isEsp => espPreset != null;
   bool get isAndroidOtg => this == FlashTarget.androidOtg;
   bool get isR36s => this == FlashTarget.r36s;
+  bool get isCrypt3xLite => this == FlashTarget.crypt3xLite;
 
   EspPreset? get espPreset => switch (this) {
     FlashTarget.cydClassic => EspPreset.cydClassic,
@@ -88,11 +91,14 @@ extension FlashTargetX on FlashTarget {
     FlashTarget.esp32e => EspPreset.esp32e,
     FlashTarget.esp32Generic => EspPreset.esp32Generic,
     FlashTarget.tdeck => EspPreset.tdeck,
-    FlashTarget.r36s || FlashTarget.androidOtg => null,
+    FlashTarget.r36s ||
+    FlashTarget.crypt3xLite ||
+    FlashTarget.androidOtg => null,
   };
 
   String get title => switch (this) {
     FlashTarget.r36s => 'R36S SD / USB',
+    FlashTarget.crypt3xLite => 'CRYPT3X OS LITE',
     FlashTarget.cydClassic => 'CYD CLASSIC',
     FlashTarget.cyd2usb => 'CYD2USB',
     FlashTarget.esp32e => 'ESP32-32E',
@@ -103,6 +109,7 @@ extension FlashTargetX on FlashTarget {
 
   String get subtitle => switch (this) {
     FlashTarget.r36s => 'PortMaster zip · SD or USB stick',
+    FlashTarget.crypt3xLite => '8 GiB GPT image · stage + dd',
     FlashTarget.androidOtg => 'ADB over USB-C OTG or TCP',
     _ => espPreset!.subtitle,
   };
@@ -227,6 +234,8 @@ class _FlasherHomePageState extends State<FlasherHomePage>
   bool _includeCustomRom = false;
   String? _customRomPath;
   bool _includeZipOnUsb = true;
+  String? _crypt3xSourceUri;
+  String? _crypt3xSourceName;
 
   final Set<String> _selectedApkIds = {};
   String? _localApkPath;
@@ -290,6 +299,8 @@ class _FlasherHomePageState extends State<FlasherHomePage>
       _includeCustomRom = prefs.getBool('r36_include_custom_rom') ?? false;
       _customRomPath = prefs.getString('r36_custom_rom_path');
       _includeZipOnUsb = prefs.getBool('r36_include_zip_on_usb') ?? true;
+      _crypt3xSourceUri = prefs.getString('crypt3x_source_uri');
+      _crypt3xSourceName = prefs.getString('crypt3x_source_name');
       _selectedApkIds
         ..clear()
         ..addAll(prefs.getStringList('android_apk_ids') ?? const <String>[]);
@@ -372,6 +383,16 @@ class _FlasherHomePageState extends State<FlasherHomePage>
     }
     if (_lastUsbTreeUri != null) {
       await prefs.setString('r36s_usb_tree_uri', _lastUsbTreeUri!);
+    }
+    if (_crypt3xSourceUri != null) {
+      await prefs.setString('crypt3x_source_uri', _crypt3xSourceUri!);
+    } else {
+      await prefs.remove('crypt3x_source_uri');
+    }
+    if (_crypt3xSourceName != null) {
+      await prefs.setString('crypt3x_source_name', _crypt3xSourceName!);
+    } else {
+      await prefs.remove('crypt3x_source_name');
     }
     await prefs.setStringList('android_apk_ids', _selectedApkIds.toList());
     if (_localApkPath != null) {
@@ -1089,6 +1110,69 @@ class _FlasherHomePageState extends State<FlasherHomePage>
     });
   }
 
+  Future<void> _pickCrypt3xImage() async {
+    final picked = await _bridge.pickCrypt3xImage();
+    if (picked == null) return;
+    if (!mounted) return;
+    setState(() {
+      _crypt3xSourceUri = picked.uri;
+      _crypt3xSourceName = picked.name;
+      _status = 'CRYPT3X image selected: ${picked.name}';
+    });
+    await _savePrefs();
+  }
+
+  Future<void> _writeCrypt3xLite() async {
+    final source = _crypt3xSourceUri;
+    if (source == null || source.isEmpty) {
+      _setStatus('Pick the 8 GiB .img or the 921 MiB .img.zip first.');
+      return;
+    }
+    final name = _crypt3xSourceName ?? Crypt3xLiteCatalog.fileName;
+    final destName = Crypt3xLiteCatalog.destFileNameFor(name);
+    final expectSha = Crypt3xLiteCatalog.expectedSha256For(name);
+    final expectBytes = Crypt3xLiteCatalog.expectedBytesFor(name) ?? 0;
+    final isRawImg = Crypt3xLiteCatalog.looksLikeImg(name);
+
+    if (!await _confirm(
+      title: 'STAGE CRYPT3X OS LITE',
+      message:
+          'Write ${Crypt3xLiteCatalog.packageDir}/$destName onto the selected USB stick / folder?\n\n'
+          '${isRawImg ? 'Raw 8 GiB image needs exFAT (FAT32 max file is 4 GiB).\n' : 'Zip is 921 MiB — FAT32 is OK.\n'}'
+          'This stages the image. It does not dd the R36S SD from the phone.\n'
+          'Existing ${Crypt3xLiteCatalog.packageDir}/ will be replaced.',
+      action: 'WRITE PACKAGE',
+      destructive: true,
+    )) {
+      return;
+    }
+
+    await _withBusy('Staging CRYPT3X OS LITE...', () async {
+      final tree = await _ensureUsbTree();
+      if (tree == null) return;
+      final report = OperationReport(
+        target: 'crypt3x_lite',
+        title: 'CRYPT3X OS LITE stage',
+      );
+      final result = await _bridge.writeCrypt3xLite(
+        source: source,
+        treeUri: tree,
+        destFileName: destName,
+        expectedSha256: expectSha,
+        expectedBytes: expectBytes,
+      );
+      report.add(
+        name: 'Stage ${Crypt3xLiteCatalog.packageDir}/',
+        ok: result.ok,
+        detail: [
+          _nativeDetail(result),
+          if (result.verified) 'sha256 verified',
+        ].where((part) => part.trim().isNotEmpty).join(' · '),
+      );
+      _setStatus(report.summary());
+    });
+  }
+
   Future<void> _openSystemFormat() async {
     final ok = await _confirm(
       title: 'OPEN SYSTEM FORMAT',
@@ -1407,6 +1491,8 @@ class _FlasherHomePageState extends State<FlasherHomePage>
             selected: _target == target,
             icon: target.isAndroidOtg
                 ? Icons.android
+                : target.isCrypt3xLite
+                ? Icons.lock
                 : target.isR36s
                 ? Icons.sd_storage
                 : Icons.developer_board,
@@ -1430,6 +1516,7 @@ class _FlasherHomePageState extends State<FlasherHomePage>
     return _Panel(
       child: switch (target) {
         FlashTarget.r36s => _buildR36Panel(),
+        FlashTarget.crypt3xLite => _buildCrypt3xLitePanel(),
         FlashTarget.androidOtg => _buildAndroidPanel(),
         _ => _buildEspPanel(target),
       },
@@ -1630,6 +1717,95 @@ class _FlasherHomePageState extends State<FlasherHomePage>
                 label: const Text('CANCEL'),
               ),
           ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCrypt3xLitePanel() {
+    final name = _crypt3xSourceName;
+    final picked = name != null && name.isNotEmpty;
+    final isZip = picked && Crypt3xLiteCatalog.looksLikeZip(name);
+    final isImg = picked && Crypt3xLiteCatalog.looksLikeImg(name);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionTitle('CRYPT3X OS LITE'),
+        Text(
+          '${Crypt3xLiteCatalog.label} · ${Crypt3xLiteCatalog.version} · '
+          '${Crypt3xLiteCatalog.lunch}',
+          style: const TextStyle(color: FlasherColors.cyan),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Official 8 GiB GPT image for a 32 GB R36S card. Too large to '
+          'bundle in the APK — pick the .img (exFAT stick) or the 921 MiB '
+          '.img.zip (FAT32 OK). The flasher stages CRYPT3X_OS_LITE/ and '
+          'verifies SHA-256. Flashing the handheld is a PC dd '
+          '(see FLASH.txt / tool/flash_crypt3x_lite.sh).',
+          style: TextStyle(color: FlasherColors.amber),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'Catalog · ${Crypt3xLiteCatalog.fileName}',
+          style: GoogleFonts.orbitron(fontSize: 14),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'IMG  ${Crypt3xLiteCatalog.displaySize}  '
+          'sha256 ${Crypt3xLiteCatalog.sha256.substring(0, 16)}…',
+          style: const TextStyle(color: FlasherColors.dim),
+        ),
+        Text(
+          'ZIP  ${Crypt3xLiteCatalog.zipDisplaySize}  '
+          'sha256 ${Crypt3xLiteCatalog.zipSha256.substring(0, 16)}…',
+          style: const TextStyle(color: FlasherColors.dim),
+        ),
+        const SizedBox(height: 14),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            OutlinedButton.icon(
+              onPressed: _busy ? null : _pickCrypt3xImage,
+              icon: const Icon(Icons.image),
+              label: const Text('PICK .IMG / .ZIP'),
+            ),
+            OutlinedButton.icon(
+              onPressed: _busy ? null : _pickUsbTree,
+              icon: const Icon(Icons.usb),
+              label: const Text('PICK USB STICK'),
+            ),
+            FilledButton.icon(
+              onPressed: _busy ? null : _testUsbConnection,
+              icon: const Icon(Icons.fact_check),
+              label: const Text('TEST USB WRITE'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        if (picked)
+          Text(
+            'Image: $name'
+            '${isZip ? ' · zip (921 MiB catalog)' : ''}'
+            '${isImg ? ' · raw 8 GiB (needs exFAT)' : ''}',
+            style: const TextStyle(color: FlasherColors.cyan),
+          )
+        else
+          const Text(
+            'No image selected.',
+            style: TextStyle(color: FlasherColors.dim),
+          ),
+        if (_lastUsbTreeUri != null)
+          Text(
+            'USB tree: $_lastUsbTreeUri',
+            style: const TextStyle(color: FlasherColors.dim),
+          ),
+        const SizedBox(height: 14),
+        FilledButton.icon(
+          onPressed: _busy ? null : _writeCrypt3xLite,
+          icon: const Icon(Icons.lock),
+          label: const Text('WRITE CRYPT3X OS LITE'),
         ),
       ],
     );

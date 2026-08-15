@@ -38,6 +38,10 @@ dist-ssr
 device_r36s_polybius/prebuilts/**/*.apk
 device_r36s_polybius/prebuilts/**/*.apk.idsig
 
+# CRYPT3X OS lite GPT image (8 GiB) — never commit
+polybius_flasher/images/*.img
+polybius_flasher/images/*.img.zip
+
 # Generated CRYPT3X boot animation (rebuild with media/render_bootanim.py)
 device_r36s_polybius/media/build/
 device_r36s_polybius/media/bootanimation.zip

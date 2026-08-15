@@ -5,11 +5,12 @@ Phone-side installer for shipping PØLYBĪUS onto handheld / MCU targets and oth
 | Target | What it does |
 | --- | --- |
 | **R36S** | SD (SAF path detect + Direct/Autoinstall) or **USB stick** (`POLYBIUS_R36S_USB/`) + optional custom ROM |
+| **CRYPT3X OS LITE** | Stage the official **8 GiB** GPT image (or 921 MiB `.img.zip`) onto a USB stick as `CRYPT3X_OS_LITE/`, SHA-256 verified. Flash the card with `dd` on a PC (`tool/flash_crypt3x_lite.sh`). Not bundled in the APK. |
 | **CYD / ESP32-32E** | Presets (classic / CYD2USB / 32E / generic) + manual BOOT/RESET wizard |
 | **LilyGO T-Deck** | Dedicated ESP32-S3 preset + trackball download-mode UX |
 | **Android (OTG ADB)** | Selective multi-APK over USB OTG / TCP with SHA-256 + pm error surfacing |
 
-Package id: `com.polybius.flasher` · Version **1.5.1**
+Package id: `com.polybius.flasher` · Version **1.6.0**
 
 ## Bundled APKs
 
@@ -35,6 +36,22 @@ flutter test
 flutter build apk --release --target-platform=android-arm64
 ```
 
-Dist: `polybius/dist/polybius-flasher-1.5.2-android-arm64.apk`
+Dist: `polybius/dist/polybius-flasher-1.6.0-android-arm64.apk`
+
+## CRYPT3X OS LITE (8 GiB)
+
+The packed image is 8 GiB (`lineage-18.1-20260815-1244-r36s-crypt3x-lite.img`). Flutter cannot ship that inside an APK. Catalog + SHA-256 live in `assets/r36s/crypt3x-lite.json` and `lib/crypt3x_lite.dart`.
+
+1. Copy the `.img` or `.img.zip` onto the phone (Downloads).
+2. In the flasher: **CRYPT3X OS LITE** → **PICK .IMG / .ZIP** → **PICK USB STICK**.
+3. Raw `.img` needs **exFAT** (FAT32 max file is 4 GiB). The 921 MiB zip fits FAT32.
+4. **WRITE CRYPT3X OS LITE** stages `CRYPT3X_OS_LITE/` with README, FLASH.txt, and SHA256.txt.
+5. On a PC, `dd` the raw image onto the R36S SD:
+
+```bash
+polybius_flasher/tool/flash_crypt3x_lite.sh /dev/sdX
+```
+
+Do not commit the 8 GiB binary. Host builds land at `/opt/android/andr36oid/device/gameconsole/r36s/`.
 
 See [`../polybius/docs/FLASHER.md`](../polybius/docs/FLASHER.md).
