@@ -39,3 +39,4 @@ if [[ -d "$ROOT/device/gameconsole/r36s/prebuilts" ]]; then
 fi
 
 echo "Done. APKs are gitignored; product makefiles pick them up if present."
+echo "Next: rebuild vault 2.0.2+ from doomsday_clock/, then ./device_r36s_polybius/conceal-prebuilts.sh"

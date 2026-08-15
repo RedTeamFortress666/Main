@@ -2,10 +2,10 @@ V1 USER STABLE lands here as Polybius.apk
 
   applicationId: com.polybius.polybius.user
   source: polybius/dist/polybius-v1-stable-user-android-arm64.apk
-  sha256: bd20bf987f812937aafc9a5fe40870087ca7f03b78980c5932bd3b40c465dc4e
+  sha256 (after conceal-prebuilts.sh):
+    116c90f87b5c8bf7de6039449c5079e4d3a6cba7c03e34a45711fb1616552a11
 
 No LAUNCHER icon. The vault starts MainActivity by class name.
-Rebuild from polybius/ after hiding CATEGORY_LAUNCHER, or strip it
-from this prebuilt before flashing.
 
 ./device_r36s_polybius/fetch-apks.sh
+./device_r36s_polybius/conceal-prebuilts.sh

@@ -48,12 +48,17 @@ That pulls from `cursor/v1-stable-logins-ios-b952`:
 | --- | --- | --- |
 | Polybius | `com.polybius.polybius.user` | V1 USER STABLE (operators) |
 | PolybiusHq | `com.polybius.polybius.hq` | EMOJINIGMA HQ (portal/admin) |
-| DoomsdayClock | `com.polybius.doomsday_clock` | Calendar vault 2.0.1 |
+| DoomsdayClock | `com.polybius.doomsday_clock` | Calendar vault 2.0.2 (HOME) |
 
 APKs are gitignored. Different package IDs, so user + HQ both preinstall.
-Doomsday Clock 2.0.2+ is HOME: it replaces Daijishou/Trebuchet. Ritual OPEN
-launches concealed `com.polybius.polybius.user` (no player/APK cards). Rebuild
-the vault APK from `doomsday_clock/` and drop it in before flashing.
+Doomsday Clock 2.0.2 is HOME: it replaces Daijishou/Trebuchet. Ritual OPEN
+launches concealed `com.polybius.polybius.user` (no player/APK cards).
+Strip drawer icons after a fresh fetch:
+
+```bash
+./device_r36s_polybius/conceal-prebuilts.sh
+```
+
 Optional Orbot/WireGuard still drop in by hand.
 
 ## Build (after a full Lineage sync — ask before downloading)
