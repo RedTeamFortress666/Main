@@ -55,6 +55,7 @@ class _HomeShellState extends State<HomeShell> {
     if (_showLogin && _session == null) {
       return AuthGate(
         onAuthenticated: _onAuth,
+        onCancel: () => setState(() => _showLogin = false),
       );
     }
     if (_session != null && _vaultSetupPending) {

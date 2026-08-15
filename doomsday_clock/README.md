@@ -22,4 +22,4 @@ flutter test
 flutter build apk --release
 ```
 
-APK: drop the rebuilt 2.0.2+ binary at `device_r36s_polybius/prebuilts/DoomsdayClock/DoomsdayClock.apk`.
+APK: drop the rebuilt 2.0.4+6 binary at `device_r36s_polybius/prebuilts/DoomsdayClock/DoomsdayClock.apk`.

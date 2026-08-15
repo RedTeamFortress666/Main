@@ -8,10 +8,11 @@ import '../widgets/doomsday_logo.dart';
 import '../widgets/matrix_chrome.dart';
 
 class AuthGate extends StatefulWidget {
-  const AuthGate({super.key, required this.onAuthenticated});
+  const AuthGate({super.key, required this.onAuthenticated, this.onCancel});
 
   final void Function(AuthSession session, {required bool needsVaultSetup})
       onAuthenticated;
+  final VoidCallback? onCancel;
 
   @override
   State<AuthGate> createState() => _AuthGateState();
@@ -146,6 +147,19 @@ class _AuthGateState extends State<AuthGate> {
                       const SizedBox(height: 12),
                       Text(_error!,
                           style: const TextStyle(color: NoirTheme.crimson)),
+                    ],
+                    if (widget.onCancel != null) ...[
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: widget.onCancel,
+                        child: const Text(
+                          '← DESK',
+                          style: TextStyle(
+                            color: NoirTheme.mist,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                      ),
                     ],
                   ],
                 ),

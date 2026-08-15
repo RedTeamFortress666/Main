@@ -52,7 +52,7 @@ in `lineageos_r36s_defconfig`, and adds `/dev/ttyACM*` to common `ueventd`.
 | DarthCherry | `com.polybius.red_veil` | Desk — Darth Cherry 1.0.2 |
 | Polybius | `com.polybius.polybius.user` | Concealed (ritual OPEN) |
 | PolybiusHq | `com.polybius.polybius.hq` | Concealed HQ (omitted on lite) |
-| DoomsdayClock | `com.polybius.doomsday_clock` | HOME 2.0.4 — desk + Route + duress |
+| DoomsdayClock | `com.polybius.doomsday_clock` | HOME 2.0.4+6 — desk + Cherry + duress |
 
 The public home is four apps. Route sets Android 11 Private DNS, MAC
 randomization, and scan/location/captive-portal flags. F-Droid is how you

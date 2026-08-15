@@ -93,6 +93,18 @@ void main() {
     expect(await d.matches('159357'), isTrue);
   });
 
+  test('duress triggerReset clears local prefs', () async {
+    SharedPreferences.setMockInitialValues({
+      DuressService.prefsKey: '159357',
+      'vault_payload_ART3MAS': 'polybius',
+    });
+    final result = await DuressService().triggerReset();
+    expect(result, DuressResult.localWipe);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString(DuressService.prefsKey), isNull);
+    expect(prefs.getString('vault_payload_ART3MAS'), isNull);
+  });
+
   test('DNS presets are Android 11 DoT hostnames', () {
     expect(RouteService.presets.map((p) => p.id), containsAll(['quad9', 'proton', 'mullvad']));
     final quad = RouteService.presets.firstWhere((p) => p.id == 'quad9');

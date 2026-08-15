@@ -4,7 +4,7 @@ import '../services/cover_apps.dart';
 import '../theme/noir_theme.dart';
 import '../widgets/matrix_chrome.dart';
 
-/// Public home desk: Proton Mail, F-Droid, Brave. Nothing else.
+/// Public home desk: Proton Mail, F-Droid, Brave, Darth Cherry.
 class DeskTab extends StatefulWidget {
   const DeskTab({super.key, this.onOpenRoute});
 

@@ -23,6 +23,20 @@ void main() {
     expect(find.textContaining('VAULT LOGIN'), findsNothing);
   });
 
+  testWidgets('lock opens vault login and DESK returns', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(const DoomsdayClockApp());
+    await tester.pump();
+    await tester.tap(find.byIcon(Icons.lock_outline));
+    await tester.pump();
+    expect(find.textContaining('VAULT LOGIN'), findsOneWidget);
+    expect(find.text('← DESK'), findsOneWidget);
+    await tester.tap(find.text('← DESK'));
+    await tester.pump();
+    expect(find.text('CHERRY'), findsOneWidget);
+    expect(find.textContaining('VAULT LOGIN'), findsNothing);
+  });
+
   testWidgets('desk lists mail, fdroid, brave, cherry', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
