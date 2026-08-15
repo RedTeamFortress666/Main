@@ -83,6 +83,9 @@ ARCHIVE="$DEST.tar"
 tar -C "$(dirname "$DEST")" -cf "$ARCHIVE" "$(basename "$DEST")"
 echo "Wrote $ARCHIVE ($(du -h "$ARCHIVE" | awk '{print $1}'))"
 if [[ -d /opt/cursor/artifacts ]]; then
-  cp -a "$ARCHIVE" /opt/cursor/artifacts/crypt3x-lite-r36s-testkit.tar
-  echo "Copied to /opt/cursor/artifacts/crypt3x-lite-r36s-testkit.tar"
+  if cp -a "$ARCHIVE" /opt/cursor/artifacts/crypt3x-lite-r36s-testkit.tar; then
+    echo "Copied to /opt/cursor/artifacts/crypt3x-lite-r36s-testkit.tar"
+  else
+    echo "Skipped artifact copy of the 574MB tar (I/O limit); kit stays at $ARCHIVE"
+  fi
 fi
