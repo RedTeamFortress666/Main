@@ -1,6 +1,6 @@
 # Yoko's Tuna Brawl
 
-Arcade 1v1 **Cat Battle** plus **Cat Car Racing**. On-screen Android pad: Up / Down / Left / Right, Jump, Punch, Kick, Laser Eyes. Stella brings milk between rounds; Joye may revive a KO.
+Arcade 1v1 **Cat Battle** plus **Cat Car Racing**. On-screen Android pad: Up / Down / Left / Right, Jump, Punch, Kick, Laser Eyes. April (goth hoodie, pink-streaked hair) slips between the cats every two rounds and sprinkles fairy dust; then Stella brings milk. Joye may revive a KO.
 
 Joye occasionally tosses Yoko **Capitalist Chicken**. Stella occasionally tosses Morlan **Soviet Salmon**. Either pickup grants super strength, speed, and invulnerability.
 

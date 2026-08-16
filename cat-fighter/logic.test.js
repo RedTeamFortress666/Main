@@ -22,6 +22,7 @@ import {
   canMilkTimeout,
   canTunaRevive,
   afterRoundEnd,
+  shouldAprilVisit,
   contactVoice,
   gainMeter,
   spendMeter,
@@ -183,10 +184,20 @@ describe('round and timeout / revive rules', () => {
   });
 
   it('sends Stella between rounds until someone wins the match', () => {
-    expect(afterRoundEnd(1, 0)).toBe('stellaMilk');
-    expect(afterRoundEnd(1, 1)).toBe('stellaMilk');
-    expect(afterRoundEnd(2, 0)).toBe('matchEnd');
-    expect(afterRoundEnd(0, 2)).toBe('matchEnd');
+    expect(afterRoundEnd(1, 0, 3)).toBe('stellaMilk');
+    expect(afterRoundEnd(2, 0, 2)).toBe('matchEnd');
+    expect(afterRoundEnd(0, 2, 2)).toBe('matchEnd');
+  });
+
+  it('brings April before Stella after the first round and every 2 rounds', () => {
+    expect(shouldAprilVisit(0)).toBe(false);
+    expect(shouldAprilVisit(1)).toBe(true);
+    expect(shouldAprilVisit(2)).toBe(true);
+    expect(shouldAprilVisit(3)).toBe(false);
+    expect(shouldAprilVisit(4)).toBe(true);
+    expect(afterRoundEnd(1, 0, 1)).toBe('aprilDust');
+    expect(afterRoundEnd(1, 1, 2)).toBe('aprilDust');
+    expect(afterRoundEnd(1, 1, 3)).toBe('stellaMilk');
   });
 });
 

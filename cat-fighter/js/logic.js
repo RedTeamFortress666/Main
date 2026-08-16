@@ -30,6 +30,8 @@ export const MILK_HEAL = 220;
 export const TUNA_HEAL = 180;
 export const REVIVES_PER_MATCH = 1;
 export const MAX_MILKS_PER_ROUND = 2;
+/** April sprinkles fairy dust every N completed rounds, before Stella's milk. */
+export const APRIL_EVERY_N_ROUNDS = 2;
 export const MOTION_WINDOW = 22;
 export const INPUT_BUFFER = 32;
 
@@ -632,9 +634,23 @@ export function canTunaRevive(revivesUsed, cap = REVIVES_PER_MATCH) {
   return revivesUsed < cap;
 }
 
-/** After a round pip is awarded: match over, or Stella serves milk between rounds. */
-export function afterRoundEnd(wins1, wins2, need = ROUNDS_TO_WIN) {
-  return matchOver(wins1, wins2, need) ? 'matchEnd' : 'stellaMilk';
+/**
+ * April walks between the cats every 2 completed rounds (2, 4, …)
+ * and also after the first round — the usual first-to-2 intermission —
+ * so she is seen before Stella's saucers in a normal match.
+ */
+export function shouldAprilVisit(completedRound, everyN = APRIL_EVERY_N_ROUNDS) {
+  if (completedRound <= 0) return false;
+  return completedRound === 1 || completedRound % everyN === 0;
+}
+
+/**
+ * After a round pip is awarded: match over, April then Stella, or Stella only.
+ * `completedRound` is the round that just finished (1-based).
+ */
+export function afterRoundEnd(wins1, wins2, completedRound = 0, need = ROUNDS_TO_WIN) {
+  if (matchOver(wins1, wins2, need)) return 'matchEnd';
+  return shouldAprilVisit(completedRound) ? 'aprilDust' : 'stellaMilk';
 }
 
 /** Meow on a friendly bump, hiss if someone is swinging. */

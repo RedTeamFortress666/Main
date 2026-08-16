@@ -1,7 +1,8 @@
 /**
- * Yoko's Tuna Brawl — screens, rounds, Stella milk, Joye tuna.
+ * Yoko's Tuna Brawl — screens, rounds, April dust, Stella milk, Joye tuna.
  *
- * Flow: title → menu → intro → fight ⇄ timeout/revive → roundEnd → matchEnd
+ * Flow: title → menu → intro → fight ⇄ timeout/revive → roundEnd
+ *       → (April every 2 rounds) → Stella milk → next round / matchEnd
  * Adding a stage: drawStage() in render.js already swaps palace / Russia /
  * round-3 mash. Hook extra rounds there.
  */
@@ -20,7 +21,7 @@ import { thinkAI } from './ai.js';
 import { createRace, updateRace, drawRace } from './race.js';
 import {
   Assets, Particles, drawStage, drawFighter, drawFighterNames, drawProjectile,
-  drawPickup, drawStella, drawJoye, drawSaucer, drawHUD, drawLetterbox,
+  drawPickup, drawStella, drawJoye, drawApril, drawSaucer, drawHUD, drawLetterbox,
 } from './render.js';
 import { drawPixelText } from './pixel.js';
 
@@ -230,6 +231,10 @@ export class Game {
       this._updateTimeout();
       return;
     }
+    if (this.mode === 'april') {
+      this._updateApril();
+      return;
+    }
     if (this.mode === 'revive') {
       this._updateRevive();
       return;
@@ -238,7 +243,7 @@ export class Game {
       this.roundEndT += 1;
       this._idlePose();
       if (this.roundEndT > 150) {
-        const next = afterRoundEnd(this.wins[0], this.wins[1]);
+        const next = afterRoundEnd(this.wins[0], this.wins[1], this.round);
         if (next === 'matchEnd') {
           const over = matchOver(this.wins[0], this.wins[1]);
           this.winner = over === 1 ? this.p1.characterId : this.p2.characterId;
@@ -246,6 +251,9 @@ export class Game {
           this.mode = 'matchEnd';
           this.audio.win();
           this.say(winBanner(this.winner), 999, this.quote);
+        } else if (next === 'aprilDust') {
+          this.round += 1;
+          this._beginAprilVisit();
         } else {
           this.round += 1;
           this._beginStellaVisit({ betweenRounds: true });
@@ -500,6 +508,37 @@ export class Game {
     this._finishRoundByHp();
   }
 
+  _beginAprilVisit() {
+    this.mode = 'april';
+    this.cutscene = { kind: 'april', t: 0 };
+    this.frozen = true;
+    this.audio.sting();
+    this.audio.fairy();
+    this.say('FAIRY DUST!', 110, 'April slips between the cats before the milk.');
+    this.p1.state = 'idle';
+    this.p2.state = 'idle';
+    this.p1.attacking = false;
+    this.p2.attacking = false;
+  }
+
+  _updateApril() {
+    const cs = this.cutscene;
+    cs.t += 1;
+    this.p1.animTime += 1;
+    this.p2.animTime += 1;
+    this.particles.update();
+    const midX = (this.p1.x + this.p2.x) / 2;
+    if (cs.t > 28 && cs.t < 150 && cs.t % 6 === 0) {
+      this.particles.spawn(midX, GROUND_Y - 70, 'fairy');
+      this.particles.spawn(this.p1.x, GROUND_Y - 50, 'fairy');
+      this.particles.spawn(this.p2.x, GROUND_Y - 50, 'fairy');
+    }
+    if (cs.t === 40 || cs.t === 90) this.audio.fairy();
+    if (cs.t > 170) {
+      this._beginStellaVisit({ betweenRounds: true });
+    }
+  }
+
   _beginStellaVisit({ betweenRounds = false } = {}) {
     this.mode = 'timeout';
     this.cutscene = { kind: 'stella', t: 0, betweenRounds };
@@ -696,6 +735,29 @@ export class Game {
     for (const p of this.projectiles) drawProjectile(ctx, p, this.time);
     this.particles.draw(ctx);
 
+    if (this.mode === 'april' && this.cutscene) {
+      drawLetterbox(ctx, 0.8);
+      ctx.fillStyle = 'rgba(40,0,30,0.32)';
+      ctx.fillRect(0, 90, CANVAS_W, CANVAS_H - 180);
+      const t = this.cutscene.t;
+      const midX = (this.p1.x + this.p2.x) / 2;
+      const enter = Math.min(1, t / 28);
+      const phase = t < 28 ? 'enter' : t > 150 ? 'leave' : 'dust';
+      ctx.save();
+      ctx.translate(midX, GROUND_Y);
+      ctx.scale(1.15, 1.15);
+      drawApril(ctx, 0, (1 - enter) * 30, t, phase, null);
+      ctx.restore();
+      const img = this.assets.images.april;
+      if (img && t > 8) {
+        ctx.imageSmoothingEnabled = false;
+        ctx.globalAlpha = Math.min(1, (t - 8) / 16) * 0.98;
+        ctx.drawImage(img, 36, 96, 200, 300);
+        ctx.globalAlpha = 1;
+        drawPixelText(ctx, 'APRIL', 40, 410, 2, '#ff9ad4');
+        drawPixelText(ctx, 'FAIRY DUST BEFORE THE MILK', 40, 432, 1, '#dddddd');
+      }
+    }
     if (this.mode === 'timeout' && this.cutscene) {
       drawLetterbox(ctx, 0.82);
       ctx.fillStyle = 'rgba(10,0,20,0.35)';

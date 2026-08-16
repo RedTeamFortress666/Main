@@ -131,6 +131,12 @@ export class AudioBus {
     setTimeout(() => this.tone(360, 0.1, 'sine', 0.1, 220), 180);
   }
 
+  fairy() {
+    [880, 990, 1174, 1320].forEach((f, i) => {
+      setTimeout(() => this.tone(f, 0.09, 'sine', 0.12, f + 80), i * 70);
+    });
+  }
+
   tuna() {
     this.tone(180, 0.08, 'square', 0.2);
     this.tone(540, 0.16, 'triangle', 0.18, 240);
@@ -165,7 +171,7 @@ export class AudioBus {
     const t = this.ctx.currentTime;
     let v = 0.28;
     if (mode === 'fight' || mode === 'intro') v = 0.1;
-    else if (mode === 'timeout' || mode === 'revive') v = 0.06;
+    else if (mode === 'timeout' || mode === 'revive' || mode === 'april') v = 0.06;
     else if (mode === 'matchEnd' || mode === 'race') v = 0.2;
     this.themeGain.gain.cancelScheduledValues(t);
     this.themeGain.gain.linearRampToValueAtTime(v * this.master * 4, t + 0.25);

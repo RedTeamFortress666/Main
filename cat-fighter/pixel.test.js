@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { FONT5, pixelTextWidth, lifeBarWidth, fighterPoseFromState } from './js/pixel.js';
+import { FONT5, pixelTextWidth, lifeBarWidth, fighterPoseFromState, paintApril } from './js/pixel.js';
 
 describe('pixel font', () => {
   it('has glyphs for A-Z, 0-9, and FIGHT punctuation', () => {
@@ -43,5 +43,20 @@ describe('fighterPoseFromState', () => {
       attackFrame: 2,
       animTime: 0,
     }).laser).toBe(1);
+  });
+});
+
+describe('April sprite', () => {
+  it('paints a goth hoodie sprite', () => {
+    const fills = [];
+    const ctx = {
+      clearRect() {},
+      fillRect(x, y, w, h) { fills.push({ x, y, w, h, color: ctx.fillStyle }); },
+      fillStyle: '',
+    };
+    paintApril(ctx, 12, 'dust');
+    expect(fills.length).toBeGreaterThan(12);
+    expect(fills.some((f) => f.color === '#141018')).toBe(true);
+    expect(fills.some((f) => f.color === '#ff4da6')).toBe(true);
   });
 });

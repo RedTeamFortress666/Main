@@ -4,6 +4,7 @@ import {
 } from './logic.js';
 import {
   drawPixelText, lifeBarWidth, drawPixelFighter, chromaKeyMagenta, SPRITE_DRAW,
+  drawAprilPixel,
 } from './pixel.js';
 
 export class Assets {
@@ -18,6 +19,7 @@ export class Assets {
       morlan: 'assets/morlan_portrait.jpg',
       stella: 'assets/stella_portrait.jpg',
       joye: 'assets/joye_portrait.jpg',
+      april: 'assets/april_portrait.png',
       palace: 'assets/palace_stage_pixel.png',
       russia: 'assets/russian_stage_pixel.png',
       yokoHud: 'assets/yoko_hud.png',
@@ -56,18 +58,19 @@ export class Particles {
   }
 
   spawn(x, y, kind, extra = {}) {
-    const n = kind === 'super' ? 28 : kind === 'hit' ? 14 : 10;
+    const n = kind === 'super' ? 28 : kind === 'fairy' ? 22 : kind === 'hit' ? 14 : 10;
+    const palette = ['#ff9ad4', '#ffe566', '#fff6d0', '#c89bff', '#ff4da6'];
     for (let i = 0; i < n; i++) {
       const ang = Math.random() * Math.PI * 2;
-      const spd = (kind === 'super' ? 7 : 4) * (0.4 + Math.random());
+      const spd = (kind === 'super' ? 7 : kind === 'fairy' ? 3.2 : 4) * (0.4 + Math.random());
       this.list.push({
         x, y,
         vx: Math.cos(ang) * spd + (extra.vx || 0),
-        vy: Math.sin(ang) * spd - 1.5,
+        vy: Math.sin(ang) * spd - (kind === 'fairy' ? 2.8 : 1.5),
         life: 18 + Math.random() * 16,
         max: 34,
         kind,
-        color: extra.color || (kind === 'milk' ? '#f4f0e0' : kind === 'tuna' ? '#d4a017' : '#fff3a0'),
+        color: extra.color || (kind === 'milk' ? '#f4f0e0' : kind === 'tuna' ? '#d4a017' : kind === 'fairy' ? palette[i % palette.length] : '#fff3a0'),
         r: 2 + Math.random() * 4,
       });
     }
@@ -78,7 +81,7 @@ export class Particles {
       p.life -= 1;
       p.x += p.vx;
       p.y += p.vy;
-      p.vy += 0.12;
+      p.vy += p.kind === 'fairy' ? -0.06 : 0.12;
       return p.life > 0;
     });
   }
@@ -295,6 +298,25 @@ export function drawJoye(ctx, x, y, t, phase, img) {
   }
   if (phase === 'feed') {
     drawPixelText(ctx, 'TUNA FOR THE FALLEN', 0, -100, 1, '#fff6d0', 'center');
+  }
+  ctx.restore();
+}
+
+export function drawApril(ctx, x, y, t, phase, img) {
+  ctx.save();
+  ctx.translate(x, y);
+  const sway = Math.sin(t * 0.12) * 3;
+  ctx.translate(sway, phase === 'enter' ? Math.max(0, 18 - t) : 0);
+  if (img) {
+    ctx.imageSmoothingEnabled = false;
+    const h = 128;
+    const w = (img.width / img.height) * h;
+    ctx.drawImage(img, -w / 2, -h + 20, w, h);
+  } else {
+    drawAprilPixel(ctx, 0, 8, t, phase, 2.4);
+  }
+  if (phase === 'dust') {
+    drawPixelText(ctx, 'FAIRY DUST', 0, -118, 1, '#ff9ad4', 'center');
   }
   ctx.restore();
 }

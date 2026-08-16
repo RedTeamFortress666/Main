@@ -585,3 +585,89 @@ export function drawCatCar(ctx, id, x, y, heading, t, scale = 2.2) {
   ctx.drawImage(c, -36, -30);
   ctx.restore();
 }
+
+/**
+ * Goth April: black hoodie, pink trim, skirt, boots, black/pink hair.
+ * Origin is feet-center. phase: enter | dust | leave
+ */
+export function paintApril(octx, t = 0, phase = 'dust') {
+  octx.clearRect(0, 0, 48, 72);
+  const r = (x, y, w, h, c) => {
+    octx.fillStyle = c;
+    octx.fillRect(x, y, w, h);
+  };
+  const wave = Math.round(Math.sin(t * 0.18) * 1);
+  const arm = phase === 'dust' ? 6 + Math.round(Math.sin(t * 0.35) * 4) : 2;
+  const black = '#141018';
+  const pink = '#ff4da6';
+  const pinkHi = '#ff9ad4';
+  const skin = '#f0c8b0';
+  const boot = '#1a1218';
+  // boots
+  r(12, 64, 10, 8, boot);
+  r(26, 64, 10, 8, boot);
+  r(12, 66, 10, 2, pink);
+  r(26, 66, 10, 2, pink);
+  // legs / fishnet hint
+  r(14, 50, 8, 14, '#2a1a24');
+  r(26, 50, 8, 14, '#2a1a24');
+  r(16, 52, 4, 2, pink);
+  r(28, 56, 4, 2, pink);
+  // skirt
+  r(10, 42, 28, 10, black);
+  r(10, 42, 28, 2, pink);
+  r(12, 50, 24, 3, '#0a080c');
+  // hoodie
+  r(12, 22, 24, 22, black);
+  r(12, 22, 24, 3, pink);
+  r(20, 28, 8, 8, pink);
+  r(22, 30, 4, 4, '#f4f0e8');
+  // arms
+  r(6, 24, 8, 16, black);
+  r(34, 24 - arm, 8, 16, black);
+  r(6, 38, 8, 4, skin);
+  r(34, 38 - arm, 8, 4, skin);
+  r(6, 26, 8, 2, pink);
+  r(34, 26 - arm, 8, 2, pink);
+  // head
+  r(16, 8, 16, 16, skin);
+  // hair + space buns
+  r(14, 6, 20, 8, black);
+  r(10, 4, 8, 8, black);
+  r(30, 4, 8, 8, black);
+  r(12, 6, 4, 4, pink);
+  r(32, 6, 4, 4, pink);
+  r(14, 16, 4, 10, black);
+  r(30, 16, 4, 10, black);
+  r(16, 18, 2, 6, pink);
+  r(30, 18, 2, 6, pink);
+  // heart glasses
+  r(17, 14, 5, 4, pinkHi);
+  r(26, 14, 5, 4, pinkHi);
+  r(22, 15, 4, 1, pink);
+  // wand / dust puff
+  if (phase === 'dust') {
+    r(38, 20 + wave, 6, 2, '#ffe566');
+    r(42, 16 + wave, 3, 3, pinkHi);
+    r(40, 14 + wave, 2, 2, '#fff6d0');
+  }
+}
+
+const _aprilSheet = { c: null };
+export function drawAprilPixel(ctx, x, y, t, phase = 'dust', scale = 3.2) {
+  if (!_aprilSheet.c) {
+    _aprilSheet.c = document.createElement('canvas');
+    _aprilSheet.c.width = 48;
+    _aprilSheet.c.height = 72;
+  }
+  const c = _aprilSheet.c;
+  const octx = c.getContext('2d');
+  octx.imageSmoothingEnabled = false;
+  paintApril(octx, t, phase);
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  ctx.translate(Math.round(x), Math.round(y));
+  ctx.scale(scale, scale);
+  ctx.drawImage(c, -24, -72);
+  ctx.restore();
+}
