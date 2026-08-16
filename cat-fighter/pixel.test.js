@@ -58,5 +58,8 @@ describe('April sprite', () => {
     expect(fills.length).toBeGreaterThan(12);
     expect(fills.some((f) => f.color === '#141018')).toBe(true);
     expect(fills.some((f) => f.color === '#ff4da6')).toBe(true);
+    expect(fills.some((f) => f.color === '#ffc4e1')).toBe(true);
+    const bagCat = fills.filter((f) => f.color === '#ffc4e1' || f.color === '#ffe6f3');
+    expect(Math.max(...bagCat.map((f) => f.w * f.h))).toBeGreaterThanOrEqual(16 * 14);
   });
 });

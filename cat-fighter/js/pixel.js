@@ -601,6 +601,8 @@ export function paintApril(octx, t = 0, phase = 'dust') {
   const black = '#141018';
   const pink = '#ff4da6';
   const pinkHi = '#ff9ad4';
+  const pastel = '#ffc4e1';
+  const pastelHi = '#ffe6f3';
   const skin = '#f0c8b0';
   const boot = '#1a1218';
   // boots
@@ -629,6 +631,19 @@ export function paintApril(octx, t = 0, phase = 'dust') {
   r(34, 38 - arm, 8, 4, skin);
   r(6, 26, 8, 2, pink);
   r(34, 26 - arm, 8, 2, pink);
+  // backpack + oversized pastel-pink bag cat
+  r(4, 26, 10, 14, black);
+  r(4, 26, 10, 2, pink);
+  r(8, 24, 3, 4, '#888');
+  r(0, 34, 16, 14, pastel);
+  r(1, 35, 14, 12, pastelHi);
+  r(2, 32, 4, 4, pastel);
+  r(10, 32, 4, 4, pastel);
+  r(4, 38, 2, 2, '#141018');
+  r(10, 38, 2, 2, '#141018');
+  r(6, 41, 4, 2, '#ff4da6');
+  r(3, 40, 2, 1, '#141018');
+  r(11, 40, 2, 1, '#141018');
   // head
   r(16, 8, 16, 16, skin);
   // hair + space buns
