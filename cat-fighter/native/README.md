@@ -9,7 +9,7 @@ cd cat-fighter && python3 -m http.server 4173
 Open `http://localhost:4173`.
 
 ## Android APK
-Requires JDK 17+ and Android SDK (platforms;android-34, build-tools;34.0.0).
+Requires JDK 17+ and Android SDK (platforms;android-35, build-tools;35.0.0).
 
 ```bash
 export ANDROID_HOME=$HOME/android-sdk   # or /opt/android-sdk, etc.

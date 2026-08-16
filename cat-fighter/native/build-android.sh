@@ -24,9 +24,9 @@ cp "$ROOT/assets/icon-512.png" "$ICON_DIR/mipmap-xxxhdpi/ic_launcher.png"
 export ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/android-sdk}}"
 export ANDROID_SDK_ROOT="$ANDROID_HOME"
 printf 'sdk.dir=%s\n' "$ANDROID_HOME" > "$AND/local.properties"
-if [ ! -d "$ANDROID_HOME/platforms/android-34" ]; then
-  echo "Android SDK platform 34 not found at $ANDROID_HOME" >&2
-  echo "Install: sdkmanager \"platforms;android-34\" \"build-tools;34.0.0\"" >&2
+if [ ! -d "$ANDROID_HOME/platforms/android-35" ] && [ ! -d "$ANDROID_HOME/platforms/android-34" ]; then
+  echo "Android SDK platform 34/35 not found at $ANDROID_HOME" >&2
+  echo "Install: sdkmanager \"platforms;android-35\" \"build-tools;35.0.0\"" >&2
   exit 1
 fi
 
