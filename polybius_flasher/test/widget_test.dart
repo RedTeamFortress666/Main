@@ -71,6 +71,14 @@ void main() {
     expect(File('tool/flash_crypt3x_lite.sh').statSync().mode & 0x49, isNonZero);
   });
 
+  test('crypt3x lite assemble script rebuilds the R36S flash zip', () {
+    final script = File('tool/assemble-crypt3x-lite-zip.sh').readAsStringSync();
+    expect(script, contains('CRYPT3X_OS_LITE-r36s-20260815.zip'));
+    expect(script, contains('e79ac4225e702c3b5b5dc353198522be2141c2d6f20c8ec9df6f8cb548428f93'));
+    expect(script, contains('965251465'));
+    expect(File('tool/assemble-crypt3x-lite-zip.sh').statSync().mode & 0x49, isNonZero);
+  });
+
   test('bundled catalog includes Portal, V.1 USER, and Darth Cherry', () {
     expect(FlasherBridge.coreSuiteIds, ['portal_hq', 'v1_user', 'darth_cherry']);
     final suite = FlasherBridge.coreSuite;

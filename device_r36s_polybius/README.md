@@ -87,13 +87,17 @@ mka -j$(nproc) bootimage systemimage
 cd device/gameconsole/r36s && sudo ./mkimg_lite.sh   # 8GiB, under 16GiB
 ```
 
-Stage that image from the phone with **PØLYBÎŪS FLASHER → CRYPT3X OS LITE**
-(`polybius_flasher/`, catalog in `assets/r36s/crypt3x-lite.json`). The APK
-cannot contain the 8 GiB file. Flash the card on a PC:
+**Flash a card:** see [`FLASH_R36S.md`](FLASH_R36S.md). Download the single
+zip `CRYPT3X_OS_LITE-r36s-20260815.zip` from the run artifacts (GitHub cannot
+host 921 MiB). Write the inner `.img` with Etcher / Raspberry Pi Imager /
+Rufus (DD) or:
 
 ```bash
 polybius_flasher/tool/flash_crypt3x_lite.sh /dev/sdX
 ```
+
+The phone flasher (**PØLYBÎŪS FLASHER → CRYPT3X OS LITE**) only *stages*
+the zip onto a USB stick. It cannot `dd` GPT. Finish on a PC.
 
 Sideload kit (no full sync — APKs onto a device that already boots):
 

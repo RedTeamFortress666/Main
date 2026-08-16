@@ -57,4 +57,7 @@ polybius_flasher/tool/flash_crypt3x_lite.sh /dev/sdX
 
 Do not commit the 8 GiB binary. Host builds land at `/opt/android/andr36oid/device/gameconsole/r36s/`.
 
+Card write steps (Etcher / `dd` / Rufus DD): [`../device_r36s_polybius/FLASH_R36S.md`](../device_r36s_polybius/FLASH_R36S.md).
+Rebuild the 921 MiB zip from 80 MiB parts: `tool/assemble-crypt3x-lite-zip.sh`.
+
 See [`../polybius/docs/FLASHER.md`](../polybius/docs/FLASHER.md).
