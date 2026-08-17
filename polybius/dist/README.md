@@ -13,8 +13,9 @@ https://github.com/RedTeamFortress666/Main/raw/cursor/r36s-polybius-product-0346
 
 https://github.com/RedTeamFortress666/Main/raw/cursor/r36s-polybius-product-0346/polybius/dist/polybius-r36s-port.zip
 
-`polybius-flasher-1.7.0-android-arm64.apk` — previous flasher (backup).
-`polybius-flasher-1.6.0-android-arm64.apk` — previous flasher (backup).
+`polybius/dist/crypt3x-os-lite/` — **CRYPT3X OS LITE** zip parts + checksums + flash scripts:
+
+https://github.com/RedTeamFortress666/Main/tree/cursor/r36s-polybius-product-0346/polybius/dist/crypt3x-os-lite
 
 ## Install (Android / ARM handheld)
 

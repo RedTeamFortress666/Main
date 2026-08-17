@@ -11,7 +11,7 @@ A PortMaster zip flashes successfully only if it contains **every** path in
 | --- | --- | --- |
 | Flasher APK 1.8.0 | [`polybius/dist/polybius-flasher-1.8.0-android-arm64.apk`](https://github.com/RedTeamFortress666/Main/raw/cursor/r36s-polybius-product-0346/polybius/dist/polybius-flasher-1.8.0-android-arm64.apk) | Cursor artifact `polybius-flasher-1.8.0-android-arm64.apk`; previous `polybius-flasher-1.7.0-android-arm64.apk` |
 | PortMaster zip | [`polybius/dist/polybius-r36s-port.zip`](https://github.com/RedTeamFortress666/Main/raw/cursor/r36s-polybius-product-0346/polybius/dist/polybius-r36s-port.zip) | [`polybius_flasher/assets/r36s/polybius-r36s-port.zip`](https://github.com/RedTeamFortress666/Main/raw/cursor/r36s-polybius-product-0346/polybius_flasher/assets/r36s/polybius-r36s-port.zip) · **also bundled inside the APK** |
-| CRYPT3X OS LITE GPT zip | not on GitHub (921 MiB) | Cursor artifacts `CRYPT3X_OS_LITE-r36s-20260815.zip.part00`–`part11` + `CRYPT3X_OS_LITE-r36s-20260815.zip.SHA256SUMS`. Phone: **PREPARE ETCHER / RUFUS KIT**. PC: `tool/prepare-crypt3x-etcher-kit.sh` |
+| CRYPT3X OS LITE parts | [`polybius/dist/crypt3x-os-lite/`](https://github.com/RedTeamFortress666/Main/tree/cursor/r36s-polybius-product-0346/polybius/dist/crypt3x-os-lite) (`part00`–`part11` + SHA256SUMS) | Phone: **PREPARE ETCHER / RUFUS KIT**. PC: `tool/prepare-crypt3x-etcher-kit.sh`. Assembled 921 MiB zip / 8 GiB `.img` are not single GitHub files. |
 
 GitHub raw 404s when logged out (private repo). Use the artifacts if that happens.
 

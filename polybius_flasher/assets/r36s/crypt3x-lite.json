@@ -6,7 +6,8 @@
   "packageDir": "CRYPT3X_OS_LITE",
   "etcherFolder": "CRYPT3X_ETCHER",
   "bundledInApk": false,
-  "note": "8 GiB GPT image is too large for an APK. Pick a staged .img/.img.zip, or PREPARE ETCHER / RUFUS KIT to concatenate part00–part11 onto a USB stick as CRYPT3X_ETCHER/. Flash the card with balenaEtcher, Rufus DD, or dd. Do not commit the 8 GiB binary.",
+  "githubDir": "https://github.com/RedTeamFortress666/Main/raw/cursor/r36s-polybius-product-0346/polybius/dist/crypt3x-os-lite",
+  "note": "8 GiB GPT image is too large for an APK. Pick a staged .img/.img.zip, or PREPARE ETCHER / RUFUS KIT to concatenate part00–part11 onto a USB stick as CRYPT3X_ETCHER/. Flash the card with balenaEtcher, Rufus DD, or dd. Do not commit the 8 GiB binary. Zip parts live on GitHub under polybius/dist/crypt3x-os-lite/ (logged-in raw URLs).",
   "image": {
     "fileName": "lineage-18.1-20260815-1244-r36s-crypt3x-lite.img",
     "bytes": 8589934592,

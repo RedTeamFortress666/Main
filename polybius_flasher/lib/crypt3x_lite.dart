@@ -24,6 +24,9 @@ class Crypt3xLitePart {
   final int? altBytes;
 
   String get tag => 'part${index.toString().padLeft(2, '0')}';
+
+  String get githubUrl =>
+      '${Crypt3xLiteCatalog.githubDir}/$fileName';
 }
 
 class Crypt3xLiteDownload {
@@ -192,6 +195,10 @@ class Crypt3xLiteCatalog {
 
   static const githubBranch =
       'https://github.com/RedTeamFortress666/Main/raw/cursor/r36s-polybius-product-0346';
+  static const githubDir =
+      '$githubBranch/polybius/dist/crypt3x-os-lite';
+  static const githubTree =
+      'https://github.com/RedTeamFortress666/Main/tree/cursor/r36s-polybius-product-0346/polybius/dist/crypt3x-os-lite';
 
   static const flasherApkFileName =
       'polybius-flasher-1.8.0-android-arm64.apk';
@@ -200,12 +207,14 @@ class Crypt3xLiteCatalog {
   static const flasherApkBackupFileName =
       'polybius-flasher-1.7.0-android-arm64.apk';
 
+  static String githubUrlFor(String fileName) => '$githubDir/$fileName';
+
   /// Everything an operator needs for beta OS testing on an R36S.
   static const betaDownloads = <Crypt3xLiteDownload>[
     Crypt3xLiteDownload(
       label: 'PØLYBÎŪS FLASHER APK 1.8.0',
       fileName: flasherApkFileName,
-      where: 'GitHub (logged-in) $flasherApkUrl · also Cursor artifact',
+      where: flasherApkUrl,
     ),
     Crypt3xLiteDownload(
       label: 'Flasher APK 1.7.0 backup',
@@ -217,20 +226,19 @@ class Crypt3xLiteCatalog {
     Crypt3xLiteDownload(
       label: 'Kit SHA-256 table',
       fileName: sumsFileName,
-      where: 'Cursor artifact (not GitHub — 921 MiB zip is split)',
+      where: '$githubDir/$sumsFileName',
       sha256: kitSha256,
     ),
     Crypt3xLiteDownload(
       label: 'Flash instructions',
       fileName: 'FLASH_R36S.txt',
-      where:
-          'Repo device_r36s_polybius/FLASH_R36S.txt · also Cursor artifact CRYPT3X_OS_LITE_R36S_FLASH.txt',
+      where: '$githubDir/FLASH_R36S.txt',
       required: false,
     ),
     Crypt3xLiteDownload(
       label: 'Assemble script (PC)',
       fileName: 'assemble-crypt3x-lite-zip.sh',
-      where: 'Repo polybius_flasher/tool/',
+      where: '$githubDir/assemble-crypt3x-lite-zip.sh',
       required: false,
     ),
     Crypt3xLiteDownload(
@@ -251,8 +259,7 @@ class Crypt3xLiteCatalog {
         (p) => Crypt3xLiteDownload(
           label: 'OS zip ${p.tag}',
           fileName: p.fileName,
-          where:
-              'Cursor artifact. Alternate name ${p.altFileName} (part11 SHA differs on the img-only zip).',
+          where: p.githubUrl,
           sha256: p.sha256,
         ),
       ),

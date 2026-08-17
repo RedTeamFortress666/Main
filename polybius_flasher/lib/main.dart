@@ -1832,8 +1832,9 @@ class _FlasherHomePageState extends State<FlasherHomePage>
         const SizedBox(height: 10),
         _SectionTitle('DOWNLOADS FOR BETA OS TESTING'),
         const Text(
-          'GitHub raw 404s when logged out (private repo). The 921 MiB zip '
-          'is not on GitHub — download all 12 Cursor artifact parts. Ignore '
+          'GitHub raw 404s when logged out (private repo). Download all 12 '
+          'parts from polybius/dist/crypt3x-os-lite/ (GitHub). The assembled '
+          '921 MiB zip is not a single GitHub file. Ignore '
           '0-byte lineage-*.img.zip placeholders and crypt3x_lite_probe_*.bin.',
           style: TextStyle(color: FlasherColors.amber, fontSize: 12),
         ),

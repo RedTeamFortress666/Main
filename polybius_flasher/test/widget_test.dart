@@ -103,6 +103,11 @@ void main() {
     expect(json['bundledInApk'], isFalse);
     expect(json['packageDir'], Crypt3xLiteCatalog.packageDir);
     expect(json['etcherFolder'], Crypt3xLiteCatalog.etcherFolder);
+    expect(json['githubDir'], Crypt3xLiteCatalog.githubDir);
+    expect(
+      Crypt3xLiteCatalog.parts.first.githubUrl,
+      contains('polybius/dist/crypt3x-os-lite/CRYPT3X_OS_LITE-r36s-20260815.zip.part00'),
+    );
     expect((json['image'] as Map)['sha256'], Crypt3xLiteCatalog.sha256);
     expect((json['image'] as Map)['bytes'], Crypt3xLiteCatalog.bytes);
     expect((json['zip'] as Map)['sha256'], Crypt3xLiteCatalog.zipSha256);

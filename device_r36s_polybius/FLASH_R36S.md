@@ -18,8 +18,9 @@ Do **not** mount it and copy files onto an existing ArkOS/JELOS card.
 ## 1. Get the zip
 
 The flash file is **one zip** (8 GiB `.img` + `FLASH_R36S.txt`).
-GitHub and the artifact store both reject a single 921 MiB object, so the
-zip is published as twelve ≤80 MiB parts. One `cat` rebuilds the zip:
+GitHub rejects a single 921 MiB object, so the zip is twelve ≤80 MiB parts
+under [`polybius/dist/crypt3x-os-lite/`](https://github.com/RedTeamFortress666/Main/tree/cursor/r36s-polybius-product-0346/polybius/dist/crypt3x-os-lite)
+(raw URLs, logged-in). One `cat` rebuilds the zip:
 
 ```bash
 cat CRYPT3X_OS_LITE-r36s-20260815.zip.part00 \
