@@ -4,13 +4,21 @@ Phone-side installer for shipping PØLYBĪUS onto handheld / MCU targets and oth
 
 | Target | What it does |
 | --- | --- |
-| **R36S** | SD (SAF path detect + Direct/Autoinstall) or **USB stick** (`POLYBIUS_R36S_USB/`) + optional custom ROM |
+| **R36S** | Lists every filename required inside `polybius-r36s-port.zip`, then writes SD (SAF) or USB stick (`POLYBIUS_R36S_USB/`). Verify `Polybius.sh` + `polybius/`. |
 | **CRYPT3X OS LITE** | Stage the official **8 GiB** GPT image (or 921 MiB `.img.zip`) onto a USB stick as `CRYPT3X_OS_LITE/`, SHA-256 verified. Flash the card with `dd` on a PC (`tool/flash_crypt3x_lite.sh`). Not bundled in the APK. |
 | **CYD / ESP32-32E** | Presets (classic / CYD2USB / 32E / generic) + manual BOOT/RESET wizard |
 | **LilyGO T-Deck** | Dedicated ESP32-S3 preset + trackball download-mode UX |
 | **Android (OTG ADB)** | Selective multi-APK over USB OTG / TCP with SHA-256 + pm error surfacing |
 
-Package id: `com.polybius.flasher` · Version **1.6.0**
+Package id: `com.polybius.flasher` · Version **1.7.0**
+
+## Downloads
+
+- Flasher APK 1.7.0: https://github.com/RedTeamFortress666/Main/raw/cursor/r36s-polybius-product-0346/polybius/dist/polybius-flasher-1.7.0-android-arm64.apk
+- R36S PortMaster zip: https://github.com/RedTeamFortress666/Main/raw/cursor/r36s-polybius-product-0346/polybius/dist/polybius-r36s-port.zip
+- Backup zip path: https://github.com/RedTeamFortress666/Main/raw/cursor/r36s-polybius-product-0346/polybius_flasher/assets/r36s/polybius-r36s-port.zip
+
+Required filenames + fallbacks (Etcher / PortMaster / manual copy): [`docs/R36S_ALTERNATE_FLASH.md`](docs/R36S_ALTERNATE_FLASH.md).
 
 ## Bundled APKs
 
@@ -36,10 +44,10 @@ flutter test
 flutter build apk --release --target-platform=android-arm64
 ```
 
-Download (arm64, 1.6.0):
-https://github.com/RedTeamFortress666/Main/raw/cursor/r36s-polybius-product-0346/polybius/dist/polybius-flasher-1.6.0-android-arm64.apk
+Download (arm64, 1.7.0):
+https://github.com/RedTeamFortress666/Main/raw/cursor/r36s-polybius-product-0346/polybius/dist/polybius-flasher-1.7.0-android-arm64.apk
 
-Dist: `polybius/dist/polybius-flasher-1.6.0-android-arm64.apk`
+Dist: `polybius/dist/polybius-flasher-1.7.0-android-arm64.apk`
 
 ## CRYPT3X OS LITE (8 GiB)
 

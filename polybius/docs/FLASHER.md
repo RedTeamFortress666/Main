@@ -1,10 +1,10 @@
-# PØLYBÎŪS Android Flasher (hardened 1.6)
+# PØLYBÎŪS Android Flasher (hardened 1.7)
 
 Phone-side installer for shipping PØLYBĪUS onto handheld / MCU targets — and other Android phones — without a PC.
 
 | Target | Action |
 | --- | --- |
-| **R36S** | Detect common ports roots, prepare/format SD (FAT write probe), Direct or PortMaster **autoinstall**, verify `Polybius.sh` + `polybius/` |
+| **R36S** | Lists every filename required inside `polybius-r36s-port.zip`; SAF SD or USB stick; verify `Polybius.sh` + `polybius/` |
 | **CRYPT3X OS LITE** | Stage the official **8 GiB** GPT image (or 921 MiB `.img.zip`) to `CRYPT3X_OS_LITE/` on a USB stick; SHA-256 vs catalog. Phone cannot `dd` GPT. PC flash: `polybius_flasher/tool/flash_crypt3x_lite.sh` |
 | **CYD classic / CYD2USB / ESP32-32E / Generic ESP32** | Presets for Bruce/Launcher-friendly boards; merged `polybius-cyd.bin` @ `0x0`; guided BOOT/RESET; TEST CONNECTION; optional serial capture |
 | **LilyGO T-Deck** | `polybius-tdeck.bin` · esp32s3 · prefer Skip auto-reset · trackball download-mode wizard |
@@ -12,7 +12,7 @@ Phone-side installer for shipping PØLYBĪUS onto handheld / MCU targets — and
 
 - App source: [`../../polybius_flasher/`](../../polybius_flasher/)
 - Package id: `com.polybius.flasher`
-- Dist APK: [`../dist/polybius-flasher-1.6.0-android-arm64.apk`](https://github.com/RedTeamFortress666/Main/raw/cursor/r36s-polybius-product-0346/polybius/dist/polybius-flasher-1.6.0-android-arm64.apk)
+- Dist APK: [`../dist/polybius-flasher-1.7.0-android-arm64.apk`](https://github.com/RedTeamFortress666/Main/raw/cursor/r36s-polybius-product-0346/polybius/dist/polybius-flasher-1.7.0-android-arm64.apk)
 - Launcher icon: Fat Man–style bomb with stencil **GAME ØN**
 
 ## Hardening highlights

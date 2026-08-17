@@ -12,6 +12,7 @@ import 'board_presets.dart';
 import 'crypt3x_lite.dart';
 import 'flasher_bridge.dart';
 import 'flasher_event.dart';
+import 'r36s_iso_manifest.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -108,7 +109,7 @@ extension FlashTargetX on FlashTarget {
   };
 
   String get subtitle => switch (this) {
-    FlashTarget.r36s => 'PortMaster zip · SD or USB stick',
+    FlashTarget.r36s => 'required filenames · PortMaster zip',
     FlashTarget.crypt3xLite => '8 GiB GPT image · stage + dd',
     FlashTarget.androidOtg => 'ADB over USB-C OTG or TCP',
     _ => espPreset!.subtitle,
@@ -422,6 +423,16 @@ class _FlasherHomePageState extends State<FlasherHomePage>
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Event log copied to clipboard.')),
+    );
+  }
+
+  Future<void> _copyR36IsoChecklist() async {
+    final text =
+        '${R36IsoManifest.checklistText()}\n${R36IsoManifest.alternateFlashText()}';
+    await Clipboard.setData(ClipboardData(text: text));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('R36S required filenames copied.')),
     );
   }
 
@@ -1752,6 +1763,20 @@ class _FlasherHomePageState extends State<FlasherHomePage>
         ),
         const SizedBox(height: 6),
         Text(
+          'Required kit zip: ${R36IsoManifest.crypt3xKitFileName}',
+          style: const TextStyle(color: FlasherColors.cyan, fontSize: 12),
+        ),
+        Text(
+          'Required inner image: ${R36IsoManifest.crypt3xImgFileName}',
+          style: const TextStyle(color: FlasherColors.cyan, fontSize: 12),
+        ),
+        const Text(
+          'Assemble from part00–part11 (GitHub cannot host 921 MiB). '
+          'If this flasher fails: Etcher / Pi Imager / Rufus DD / dd.',
+          style: TextStyle(color: FlasherColors.dim),
+        ),
+        const SizedBox(height: 6),
+        Text(
           'IMG  ${Crypt3xLiteCatalog.displaySize}  '
           'sha256 ${Crypt3xLiteCatalog.sha256.substring(0, 16)}…',
           style: const TextStyle(color: FlasherColors.dim),
@@ -1825,10 +1850,82 @@ class _FlasherHomePageState extends State<FlasherHomePage>
       children: [
         _SectionTitle('R36S SD / USB INSTALL'),
         Text(
-          'Bundle: ${AssetIntegrity.r36sZip.label} · ${AssetIntegrity.r36sZip.version}',
+          'Package: ${R36IsoManifest.packageFileName} · ${R36IsoManifest.version}',
           style: const TextStyle(color: FlasherColors.cyan),
         ),
+        Text(
+          'SHA-256 ${R36IsoManifest.sha256}',
+          style: const TextStyle(color: FlasherColors.dim, fontSize: 12),
+        ),
         const SizedBox(height: 12),
+        _SectionTitle('FILES REQUIRED IN THE ZIP'),
+        const Text(
+          'A custom R36S iso/zip only flashes if every [REQ] name below is inside it. '
+          'The official polybius-r36s-port.zip already has all of them and is bundled in this APK.',
+          style: TextStyle(color: FlasherColors.amber),
+        ),
+        const SizedBox(height: 8),
+        ...R36IsoManifest.portZipFiles.map(
+          (file) => Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${file.required ? "[REQ]" : "[opt]"} ${file.path}',
+                  style: const TextStyle(
+                    color: FlasherColors.phosphor,
+                    fontFamily: 'monospace',
+                    fontSize: 13,
+                  ),
+                ),
+                Text(
+                  file.role,
+                  style: const TextStyle(color: FlasherColors.dim, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Verify must see: ports/Polybius.sh + ports/polybius/polybius + '
+          'libapp.so + libflutter_linux_gtk.so',
+          style: TextStyle(color: FlasherColors.cyan),
+        ),
+        const SizedBox(height: 10),
+        _SectionTitle('DOWNLOADS'),
+        Text(
+          'Primary: ${R36IsoManifest.githubUrl}',
+          style: const TextStyle(color: FlasherColors.dim, fontSize: 12),
+        ),
+        Text(
+          'Backup: ${R36IsoManifest.githubBackupUrl}',
+          style: const TextStyle(color: FlasherColors.dim, fontSize: 12),
+        ),
+        const Text(
+          'Also bundled in this APK — no extra download needed to flash from the phone. '
+          'GitHub raw 404s if you are logged out (private repo).',
+          style: TextStyle(color: FlasherColors.amber),
+        ),
+        const SizedBox(height: 10),
+        _SectionTitle('IF THIS FLASHER FAILS'),
+        const Text(
+          '1. Unzip polybius-r36s-port.zip → copy Polybius.sh + polybius/ into roms/ports/ '
+          '(or roms2/ports, EASYROMS/ports).\n'
+          '2. Or drop the zip on roms/ports/autoinstall/ or PortMaster/autoinstall/ and reboot.\n'
+          '3. Full OS (erases card): CRYPT3X OS LITE via Etcher / Pi Imager / Rufus DD / dd. '
+          'That is a GPT .img, not this PortMaster zip.',
+          style: TextStyle(color: FlasherColors.dim),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: _copyR36IsoChecklist,
+          icon: const Icon(Icons.copy),
+          label: const Text('COPY REQUIRED FILENAMES + FALLBACKS'),
+        ),
+        const Divider(color: FlasherColors.grid),
+        const SizedBox(height: 8),
         Text('Destination', style: GoogleFonts.orbitron(fontSize: 14)),
         const SizedBox(height: 6),
         ...R36StorageDestination.values.map(

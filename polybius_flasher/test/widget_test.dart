@@ -8,6 +8,7 @@ import 'package:polybius_flasher/crypt3x_lite.dart';
 import 'package:polybius_flasher/flasher_bridge.dart';
 import 'package:polybius_flasher/flasher_event.dart';
 import 'package:polybius_flasher/main.dart';
+import 'package:polybius_flasher/r36s_iso_manifest.dart';
 
 void main() {
   test('esp presets map chip/firmware correctly', () {
@@ -77,6 +78,38 @@ void main() {
     expect(script, contains('e79ac4225e702c3b5b5dc353198522be2141c2d6f20c8ec9df6f8cb548428f93'));
     expect(script, contains('965251465'));
     expect(File('tool/assemble-crypt3x-lite-zip.sh').statSync().mode & 0x49, isNonZero);
+  });
+
+  test('r36s iso manifest lists every required zip path and downloads', () {
+    expect(R36IsoManifest.packageFileName, AssetIntegrity.r36sZip.fileName);
+    expect(R36IsoManifest.sha256, AssetIntegrity.r36sZip.sha256);
+    expect(R36IsoManifest.portZipFiles.length, 23);
+    expect(
+      R36IsoManifest.portZipFiles.map((f) => f.path),
+      containsAll(R36IsoManifest.verifyMustExist),
+    );
+    expect(
+      R36IsoManifest.portZipFiles.any((f) => f.path == 'ports/Polybius.sh'),
+      isTrue,
+    );
+    expect(R36IsoManifest.githubUrl, contains(R36IsoManifest.packageFileName));
+    expect(R36IsoManifest.githubBackupUrl, contains('assets/r36s'));
+    expect(R36IsoManifest.flasherApkFileName, contains('1.7.0'));
+    expect(R36IsoManifest.crypt3xPartFiles.length, 12);
+    expect(R36IsoManifest.alternateFlashText(), contains('PortMaster'));
+    expect(R36IsoManifest.alternateFlashText(), contains('balenaEtcher'));
+
+    final json = jsonDecode(
+      File('assets/r36s/iso-manifest.json').readAsStringSync(),
+    ) as Map<String, dynamic>;
+    expect(json['sha256'], R36IsoManifest.sha256);
+    expect(json['bytes'], R36IsoManifest.bytes);
+    final files = (json['files'] as List).cast<Map<String, dynamic>>();
+    expect(files.length, R36IsoManifest.portZipFiles.length);
+    expect(
+      files.map((f) => f['path']),
+      R36IsoManifest.portZipFiles.map((f) => f.path),
+    );
   });
 
   test('bundled catalog includes Portal, V.1 USER, and Darth Cherry', () {
