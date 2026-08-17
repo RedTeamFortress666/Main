@@ -23,7 +23,12 @@ Dependencies for both are refreshed automatically on startup via the update scri
   `cd polybius && flutter run -d web-server --web-hostname 0.0.0.0 --web-port 8080`
   The first compile is slow (~20–40s) and the page is blank/black until it finishes — be patient. Then open `http://localhost:8080`.
 - **Login:** the app opens on a login gate. The bootstrapped account is username `DEVELOPER` / password `developer` (username is case-sensitive uppercase). After login you land on the neon arcade main menu.
-This repo contains two separate products:
+### `shadownet/` Flutter app (Shadøwnet × QShield)
+
+- Android-focused developer mesh for local Abliterated GGUF models (2–6 GB) and inference connect points.
+- Commands (from `shadownet/`): `flutter pub get`, `flutter analyze`, `flutter test`, `flutter run -d android`.
+- QShield hybrid transport (X25519 + Kyber512-framed sealing) wraps inference bridge calls to llama.cpp / KoboldCpp / MLC endpoints.
+
 
 1. **Root React app** (`/`) — a small Vite + React + TypeScript frontend (`name: first-app`). No backend/database.
 2. **`polybius/`** — a Flutter app ("PØLYBĪUS", a retro neon arcade shooter that is actually covert encrypted messaging). This is the substantial product. See `polybius/README.md`.
