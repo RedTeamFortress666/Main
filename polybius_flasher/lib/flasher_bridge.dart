@@ -467,6 +467,38 @@ class FlasherBridge {
     return NativeResult.fromMap(raw ?? {});
   }
 
+  /// Concatenate CRYPT3X part00–part11 onto dest as CRYPT3X_ETCHER/ for Etcher/Rufus.
+  Future<NativeResult> assembleCrypt3xEtcherKit({
+    required String partsTreeUri,
+    required String destTreeUri,
+  }) async {
+    ensureListening();
+    final raw = await _methods.invokeMethod<Map<dynamic, dynamic>>(
+      'assembleCrypt3xEtcherKit',
+      {
+        'partsTreeUri': partsTreeUri,
+        'destTreeUri': destTreeUri,
+        'kitFileName': Crypt3xLiteCatalog.kitFileName,
+        'kitSha256': Crypt3xLiteCatalog.kitSha256,
+        'kitBytes': Crypt3xLiteCatalog.kitBytes,
+        'officialZipFileName': Crypt3xLiteCatalog.zipFileName,
+        'officialZipSha256': Crypt3xLiteCatalog.zipSha256,
+        'officialZipBytes': Crypt3xLiteCatalog.zipBytes,
+        'etcherFolder': Crypt3xLiteCatalog.etcherFolder,
+        'etcherText': Crypt3xLiteCatalog.etcherInstructions(
+          Crypt3xLiteCatalog.kitFileName,
+        ),
+        'rufusText': Crypt3xLiteCatalog.rufusInstructions(
+          Crypt3xLiteCatalog.kitFileName,
+        ),
+        'flashText': Crypt3xLiteCatalog.flashInstructions(
+          Crypt3xLiteCatalog.kitFileName,
+        ),
+      },
+    );
+    return NativeResult.fromMap(raw ?? {});
+  }
+
   Future<NativeResult> probeUsbWrite(String treeUri) async {
     ensureListening();
     final raw = await _methods.invokeMethod<Map<dynamic, dynamic>>(

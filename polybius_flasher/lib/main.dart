@@ -110,7 +110,7 @@ extension FlashTargetX on FlashTarget {
 
   String get subtitle => switch (this) {
     FlashTarget.r36s => 'required filenames · PortMaster zip',
-    FlashTarget.crypt3xLite => '8 GiB GPT image · stage + dd',
+    FlashTarget.crypt3xLite => '8 GiB GPT · stage or Etcher kit',
     FlashTarget.androidOtg => 'ADB over USB-C OTG or TCP',
     _ => espPreset!.subtitle,
   };
@@ -1184,6 +1184,53 @@ class _FlasherHomePageState extends State<FlasherHomePage>
     });
   }
 
+  Future<void> _assembleCrypt3xEtcherKit() async {
+    if (!await _confirm(
+      title: 'PREPARE ETCHER / RUFUS KIT',
+      message:
+          'Concatenate part00–part11 into ${Crypt3xLiteCatalog.etcherFolder}/ '
+          'on a USB stick.\n\n'
+          '1. Pick the folder that holds the 12 CRYPT3X zip parts.\n'
+          '2. Pick the USB stick (FAT32 is OK — assembled zip is 921 MiB).\n\n'
+          'The flasher writes ${Crypt3xLiteCatalog.kitFileName} plus '
+          'ETCHER.txt, RUFUS.txt, FLASH.txt, and SHA256.txt.\n'
+          'Flash the microSD on a PC with balenaEtcher, Rufus DD, or dd. '
+          'The phone cannot write GPT.',
+      action: 'PREPARE KIT',
+      destructive: false,
+    )) {
+      return;
+    }
+
+    await _withBusy('Assembling CRYPT3X Etcher/Rufus kit...', () async {
+      _setStatus('Pick the folder that contains part00–part11.');
+      final partsTree = await _bridge.pickSdTree();
+      if (partsTree == null || partsTree.isEmpty) {
+        _setStatus('Cancelled — no parts folder selected.');
+        return;
+      }
+      final dest = await _ensureUsbTree();
+      if (dest == null) return;
+      final report = OperationReport(
+        target: 'crypt3x_lite',
+        title: 'CRYPT3X Etcher/Rufus kit',
+      );
+      final result = await _bridge.assembleCrypt3xEtcherKit(
+        partsTreeUri: partsTree,
+        destTreeUri: dest,
+      );
+      report.add(
+        name: 'Assemble ${Crypt3xLiteCatalog.etcherFolder}/',
+        ok: result.ok,
+        detail: [
+          _nativeDetail(result),
+          if (result.verified) 'sha256 verified',
+        ].where((part) => part.trim().isNotEmpty).join(' · '),
+      );
+      _setStatus(report.summary());
+    });
+  }
+
   Future<void> _openSystemFormat() async {
     final ok = await _confirm(
       title: 'OPEN SYSTEM FORMAT',
@@ -1750,41 +1797,112 @@ class _FlasherHomePageState extends State<FlasherHomePage>
         const SizedBox(height: 8),
         const Text(
           'Official 8 GiB GPT image for a 32 GB R36S card. Too large to '
-          'bundle in the APK — pick the .img (exFAT stick) or the 921 MiB '
-          '.img.zip (FAT32 OK). The flasher stages CRYPT3X_OS_LITE/ and '
-          'verifies SHA-256. Flashing the handheld is a PC dd '
-          '(see FLASH.txt / tool/flash_crypt3x_lite.sh).',
+          'bundle in the APK. Two phone actions: stage a picked .img/.zip '
+          'as CRYPT3X_OS_LITE/, or PREPARE ETCHER / RUFUS KIT which '
+          'concatenates part00–part11 into CRYPT3X_ETCHER/ for balenaEtcher '
+          'or Rufus. The phone cannot dd GPT onto the handheld.',
           style: TextStyle(color: FlasherColors.amber),
         ),
         const SizedBox(height: 12),
+        _SectionTitle('FILES ON THE CARD / IN THE ZIP'),
         Text(
-          'Catalog · ${Crypt3xLiteCatalog.fileName}',
-          style: GoogleFonts.orbitron(fontSize: 14),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'Required kit zip: ${R36IsoManifest.crypt3xKitFileName}',
+          'Inner image: ${Crypt3xLiteCatalog.fileName}',
           style: const TextStyle(color: FlasherColors.cyan, fontSize: 12),
         ),
         Text(
-          'Required inner image: ${R36IsoManifest.crypt3xImgFileName}',
+          '  ${Crypt3xLiteCatalog.displaySize}  sha256 ${Crypt3xLiteCatalog.sha256}',
+          style: const TextStyle(color: FlasherColors.dim, fontSize: 12),
+        ),
+        Text(
+          'Official img.zip: ${Crypt3xLiteCatalog.zipFileName}',
           style: const TextStyle(color: FlasherColors.cyan, fontSize: 12),
         ),
+        Text(
+          '  ${Crypt3xLiteCatalog.zipBytes} bytes  sha256 ${Crypt3xLiteCatalog.zipSha256}',
+          style: const TextStyle(color: FlasherColors.dim, fontSize: 12),
+        ),
+        Text(
+          'Kit zip (img + FLASH_R36S.txt): ${Crypt3xLiteCatalog.kitFileName}',
+          style: const TextStyle(color: FlasherColors.cyan, fontSize: 12),
+        ),
+        Text(
+          '  ${Crypt3xLiteCatalog.kitBytes} bytes  sha256 ${Crypt3xLiteCatalog.kitSha256}',
+          style: const TextStyle(color: FlasherColors.dim, fontSize: 12),
+        ),
+        const SizedBox(height: 10),
+        _SectionTitle('DOWNLOADS FOR BETA OS TESTING'),
         const Text(
-          'Assemble from part00–part11 (GitHub cannot host 921 MiB). '
-          'If this flasher fails: Etcher / Pi Imager / Rufus DD / dd.',
+          'GitHub raw 404s when logged out (private repo). The 921 MiB zip '
+          'is not on GitHub — download all 12 Cursor artifact parts. Ignore '
+          '0-byte lineage-*.img.zip placeholders and crypt3x_lite_probe_*.bin.',
+          style: TextStyle(color: FlasherColors.amber, fontSize: 12),
+        ),
+        const SizedBox(height: 8),
+        ...Crypt3xLiteCatalog.allRequiredDownloads.map(
+          (d) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${d.required ? "[REQ]" : "[opt]"} ${d.fileName}',
+                  style: const TextStyle(
+                    color: FlasherColors.phosphor,
+                    fontFamily: 'monospace',
+                    fontSize: 13,
+                  ),
+                ),
+                Text(
+                  d.label,
+                  style: const TextStyle(color: FlasherColors.cyan, fontSize: 12),
+                ),
+                Text(
+                  d.where,
+                  style: const TextStyle(color: FlasherColors.dim, fontSize: 11),
+                ),
+                if (d.sha256 != null)
+                  Text(
+                    'sha256 ${d.sha256}',
+                    style: const TextStyle(
+                      color: FlasherColors.dim,
+                      fontFamily: 'monospace',
+                      fontSize: 11,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        _SectionTitle('OPTIONAL / BACKUP'),
+        ...Crypt3xLiteCatalog.betaDownloads.where((d) => !d.required).map(
+          (d) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '[opt] ${d.fileName}',
+                  style: const TextStyle(
+                    color: FlasherColors.phosphor,
+                    fontFamily: 'monospace',
+                    fontSize: 13,
+                  ),
+                ),
+                Text(
+                  '${d.label} — ${d.where}',
+                  style: const TextStyle(color: FlasherColors.dim, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        const Text(
+          'Assemble: cat …part* > CRYPT3X_OS_LITE-r36s-20260815.zip   OR '
+          'PREPARE ETCHER / RUFUS KIT below. Then Etcher / Pi Imager / '
+          'Rufus DD / dd the inner .img onto a 32 GB+ microSD.',
           style: TextStyle(color: FlasherColors.dim),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'IMG  ${Crypt3xLiteCatalog.displaySize}  '
-          'sha256 ${Crypt3xLiteCatalog.sha256.substring(0, 16)}…',
-          style: const TextStyle(color: FlasherColors.dim),
-        ),
-        Text(
-          'ZIP  ${Crypt3xLiteCatalog.zipDisplaySize}  '
-          'sha256 ${Crypt3xLiteCatalog.zipSha256.substring(0, 16)}…',
-          style: const TextStyle(color: FlasherColors.dim),
         ),
         const SizedBox(height: 14),
         Wrap(
@@ -1818,7 +1936,7 @@ class _FlasherHomePageState extends State<FlasherHomePage>
           )
         else
           const Text(
-            'No image selected.',
+            'No image selected (only needed for WRITE CRYPT3X OS LITE).',
             style: TextStyle(color: FlasherColors.dim),
           ),
         if (_lastUsbTreeUri != null)
@@ -1827,10 +1945,21 @@ class _FlasherHomePageState extends State<FlasherHomePage>
             style: const TextStyle(color: FlasherColors.dim),
           ),
         const SizedBox(height: 14),
-        FilledButton.icon(
-          onPressed: _busy ? null : _writeCrypt3xLite,
-          icon: const Icon(Icons.lock),
-          label: const Text('WRITE CRYPT3X OS LITE'),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            FilledButton.icon(
+              onPressed: _busy ? null : _writeCrypt3xLite,
+              icon: const Icon(Icons.lock),
+              label: const Text('WRITE CRYPT3X OS LITE'),
+            ),
+            FilledButton.icon(
+              onPressed: _busy ? null : _assembleCrypt3xEtcherKit,
+              icon: const Icon(Icons.sd_card),
+              label: const Text('PREPARE ETCHER / RUFUS KIT'),
+            ),
+          ],
         ),
       ],
     );

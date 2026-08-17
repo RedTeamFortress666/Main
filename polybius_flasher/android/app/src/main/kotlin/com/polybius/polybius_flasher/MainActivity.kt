@@ -337,6 +337,43 @@ class MainActivity : FlutterFragmentActivity() {
                             result = result,
                         )
                     }
+                    "assembleCrypt3xEtcherKit" -> {
+                        val partsTreeUri = call.argument<String>("partsTreeUri")
+                        val destTreeUri = call.argument<String>("destTreeUri")
+                        val kitFileName = call.argument<String>("kitFileName")
+                            ?: "CRYPT3X_OS_LITE-r36s-20260815.zip"
+                        val kitSha256 = call.argument<String>("kitSha256") ?: ""
+                        val kitBytes = (call.argument<Number>("kitBytes")?.toLong()) ?: 0L
+                        val officialZipFileName = call.argument<String>("officialZipFileName")
+                            ?: "lineage-18.1-20260815-1244-r36s-crypt3x-lite.img.zip"
+                        val officialZipSha256 = call.argument<String>("officialZipSha256") ?: ""
+                        val officialZipBytes =
+                            (call.argument<Number>("officialZipBytes")?.toLong()) ?: 0L
+                        val etcherFolder = call.argument<String>("etcherFolder")
+                            ?: "CRYPT3X_ETCHER"
+                        val etcherText = call.argument<String>("etcherText") ?: ""
+                        val rufusText = call.argument<String>("rufusText") ?: ""
+                        val flashText = call.argument<String>("flashText") ?: ""
+                        if (partsTreeUri.isNullOrBlank() || destTreeUri.isNullOrBlank()) {
+                            result.error("bad_args", "partsTreeUri and destTreeUri required", null)
+                            return@setMethodCallHandler
+                        }
+                        assembleCrypt3xEtcherKit(
+                            partsTreeUri = partsTreeUri,
+                            destTreeUri = destTreeUri,
+                            kitFileName = kitFileName,
+                            kitSha256 = kitSha256,
+                            kitBytes = kitBytes,
+                            officialZipFileName = officialZipFileName,
+                            officialZipSha256 = officialZipSha256,
+                            officialZipBytes = officialZipBytes,
+                            etcherFolder = etcherFolder,
+                            etcherText = etcherText,
+                            rufusText = rufusText,
+                            flashText = flashText,
+                            result = result,
+                        )
+                    }
                     "probeUsbWrite" -> {
                         val treeUri = call.argument<String>("treeUri")
                         if (treeUri.isNullOrBlank()) {
@@ -774,6 +811,77 @@ class MainActivity : FlutterFragmentActivity() {
                 ok = writeResult.ok,
                 detail = writeResult.detail,
                 target = "r36s_usb",
+            )
+            mainHandler.post {
+                result.success(
+                    mapOf(
+                        "ok" to writeResult.ok,
+                        "message" to writeResult.message,
+                        "portsPath" to writeResult.portsPath,
+                        "verified" to writeResult.verified,
+                        "detail" to writeResult.detail,
+                    ),
+                )
+            }
+        }
+    }
+
+    private fun assembleCrypt3xEtcherKit(
+        partsTreeUri: String,
+        destTreeUri: String,
+        kitFileName: String,
+        kitSha256: String,
+        kitBytes: Long,
+        officialZipFileName: String,
+        officialZipSha256: String,
+        officialZipBytes: Long,
+        etcherFolder: String,
+        etcherText: String,
+        rufusText: String,
+        flashText: String,
+        result: MethodChannel.Result,
+    ) {
+        emitter.currentTarget = "crypt3x_lite"
+        r36Cancel.set(false)
+        io.execute {
+            val installer =
+                R36sInstaller(
+                    context = this,
+                    onLog = { msg ->
+                        emitter.log(msg, stage = "crypt3x_etcher", target = "crypt3x_lite")
+                    },
+                    onProgress = { p, msg ->
+                        emitter.progress(p, msg, stage = "crypt3x_etcher")
+                    },
+                    cancel = r36Cancel,
+                )
+            val writeResult =
+                try {
+                    installer.assembleCrypt3xEtcherKit(
+                        partsTreeUri = Uri.parse(partsTreeUri),
+                        destTreeUri = Uri.parse(destTreeUri),
+                        kitFileName = kitFileName,
+                        kitSha256 = kitSha256,
+                        kitBytes = kitBytes,
+                        officialZipFileName = officialZipFileName,
+                        officialZipSha256 = officialZipSha256,
+                        officialZipBytes = officialZipBytes,
+                        etcherFolder = etcherFolder,
+                        etcherText = etcherText,
+                        rufusText = rufusText,
+                        flashText = flashText,
+                    )
+                } catch (e: Exception) {
+                    R36sInstaller.Result(false, e.message ?: e.toString())
+                }
+            emitter.emit(
+                stage = "crypt3x_etcher",
+                message = writeResult.message,
+                percent = if (writeResult.ok) 1.0 else null,
+                level = if (writeResult.ok) "success" else "error",
+                ok = writeResult.ok,
+                detail = writeResult.detail,
+                target = "crypt3x_lite",
             )
             mainHandler.post {
                 result.success(

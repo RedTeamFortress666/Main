@@ -26,14 +26,17 @@ void main() {
     expect(FlashTarget.crypt3xLite.isEsp, isFalse);
     expect(FlashTarget.crypt3xLite.isCrypt3xLite, isTrue);
     expect(FlashTarget.crypt3xLite.title, 'CRYPT3X OS LITE');
-    expect(FlashTarget.crypt3xLite.subtitle, contains('8 GiB'));
+    expect(FlashTarget.crypt3xLite.subtitle, contains('Etcher'));
   });
 
   test('crypt3x lite catalog matches sidecar json and official hashes', () {
     expect(Crypt3xLiteCatalog.bytes, 8589934592);
     expect(Crypt3xLiteCatalog.zipBytes, 965250113);
+    expect(Crypt3xLiteCatalog.kitBytes, 965251465);
     expect(Crypt3xLiteCatalog.sha256, matches(RegExp(r'^[a-f0-9]{64}$')));
     expect(Crypt3xLiteCatalog.zipSha256, matches(RegExp(r'^[a-f0-9]{64}$')));
+    expect(Crypt3xLiteCatalog.kitSha256, matches(RegExp(r'^[a-f0-9]{64}$')));
+    expect(Crypt3xLiteCatalog.kitSha256, isNot(Crypt3xLiteCatalog.zipSha256));
     expect(Crypt3xLiteCatalog.bytes, lessThan(16 * 1024 * 1024 * 1024));
     expect(Crypt3xLiteCatalog.bytes, greaterThan(Crypt3xLiteCatalog.fat32MaxBytes));
     expect(
@@ -45,6 +48,10 @@ void main() {
       Crypt3xLiteCatalog.zipSha256,
     );
     expect(
+      Crypt3xLiteCatalog.expectedSha256For(Crypt3xLiteCatalog.kitFileName),
+      Crypt3xLiteCatalog.kitSha256,
+    );
+    expect(
       Crypt3xLiteCatalog.destFileNameFor('picked.img'),
       Crypt3xLiteCatalog.fileName,
     );
@@ -52,16 +59,60 @@ void main() {
       Crypt3xLiteCatalog.destFileNameFor('picked.img.zip'),
       Crypt3xLiteCatalog.zipFileName,
     );
+    expect(
+      Crypt3xLiteCatalog.destFileNameFor(Crypt3xLiteCatalog.kitFileName),
+      Crypt3xLiteCatalog.kitFileName,
+    );
+    expect(
+      Crypt3xLiteCatalog.etcherDestNameForSha256(Crypt3xLiteCatalog.kitSha256),
+      Crypt3xLiteCatalog.kitFileName,
+    );
+    expect(
+      Crypt3xLiteCatalog.etcherDestNameForSha256(Crypt3xLiteCatalog.zipSha256),
+      Crypt3xLiteCatalog.zipFileName,
+    );
+    expect(Crypt3xLiteCatalog.etcherDestNameForSha256('deadbeef'), isNull);
+    expect(Crypt3xLiteCatalog.parts.length, 12);
+    expect(Crypt3xLiteCatalog.parts.first.fileName, endsWith('.part00'));
+    expect(Crypt3xLiteCatalog.parts.last.fileName, endsWith('.part11'));
+    expect(
+      Crypt3xLiteCatalog.parts.take(11).every((p) => p.bytes == 83886080),
+      isTrue,
+    );
+    expect(
+      Crypt3xLiteCatalog.parts.take(11).fold<int>(0, (s, p) => s + p.bytes) +
+          Crypt3xLiteCatalog.parts.last.bytes,
+      Crypt3xLiteCatalog.kitBytes,
+    );
+    expect(Crypt3xLiteCatalog.etcherFolder, 'CRYPT3X_ETCHER');
+    expect(Crypt3xLiteCatalog.etcherInstructions('x.zip'), contains('balenaEtcher'));
+    expect(Crypt3xLiteCatalog.rufusInstructions('x.zip'), contains('DD Image'));
+    expect(Crypt3xLiteCatalog.allRequiredDownloads.length, 14);
+    expect(
+      Crypt3xLiteCatalog.allRequiredDownloads.map((d) => d.fileName),
+      contains(Crypt3xLiteCatalog.flasherApkFileName),
+    );
+    expect(
+      Crypt3xLiteCatalog.allRequiredDownloads.map((d) => d.fileName),
+      contains(Crypt3xLiteCatalog.parts.first.fileName),
+    );
 
     final json = jsonDecode(
       File('assets/r36s/crypt3x-lite.json').readAsStringSync(),
     ) as Map<String, dynamic>;
     expect(json['bundledInApk'], isFalse);
     expect(json['packageDir'], Crypt3xLiteCatalog.packageDir);
+    expect(json['etcherFolder'], Crypt3xLiteCatalog.etcherFolder);
     expect((json['image'] as Map)['sha256'], Crypt3xLiteCatalog.sha256);
     expect((json['image'] as Map)['bytes'], Crypt3xLiteCatalog.bytes);
     expect((json['zip'] as Map)['sha256'], Crypt3xLiteCatalog.zipSha256);
     expect((json['zip'] as Map)['bytes'], Crypt3xLiteCatalog.zipBytes);
+    expect((json['kitZip'] as Map)['sha256'], Crypt3xLiteCatalog.kitSha256);
+    expect((json['kitZip'] as Map)['bytes'], Crypt3xLiteCatalog.kitBytes);
+    final parts = (json['parts'] as List).cast<Map<String, dynamic>>();
+    expect(parts.length, 12);
+    expect(parts.last['sha256'], Crypt3xLiteCatalog.parts.last.sha256);
+    expect(parts.last['altSha256'], Crypt3xLiteCatalog.parts.last.altSha256);
   });
 
   test('crypt3x lite host flash script refuses missing image and documents dd', () {
@@ -80,6 +131,17 @@ void main() {
     expect(File('tool/assemble-crypt3x-lite-zip.sh').statSync().mode & 0x49, isNonZero);
   });
 
+  test('crypt3x etcher kit script writes ETCHER and RUFUS instructions', () {
+    final script = File('tool/prepare-crypt3x-etcher-kit.sh').readAsStringSync();
+    expect(script, contains('CRYPT3X_ETCHER'));
+    expect(script, contains('ETCHER.txt'));
+    expect(script, contains('RUFUS.txt'));
+    expect(script, contains('balenaEtcher'));
+    expect(script, contains('DD Image'));
+    expect(script, contains('assemble-crypt3x-lite-zip.sh'));
+    expect(File('tool/prepare-crypt3x-etcher-kit.sh').statSync().mode & 0x49, isNonZero);
+  });
+
   test('r36s iso manifest lists every required zip path and downloads', () {
     expect(R36IsoManifest.packageFileName, AssetIntegrity.r36sZip.fileName);
     expect(R36IsoManifest.sha256, AssetIntegrity.r36sZip.sha256);
@@ -94,10 +156,10 @@ void main() {
     );
     expect(R36IsoManifest.githubUrl, contains(R36IsoManifest.packageFileName));
     expect(R36IsoManifest.githubBackupUrl, contains('assets/r36s'));
-    expect(R36IsoManifest.flasherApkFileName, contains('1.7.0'));
+    expect(R36IsoManifest.flasherApkFileName, contains('1.8.0'));
     expect(R36IsoManifest.crypt3xPartFiles.length, 12);
     expect(R36IsoManifest.alternateFlashText(), contains('PortMaster'));
-    expect(R36IsoManifest.alternateFlashText(), contains('balenaEtcher'));
+    expect(R36IsoManifest.alternateFlashText(), contains('PREPARE ETCHER / RUFUS KIT'));
 
     final json = jsonDecode(
       File('assets/r36s/iso-manifest.json').readAsStringSync(),

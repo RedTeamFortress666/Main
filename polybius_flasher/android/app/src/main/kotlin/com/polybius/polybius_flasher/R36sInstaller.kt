@@ -55,7 +55,10 @@ class R36sInstaller(
 
     /** Staged CRYPT3X OS lite GPT image / zip (not a PortMaster unzip). */
     private val crypt3xPackageDirName = "CRYPT3X_OS_LITE"
+    private val crypt3xEtcherDirName = "CRYPT3X_ETCHER"
     private val fat32MaxBytes = 4_294_967_295L
+    private val kitPartPrefix = "CRYPT3X_OS_LITE-r36s-20260815.zip.part"
+    private val altPartPrefix = "crypt3x_lite_img_zip.part"
 
     fun probeStickWrite(treeUri: Uri): Result {
         val root = DocumentFile.fromTreeUri(context, treeUri)
@@ -345,6 +348,249 @@ class R36sInstaller(
             verified = expect != null,
             detail = "sha256=$hex bytes=$written",
         )
+    }
+
+    /**
+     * Concatenates the twelve CRYPT3X zip parts (kit names or
+     * `crypt3x_lite_img_zip.partNN`) onto a USB stick as
+     * `CRYPT3X_ETCHER/` — ready for balenaEtcher / Rufus / `dd`.
+     *
+     * Does **not** `dd` the card. Unprivileged Android cannot write GPT.
+     */
+    fun assembleCrypt3xEtcherKit(
+        partsTreeUri: Uri,
+        destTreeUri: Uri,
+        kitFileName: String,
+        kitSha256: String,
+        kitBytes: Long,
+        officialZipFileName: String,
+        officialZipSha256: String,
+        officialZipBytes: Long,
+        etcherFolder: String = crypt3xEtcherDirName,
+        etcherText: String,
+        rufusText: String,
+        flashText: String,
+    ): Result {
+        if (cancel.get()) return Result(false, "Cancelled")
+
+        val resolver = context.contentResolver
+        val partsRoot = DocumentFile.fromTreeUri(context, partsTreeUri)
+            ?: return Result(false, "Could not open the parts folder")
+        val stickRoot = DocumentFile.fromTreeUri(context, destTreeUri)
+            ?: return Result(false, "Could not open the USB stick / destination folder")
+        if (!stickRoot.canWrite()) {
+            return Result(false, "Destination is not writable. Use FAT32 or exFAT.")
+        }
+
+        onProgress(0.02, "Probing destination write access…")
+        val probe = probeWritable(stickRoot)
+        if (!probe.ok) return Result(false, probe.message)
+
+        onProgress(0.04, "Looking for part00–part11…")
+        val parts = findCrypt3xParts(partsRoot)
+            ?: return Result(
+                false,
+                "Need all 12 parts in that folder (or one level down): " +
+                    "${kitPartPrefix}00…11 or ${altPartPrefix}00…11",
+            )
+        val totalBytes = parts.sumOf { it.length().coerceAtLeast(0L) }
+        if (totalBytes <= 0L) {
+            return Result(false, "Parts are unreadable (size 0). Re-copy part00–part11.")
+        }
+        onLog(
+            "Found ${parts.size} parts, ${totalBytes / (1024L * 1024L)} MiB. " +
+                "Concatenating onto $etcherFolder/…",
+        )
+
+        onProgress(0.06, "Preparing $etcherFolder/…")
+        stickRoot.findFile(etcherFolder)?.let { existing ->
+            onLog("Removing previous $etcherFolder/…")
+            deleteTree(existing)
+        }
+        val packageDir = stickRoot.createDirectory(etcherFolder)
+            ?: return Result(false, "Cannot create $etcherFolder/")
+
+        val tmpName = "CRYPT3X_ASSEMBLING.zip"
+        packageDir.findFile(tmpName)?.delete()
+        val dest = packageDir.createFile("application/zip", tmpName)
+            ?: return Result(false, "Cannot create $tmpName")
+
+        onProgress(0.08, "Concatenating parts…")
+        val digest = MessageDigest.getInstance("SHA-256")
+        val buf = ByteArray(1024 * 1024)
+        var written = 0L
+        try {
+            resolver.openOutputStream(dest.uri, "w")?.use { out ->
+                for ((index, part) in parts.withIndex()) {
+                    if (cancel.get()) {
+                        dest.delete()
+                        return Result(false, "Cancelled")
+                    }
+                    val label = part.name ?: "part${index.toString().padStart(2, '0')}"
+                    onLog("Appending $label (${part.length() / (1024L * 1024L)} MiB)")
+                    resolver.openInputStream(part.uri)?.use { input ->
+                        while (true) {
+                            if (cancel.get()) {
+                                dest.delete()
+                                return Result(false, "Cancelled")
+                            }
+                            val n = input.read(buf)
+                            if (n <= 0) break
+                            out.write(buf, 0, n)
+                            digest.update(buf, 0, n)
+                            written += n
+                            val frac = 0.08 + 0.78 * (written.toDouble() / totalBytes.toDouble())
+                            onProgress(frac.coerceIn(0.08, 0.86), "Assembling $label")
+                        }
+                    } ?: run {
+                        dest.delete()
+                        return Result(false, "Cannot read $label")
+                    }
+                }
+                out.flush()
+            } ?: return Result(false, "Cannot open output for $tmpName")
+        } catch (e: Exception) {
+            dest.delete()
+            return Result(false, "Assemble failed after $written bytes: ${e.message}")
+        }
+
+        if (written != totalBytes) {
+            dest.delete()
+            return Result(false, "Short write: $written of $totalBytes bytes")
+        }
+
+        val hex = digest.digest().joinToString("") { b -> "%02x".format(b) }
+        val kitExpect = kitSha256.lowercase()
+        val zipExpect = officialZipSha256.lowercase()
+        val destFileName = when {
+            hex == kitExpect && (kitBytes <= 0L || written == kitBytes) -> kitFileName
+            hex == zipExpect && (officialZipBytes <= 0L || written == officialZipBytes) ->
+                officialZipFileName
+            hex == kitExpect -> kitFileName
+            hex == zipExpect -> officialZipFileName
+            else -> {
+                dest.delete()
+                return Result(
+                    false,
+                    "SHA-256 mismatch for assembled zip\n" +
+                        "expected kit $kitExpect ($kitBytes bytes) or " +
+                        "official $zipExpect ($officialZipBytes bytes)\n" +
+                        "actual   $hex ($written bytes)\n" +
+                        "Re-download part00–part11 and try again.",
+                    detail = "sha256=$hex bytes=$written",
+                )
+            }
+        }
+
+        onProgress(0.88, "Renaming to $destFileName…")
+        if (!renameAssembledZip(packageDir, dest, destFileName, resolver)) {
+            dest.delete()
+            return Result(false, "Cannot rename assembled zip to $destFileName")
+        }
+
+        val namedEtcher = etcherText.replace(kitFileName, destFileName)
+        val namedRufus = rufusText.replace(kitFileName, destFileName)
+        val namedFlash = flashText.replace(kitFileName, destFileName)
+
+        onProgress(0.92, "Writing ETCHER / RUFUS / FLASH instructions…")
+        writeTextFile(packageDir, "ETCHER.txt", namedEtcher, resolver)
+            ?: return Result(false, "Cannot write ETCHER.txt")
+        writeTextFile(packageDir, "RUFUS.txt", namedRufus, resolver)
+            ?: return Result(false, "Cannot write RUFUS.txt")
+        writeTextFile(packageDir, "FLASH.txt", namedFlash, resolver)
+            ?: return Result(false, "Cannot write FLASH.txt")
+        writeTextFile(
+            packageDir,
+            "SHA256.txt",
+            "$hex  $destFileName\n",
+            resolver,
+        ) ?: return Result(false, "Cannot write SHA256.txt")
+        writeTextFile(
+            packageDir,
+            "CRYPT3X_ETCHER_READY.txt",
+            "CRYPT3X OS LITE Etcher/Rufus kit ready.\n" +
+                "file=$destFileName\n" +
+                "bytes=$written\n" +
+                "sha256=$hex\n" +
+                "folder=$etcherFolder\n" +
+                "etcher=select $destFileName (or unzip and select the .img)\n" +
+                "rufus=unzip then DD Image mode on the .img\n",
+            resolver,
+        ) ?: return Result(false, "Cannot write CRYPT3X_ETCHER_READY.txt")
+
+        onProgress(1.0, "Etcher/Rufus kit ready")
+        return Result(
+            ok = true,
+            message =
+                "Wrote $etcherFolder/$destFileName " +
+                    "(${written / (1024L * 1024L)} MiB). SHA-256 verified. " +
+                    "Eject, open ETCHER.txt or RUFUS.txt on a PC. " +
+                    "The phone cannot write GPT to the R36S card.",
+            portsPath = etcherFolder,
+            verified = true,
+            detail = "sha256=$hex bytes=$written file=$destFileName",
+        )
+    }
+
+    private fun findCrypt3xParts(root: DocumentFile): List<DocumentFile>? {
+        val files = ArrayList<DocumentFile>()
+        collectFiles(root, files, depth = 0, maxDepth = 2)
+        fun match(prefix: String): List<DocumentFile>? {
+            val found = ArrayList<DocumentFile>(12)
+            for (i in 0..11) {
+                val want = prefix + i.toString().padStart(2, '0')
+                val hit =
+                    files.firstOrNull { doc ->
+                        val n = doc.name ?: return@firstOrNull false
+                        n == want || n.endsWith(want) || n.endsWith("/$want")
+                    } ?: return null
+                found.add(hit)
+            }
+            return found
+        }
+        return match(kitPartPrefix) ?: match(altPartPrefix)
+    }
+
+    private fun collectFiles(
+        dir: DocumentFile,
+        out: MutableList<DocumentFile>,
+        depth: Int,
+        maxDepth: Int,
+    ) {
+        for (child in dir.listFiles()) {
+            if (child.isFile) {
+                out.add(child)
+            } else if (child.isDirectory && depth < maxDepth) {
+                val name = child.name ?: continue
+                if (name.startsWith(".")) continue
+                collectFiles(child, out, depth + 1, maxDepth)
+            }
+        }
+    }
+
+    private fun renameAssembledZip(
+        parent: DocumentFile,
+        tmp: DocumentFile,
+        destFileName: String,
+        resolver: ContentResolver,
+    ): Boolean {
+        if (tmp.name == destFileName) return true
+        parent.findFile(destFileName)?.delete()
+        if (tmp.renameTo(destFileName)) return true
+        val dest = parent.createFile("application/zip", destFileName) ?: return false
+        return try {
+            resolver.openInputStream(tmp.uri)?.use { input ->
+                resolver.openOutputStream(dest.uri, "w")?.use { out ->
+                    input.copyTo(out)
+                    out.flush()
+                } ?: return false
+            } ?: return false
+            tmp.delete()
+            true
+        } catch (_: Exception) {
+            dest.delete()
+            false
+        }
     }
 
     private fun openSource(source: String): InputStream? {

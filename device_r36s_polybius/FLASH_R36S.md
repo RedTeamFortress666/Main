@@ -106,8 +106,14 @@ Use `rdiskN` (raw) not `diskN`.
 
 Rufus: choose the `.img`, **DD Image** mode, write, eject.
 
-The phone **PØLYBÎŪS FLASHER** can only *stage* this zip onto a USB stick
-(`CRYPT3X OS LITE`). It cannot `dd` GPT onto the R36S card. Finish on a PC.
+The phone **PØLYBÎŪS FLASHER** has two CRYPT3X actions:
+
+- **WRITE CRYPT3X OS LITE** — stage a picked `.img` / `.img.zip` as `CRYPT3X_OS_LITE/`.
+- **PREPARE ETCHER / RUFUS KIT** — concatenate `part00`–`part11` into `CRYPT3X_ETCHER/`
+  with `ETCHER.txt`, `RUFUS.txt`, `FLASH.txt`, and `SHA256.txt`.
+
+It cannot `dd` GPT onto the R36S card. Finish on a PC (Etcher / Rufus DD / `dd`).
+On a PC you can also run `polybius_flasher/tool/prepare-crypt3x-etcher-kit.sh`.
 
 ## 4. Boot the R36S
 

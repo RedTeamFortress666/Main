@@ -3,15 +3,16 @@
 `polybius-1.0.0-beta.1-android-arm64.apk` — Android **arm64-v8a** release APK
 (debug-signed for BETA side-loading). Works on modern ARM Android devices.
 
-`polybius-flasher-1.7.0-android-arm64.apk` — **PØLYBÎŪS FLASHER** 1.7.0
-(R36S required-filename list + CRYPT3X OS LITE + USB/SD + CYD/T-Deck + OTG ADB):
+`polybius-flasher-1.8.0-android-arm64.apk` — **PØLYBÎŪS FLASHER** 1.8.0
+(R36S required-filename list + CRYPT3X Etcher/Rufus kit + USB/SD + CYD/T-Deck + OTG ADB):
 
-https://github.com/RedTeamFortress666/Main/raw/cursor/r36s-polybius-product-0346/polybius/dist/polybius-flasher-1.7.0-android-arm64.apk
+https://github.com/RedTeamFortress666/Main/raw/cursor/r36s-polybius-product-0346/polybius/dist/polybius-flasher-1.8.0-android-arm64.apk
 
 `polybius-r36s-port.zip` — PortMaster zip the flasher writes (also bundled in the APK):
 
 https://github.com/RedTeamFortress666/Main/raw/cursor/r36s-polybius-product-0346/polybius/dist/polybius-r36s-port.zip
 
+`polybius-flasher-1.7.0-android-arm64.apk` — previous flasher (backup).
 `polybius-flasher-1.6.0-android-arm64.apk` — previous flasher (backup).
 
 ## Install (Android / ARM handheld)

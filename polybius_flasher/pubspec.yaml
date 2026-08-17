@@ -1,7 +1,7 @@
 name: polybius_flasher
 description: PØLYBÎŪS Android flasher — R36S SD/USB, CRYPT3X OS lite 8GiB, CYD, T-Deck, OTG ADB
 publish_to: 'none'
-version: 1.7.0+11
+version: 1.8.0+12
 
 environment:
   sdk: ^3.12.2

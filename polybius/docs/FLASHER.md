@@ -1,18 +1,18 @@
-# PØLYBÎŪS Android Flasher (hardened 1.7)
+# PØLYBÎŪS Android Flasher (hardened 1.8)
 
 Phone-side installer for shipping PØLYBĪUS onto handheld / MCU targets — and other Android phones — without a PC.
 
 | Target | Action |
 | --- | --- |
 | **R36S** | Lists every filename required inside `polybius-r36s-port.zip`; SAF SD or USB stick; verify `Polybius.sh` + `polybius/` |
-| **CRYPT3X OS LITE** | Stage the official **8 GiB** GPT image (or 921 MiB `.img.zip`) to `CRYPT3X_OS_LITE/` on a USB stick; SHA-256 vs catalog. Phone cannot `dd` GPT. PC flash: `polybius_flasher/tool/flash_crypt3x_lite.sh` |
+| **CRYPT3X OS LITE** | Stage a picked `.img`/`.img.zip` to `CRYPT3X_OS_LITE/`, **or** concatenate `part00`–`part11` into `CRYPT3X_ETCHER/` for balenaEtcher / Rufus. Phone cannot `dd` GPT. |
 | **CYD classic / CYD2USB / ESP32-32E / Generic ESP32** | Presets for Bruce/Launcher-friendly boards; merged `polybius-cyd.bin` @ `0x0`; guided BOOT/RESET; TEST CONNECTION; optional serial capture |
 | **LilyGO T-Deck** | `polybius-tdeck.bin` · esp32s3 · prefer Skip auto-reset · trackball download-mode wizard |
 | **Android (OTG ADB)** | Selective multi-APK install (Portal / V.1 / Darth Cherry bundled); MTP detection; per-APK `pm` errors; continue queue; optional `-d` / `--user 0` |
 
 - App source: [`../../polybius_flasher/`](../../polybius_flasher/)
 - Package id: `com.polybius.flasher`
-- Dist APK: [`../dist/polybius-flasher-1.7.0-android-arm64.apk`](https://github.com/RedTeamFortress666/Main/raw/cursor/r36s-polybius-product-0346/polybius/dist/polybius-flasher-1.7.0-android-arm64.apk)
+- Dist APK: [`../dist/polybius-flasher-1.8.0-android-arm64.apk`](https://github.com/RedTeamFortress666/Main/raw/cursor/r36s-polybius-product-0346/polybius/dist/polybius-flasher-1.8.0-android-arm64.apk)
 - Launcher icon: Fat Man–style bomb with stencil **GAME ØN**
 
 ## Hardening highlights
@@ -48,11 +48,11 @@ Check one, some, or **SELECT ALL BUNDLED** — nothing installs unless selected.
 4. Verify report must show `Polybius.sh` + `polybius/`.
 
 ### CRYPT3X OS LITE
-1. Build/pack the 8 GiB image (`mkimg_lite.sh`) or copy it onto the phone.
-2. Open **CRYPT3X OS LITE** → **PICK .IMG / .ZIP** (do not expect it inside the APK).
-3. Raw `.img` → exFAT stick. `.img.zip` (921 MiB) → FAT32 is fine.
-4. **WRITE CRYPT3X OS LITE** → `CRYPT3X_OS_LITE/` with SHA256.txt + FLASH.txt.
-5. On a PC: `polybius_flasher/tool/flash_crypt3x_lite.sh /dev/sdX` (types FLASH to confirm).
+1. Download all 12 Cursor artifact parts (`CRYPT3X_OS_LITE-r36s-20260815.zip.part00`–`part11`) plus the SHA256SUMS file. Not on GitHub (921 MiB).
+2. **PREPARE ETCHER / RUFUS KIT** → pick the parts folder → pick a USB stick. Writes `CRYPT3X_ETCHER/` (assembled zip + ETCHER.txt + RUFUS.txt).
+3. Or **PICK .IMG / .ZIP** + **WRITE CRYPT3X OS LITE** to stage `CRYPT3X_OS_LITE/` without concatenating parts.
+4. Raw `.img` → exFAT stick. Assembled zip (921 MiB) → FAT32 is fine.
+5. On a PC: balenaEtcher / Rufus DD / `polybius_flasher/tool/flash_crypt3x_lite.sh /dev/sdX`.
 
 ### CYD / ESP32-32E
 1. Read overwrite warning (full image replaces Launcher/Bruce).

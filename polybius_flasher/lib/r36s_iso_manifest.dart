@@ -50,11 +50,11 @@ class R36IsoManifest {
   static const artifactName = 'polybius-r36s-port.zip';
 
   static const flasherApkFileName =
-      'polybius-flasher-1.7.0-android-arm64.apk';
+      'polybius-flasher-1.8.0-android-arm64.apk';
   static const flasherApkUrl =
       '$githubBranch/polybius/dist/$flasherApkFileName';
   static const flasherApkBackupUrl =
-      '$githubBranch/polybius/dist/polybius-flasher-1.6.0-android-arm64.apk';
+      '$githubBranch/polybius/dist/polybius-flasher-1.7.0-android-arm64.apk';
 
   /// Names the PortMaster zip must contain. Verify looks for Polybius.sh +
   /// polybius/; the rest are required for the Flutter Linux binary to start.
@@ -186,7 +186,7 @@ class R36IsoManifest {
 
   static const downloads = <R36IsoDownload>[
     R36IsoDownload(
-      label: 'Flasher APK 1.7.0 (this build)',
+      label: 'Flasher APK 1.8.0 (this build)',
       fileName: flasherApkFileName,
       url: flasherApkUrl,
     ),
@@ -223,7 +223,8 @@ class R36IsoManifest {
       ..writeln('CRYPT3X OS LITE full-card image (not PortMaster):')
       ..writeln('  $crypt3xKitFileName')
       ..writeln('  inner $crypt3xImgFileName')
-      ..writeln('  assemble from ${crypt3xPartFiles.length} × 80 MiB parts');
+      ..writeln('  assemble from ${crypt3xPartFiles.length} × 80 MiB parts')
+      ..writeln('  flasher: PREPARE ETCHER / RUFUS KIT → CRYPT3X_ETCHER/');
     return buf.toString();
   }
 
@@ -241,7 +242,10 @@ IF THE PHONE FLASHER FAILS — R36S PortMaster zip
 4. Launch Polybius from the Ports menu. Do not format the SD.
 
 IF YOU WANT A FULL OS IMAGE INSTEAD (erases the card)
-1. Assemble $crypt3xKitFileName from the 12 part files.
+1. In the flasher: CRYPT3X OS LITE → PREPARE ETCHER / RUFUS KIT.
+   Pick the folder with part00–part11, then the USB stick.
+   That writes CRYPT3X_ETCHER/ with the assembled zip + ETCHER.txt + RUFUS.txt.
+   Or on a PC: cat the 12 parts (tool/assemble-crypt3x-lite-zip.sh).
 2. Unzip → $crypt3xImgFileName (8 GiB GPT, not a CD ISO).
 3. Write with balenaEtcher, Raspberry Pi Imager, Rufus (DD mode), or:
      sudo dd if=$crypt3xImgFileName of=/dev/sdX bs=4M status=progress conv=fsync
