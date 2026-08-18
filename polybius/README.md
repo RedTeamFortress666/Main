@@ -59,7 +59,7 @@ Multi-rotor Enigma variant. Each character → 2 emojis from a daily 560-emoji p
 - **🔒 ENCRYPT** — plaintext → emoji ciphertext
 - **🔓 DECRYPT** — emoji → plaintext
 - **🎲 POOL** — today's 560-emoji cipher pool
-- **📡 CONNECT** — device info, Bluetooth placeholder, logout
+- **📡 CONNECT** — device info, operator identity QR, Bluetooth placeholder, logout
 - **⚙ Rotor Gear** — live rotor positions and step counts
 
 ## Build
