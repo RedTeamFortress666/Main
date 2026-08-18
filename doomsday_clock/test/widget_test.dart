@@ -13,7 +13,7 @@ void main() {
   testWidgets('app boots the journal', (tester) async {
     await tester.pumpWidget(const DoomsdayClockApp());
     await tester.pump();
-    expect(find.text('DOØMSDAY CLØCK'), findsOneWidget);
+    expect(find.text('DØØMSDAY JOURNAL'), findsOneWidget);
     expect(find.text('Calendar / Journal'), findsOneWidget);
   });
 }

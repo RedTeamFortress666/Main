@@ -1,11 +1,11 @@
 {
-    "name": "Doomsday Clock",
+    "name": "Døømsday Journal",
     "short_name": "Journal",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0A0014",
-    "theme_color": "#00F0FF",
-    "description": "DOØMSDAY CLØCK — local calendar journal",
+    "background_color": "#1A0500",
+    "theme_color": "#FF6A00",
+    "description": "Døømsday Journal — local calendar journal",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

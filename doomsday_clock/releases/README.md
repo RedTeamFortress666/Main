@@ -1,10 +1,10 @@
-# Doomsday Clock journal — Android APK
+# Døømsday Journal — Android APK
 
 ## GitHub download
 
-[**doomsday-clock-journal-3.0.0-android-arm64.apk**](https://github.com/RedTeamFortress666/Main/releases/download/doomsday-v3.0.0/doomsday-clock-journal-3.0.0-android-arm64.apk)
+[**doomsday-journal-3.0.1-android-arm64.apk**](https://github.com/RedTeamFortress666/Main/releases/download/doomsday-v3.0.1/doomsday-journal-3.0.1-android-arm64.apk)
 
-Release page: https://github.com/RedTeamFortress666/Main/releases/tag/doomsday-v3.0.0
+Release page: https://github.com/RedTeamFortress666/Main/releases/tag/doomsday-v3.0.1
 
 `arm64-v8a`, package `com.polybius.doomsday_clock`, debug-signed for sideload.
 
@@ -12,7 +12,7 @@ Release page: https://github.com/RedTeamFortress666/Main/releases/tag/doomsday-v
 
 1. Copy the `.apk` to an ARM64 Android phone.
 2. Enable install from unknown sources for the file manager.
-3. Open the APK, then launch **Doomsday Clock**.
+3. Open the APK, then launch **Døømsday Journal**.
 
 Camera permission is optional (QR scan). Paste still works without a camera.
 

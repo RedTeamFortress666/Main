@@ -23,7 +23,7 @@ class DoomsdayClockApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Doomsday Clock',
+      title: 'Døømsday Journal',
       debugShowCheckedModeBanner: false,
       theme: NoirTheme.dark,
       home: home ?? const JournalScreen(),

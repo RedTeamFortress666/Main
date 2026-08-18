@@ -1,7 +1,7 @@
-name: Doomsday Clock journal download
+name: Døømsday Journal download
 
 # Publishes the sideloadable journal APK to a GitHub Release.
-# Tag: doomsday-v3.0.0 (does not match the Polybius v* workflow).
+# Tag: doomsday-v3.0.1 (does not match the Polybius v* workflow).
 on:
   push:
     tags:
@@ -19,21 +19,21 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'doomsday-v3.0.0' }}
-          name: Doomsday Clock journal 3.0.0
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'doomsday-v3.0.1' }}
+          name: Døømsday Journal 3.0.1
           draft: false
           prerelease: false
           generate_release_notes: false
-          files: doomsday_clock/releases/doomsday-clock-journal-3.0.0-android-arm64.apk
+          files: doomsday_clock/releases/doomsday-journal-3.0.1-android-arm64.apk
           body: |
-            Sideloadable Android **arm64-v8a** APK for DOØMSDAY CLØCK (local calendar / journal). No server, no AI backend.
+            Sideloadable Android **arm64-v8a** APK for Døømsday Journal (local calendar / journal). No server, no AI backend.
 
-            **Download:** `doomsday-clock-journal-3.0.0-android-arm64.apk`
+            **Download:** `doomsday-journal-3.0.1-android-arm64.apk`
             **Package:** `com.polybius.doomsday_clock`
-            **Version:** 3.0.0
-            **SHA-256:** `ef3c127b7b75cd61912a01bf7ee09107bb00b01c8c3ed7bda496aaa107461700`
+            **Version:** 3.0.1
+            **SHA-256:** `0de3725a0c8a5f884e724be53f508346a0e2ef2fdc60e24e8487612df1ff3d72`
 
-            Install: enable unknown sources → open the APK → launch **Doomsday Clock**.
+            Install: enable unknown sources → open the APK → launch **Døømsday Journal**.
             Camera is optional (QR scan). Paste still works without a camera.
 
             Debug-signed for sideload (same as the PØLYBĪUS BETA APK).

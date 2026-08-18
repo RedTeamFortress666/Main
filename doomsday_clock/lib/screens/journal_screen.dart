@@ -151,7 +151,7 @@ class _JournalScreenState extends State<JournalScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
-                          'DOØMSDAY CLØCK',
+                          'DØØMSDAY JOURNAL',
                           style: Theme.of(context).textTheme.displayLarge,
                         ),
                         const SizedBox(height: 4),

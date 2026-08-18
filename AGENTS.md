@@ -6,7 +6,7 @@ This repo is a monorepo with **three independent products**:
 
 1. **Root Tasks app** (`/`) — a Vite + React + TypeScript single-page app. No backend/database.
 2. **`polybius/`** — a Flutter cross-platform app (a covert cipher tool disguised as a retro arcade shooter). Runs on web + mobile/desktop; in this cloud VM we run the **web** target.
-3. **`doomsday_clock/`** — a Flutter calendar/journal (local only, no AI backend). Web on port **8090**.
+3. **`doomsday_clock/`** — Døømsday Journal, a Flutter calendar/journal (local only, no AI backend). Web on port **8090**.
 
 Dependencies for both are refreshed automatically on startup via the update script (`npm install` at root, `flutter pub get` in `polybius/`).
 
@@ -25,11 +25,11 @@ Dependencies for both are refreshed automatically on startup via the update scri
   The first compile is slow (~20–40s) and the page is blank/black until it finishes — be patient. Then open `http://localhost:8080`.
 - **Login:** the app opens on a login gate. The bootstrapped account is username `DEVELOPER` / password `developer` (username is case-sensitive uppercase). After login you land on the neon arcade main menu.
 
-### Doomsday Clock journal (`doomsday_clock/`)
+### Døømsday Journal (`doomsday_clock/`)
 - Local Flutter calendar/journal. No backend.
 - Run web: `cd doomsday_clock && flutter run -d web-server --web-hostname 0.0.0.0 --web-port 8090` then open `http://localhost:8090`.
 - Tests: `flutter test` and `flutter analyze` from `doomsday_clock/`.
-- Android APK (arm64): `doomsday_clock/releases/doomsday-clock-journal-3.0.0-android-arm64.apk`.
+- Android APK (arm64): `doomsday_clock/releases/doomsday-journal-3.0.1-android-arm64.apk`.
 This repo contains two separate products:
 
 1. **Root React app** (`/`) — a small Vite + React + TypeScript frontend (`name: first-app`). No backend/database.
@@ -52,9 +52,9 @@ Dependencies for both are refreshed automatically on startup via the update scri
 - Only the **web** toolchain is set up (Chrome is present). Android/iOS/Linux-desktop toolchains are intentionally not installed (`flutter doctor` will flag them). To run/see the app, serve web: `flutter run -d web-server --web-hostname 0.0.0.0 --web-port 8080`, then open `http://localhost:8080` (the `web-server` device compiles for ~15-20s before it is served; a Dart Debug Chrome extension warning is normal and harmless).
 - First login (bootstrapped on first install): username `DEVELOPER`, password `developer`. Login lands on the neon arcade main menu; `START GAME` launches the Flame space shooter. The hidden cipher layer requires the unlock rituals documented in `polybius/README.md`.
 
-### `doomsday_clock/` Flutter journal
+### `doomsday_clock/` Døømsday Journal
 
 - Local calendar/journal. No backend.
 - Run web: `cd doomsday_clock && flutter run -d web-server --web-hostname 0.0.0.0 --web-port 8090`, then open `http://localhost:8090`.
 - Tests: `flutter test` and `flutter analyze` from `doomsday_clock/`.
-- Android APK (arm64): `doomsday_clock/releases/doomsday-clock-journal-3.0.0-android-arm64.apk`.
+- Android APK (arm64): `doomsday_clock/releases/doomsday-journal-3.0.1-android-arm64.apk`.
