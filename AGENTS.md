@@ -29,6 +29,7 @@ Dependencies for both are refreshed automatically on startup via the update scri
 - Local Flutter calendar/journal. No backend.
 - Run web: `cd doomsday_clock && flutter run -d web-server --web-hostname 0.0.0.0 --web-port 8090` then open `http://localhost:8090`.
 - Tests: `flutter test` and `flutter analyze` from `doomsday_clock/`.
+- Android APK (arm64): `doomsday_clock/releases/doomsday-clock-journal-3.0.0-android-arm64.apk`.
 This repo contains two separate products:
 
 1. **Root React app** (`/`) — a small Vite + React + TypeScript frontend (`name: first-app`). No backend/database.
@@ -56,3 +57,4 @@ Dependencies for both are refreshed automatically on startup via the update scri
 - Local calendar/journal. No backend.
 - Run web: `cd doomsday_clock && flutter run -d web-server --web-hostname 0.0.0.0 --web-port 8090`, then open `http://localhost:8090`.
 - Tests: `flutter test` and `flutter analyze` from `doomsday_clock/`.
+- Android APK (arm64): `doomsday_clock/releases/doomsday-clock-journal-3.0.0-android-arm64.apk`.

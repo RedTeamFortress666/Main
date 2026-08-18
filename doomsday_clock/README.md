@@ -20,6 +20,8 @@ Sideloadable **arm64-v8a** release (debug-signed, same as the PØLYBĪUS BETA AP
 
 `releases/doomsday-clock-journal-3.0.0-android-arm64.apk`
 
+SHA-256: `ef3c127b7b75cd61912a01bf7ee09107bb00b01c8c3ed7bda496aaa107461700`
+
 Install: enable unknown sources → open the APK → launch **Doomsday Clock**.
 
 ```bash
