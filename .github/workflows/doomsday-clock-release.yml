@@ -1,0 +1,39 @@
+name: Døømsday Journal download
+
+# Publishes the sideloadable journal APK to a GitHub Release.
+# Tag: doomsday-v3.0.1 (does not match the Polybius v* workflow).
+on:
+  push:
+    tags:
+      - 'doomsday-v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  github-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'doomsday-v3.0.1' }}
+          name: Døømsday Journal 3.0.1
+          draft: false
+          prerelease: false
+          generate_release_notes: false
+          files: doomsday_clock/releases/doomsday-journal-3.0.1-android-arm64.apk
+          body: |
+            Sideloadable Android **arm64-v8a** APK for Døømsday Journal (local calendar / journal). No server, no AI backend.
+
+            **Download:** `doomsday-journal-3.0.1-android-arm64.apk`
+            **Package:** `com.polybius.doomsday_clock`
+            **Version:** 3.0.1
+            **SHA-256:** `0de3725a0c8a5f884e724be53f508346a0e2ef2fdc60e24e8487612df1ff3d72`
+
+            Install: enable unknown sources → open the APK → launch **Døømsday Journal**.
+            Camera is optional (QR scan). Paste still works without a camera.
+
+            Debug-signed for sideload (same as the PØLYBĪUS BETA APK).

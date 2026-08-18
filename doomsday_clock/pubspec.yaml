@@ -1,0 +1,40 @@
+name: doomsday_clock
+description: Døømsday Journal — local calendar journal
+publish_to: 'none'
+version: 3.0.1+2
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  shared_preferences: ^2.3.3
+  intl: ^0.20.2
+  qr_flutter: ^4.1.0
+  mobile_scanner: ^7.4.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter:
+  uses-material-design: true
+
+flutter_launcher_icons:
+  image_path: "assets/icon/app_icon.jpg"
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  web:
+    generate: true
+    image_path: "assets/icon/app_icon.jpg"
+    background_color: "#1A0500"
+    theme_color: "#FF6A00"
+  min_sdk_android: 21
+  adaptive_icon_background: "#1A0500"
+  adaptive_icon_foreground: "assets/icon/app_icon.jpg"
+  adaptive_icon_foreground_inset: 0
