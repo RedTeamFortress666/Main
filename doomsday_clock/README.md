@@ -2,6 +2,16 @@
 
 Local calendar / journal. No accounts, no server, no AI backend.
 
+## GitHub download (Android)
+
+[**Download APK**](https://github.com/RedTeamFortress666/Main/releases/download/doomsday-v3.0.0/doomsday-clock-journal-3.0.0-android-arm64.apk)
+from [Releases · doomsday-v3.0.0](https://github.com/RedTeamFortress666/Main/releases/tag/doomsday-v3.0.0)
+(`arm64-v8a`, debug-signed sideload).
+
+SHA-256: `ef3c127b7b75cd61912a01bf7ee09107bb00b01c8c3ed7bda496aaa107461700`
+
+Install: enable unknown sources → open the APK → launch **Doomsday Clock**.
+
 ## Run (web)
 
 ```bash
