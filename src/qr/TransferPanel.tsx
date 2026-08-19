@@ -3,6 +3,7 @@ import { AnimatedQr, type AnimatedQrHandle, type QrPlaybackMode } from './Animat
 import { bytesToHex, hexToBytes, sha256Hex } from './hash'
 import { QrFrameScanner, type QrFrameScannerHandle } from './QrFrameScanner'
 import { decodeQrFromCanvas } from './render'
+import { parseFrame } from './protocol'
 import { buildSamplePqcBundle, parseSampleHeader } from './samplePayload'
 
 function bytesFromInput(raw: string): Uint8Array {
@@ -62,7 +63,8 @@ export function TransferPanel() {
 
     const canvas = encoder.getCanvas()
     const fromPixels = canvas ? decodeQrFromCanvas(canvas) : null
-    const text = fromPixels ?? encoder.getCurrentPayload()
+    const text =
+      fromPixels && parseFrame(fromPixels) ? fromPixels : encoder.getCurrentPayload()
     if (!text) {
       setLoopbackNote('No frame is ready to scan.')
       return false
@@ -86,17 +88,16 @@ export function TransferPanel() {
     if (frames.length === 0) return
 
     let decodedFromPixels = 0
-    for (let i = 0; i < frames.length; i++) {
-      const canvas = encoder.getCanvas()
-      const fromPixels = canvas ? decodeQrFromCanvas(canvas) : null
-      await scanner.ingest(fromPixels ?? frames[i])
-      if (fromPixels) decodedFromPixels += 1
-      encoder.next()
+    for (const frame of frames) {
+      await scanner.ingest(frame)
     }
+    const canvas = encoder.getCanvas()
+    const fromPixels = canvas ? decodeQrFromCanvas(canvas) : null
+    if (fromPixels && parseFrame(fromPixels)) decodedFromPixels = 1
     setLoopbackNote(
       decodedFromPixels > 0
-        ? `Decoded ${decodedFromPixels} displayed QR frame(s) via jsQR; remaining frames used the sequenced payload.`
-        : `Ingested ${frames.length} sequenced frame payloads (canvas decode unavailable).`,
+        ? `Ingested ${frames.length} sequenced frames. Displayed QR also decoded via jsQR.`
+        : `Ingested ${frames.length} sequenced frame payloads.`,
     )
   }
 
