@@ -8,3 +8,6 @@ beforeEach(() => {
 afterEach(() => {
   localStorage.clear()
 })
+
+// jsdom logs a noisy "not implemented" error unless the canvas package is installed.
+HTMLCanvasElement.prototype.getContext = () => null

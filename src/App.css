@@ -5,6 +5,12 @@
   box-shadow: 0 20px 45px -25px rgba(30, 41, 59, 0.45);
 }
 
+.app:not(.app--transfer) {
+  max-width: 520px;
+  margin: 0 auto;
+  width: 100%;
+}
+
 .app__header {
   margin-bottom: 1.5rem;
 }
