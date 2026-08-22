@@ -9,6 +9,7 @@ import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 import 'package:polybius/core/widgets/arcade_ui.dart';
 import 'package:polybius/core/widgets/crt_widgets.dart';
+import 'package:polybius/core/widgets/floating_glyph_keyboard.dart';
 
 /// Layer 2 public face — retro arcade main menu with hidden unlock rituals.
 ///
@@ -83,6 +84,11 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen>
                     child: Column(
               children: [
                 const Spacer(),
+                const SizedBox(
+                  height: 118,
+                  child: IgnorePointer(child: FloatingGlyphKeyboard()),
+                ),
+                const SizedBox(height: 10),
                 GestureDetector(
                   onLongPressStart: (_) => _startTitleHold(),
                   onLongPressEnd: (_) => _endTitleHold(),

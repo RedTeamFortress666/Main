@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 import 'package:polybius/core/constants/app_constants.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
+import 'package:polybius/core/crypto/unpredictable_shift.dart';
 import 'package:polybius/core/widgets/crt_widgets.dart';
+import 'package:polybius/core/widgets/floating_glyph_keyboard.dart';
 
 /// Replit-style OIDC login gate. First install ships with DEVELOPER account.
 class LoginScreen extends ConsumerStatefulWidget {
@@ -71,6 +73,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    const SizedBox(
+                      height: 168,
+                      child: IgnorePointer(child: FloatingGlyphKeyboard()),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      PolybiusSquareGlyphs.phrase,
+                      style: const TextStyle(
+                        fontFamily: 'monospace',
+                        color: NeonTheme.neonPurple,
+                        letterSpacing: 3,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     Text(
                       AppConstants.appName,
                       style: Theme.of(context).textTheme.displayLarge,
