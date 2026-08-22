@@ -118,7 +118,7 @@ Seeded steg + hieroglyph + sigil sets. Same seed → same glyphs. Token `v: 2` w
 ```bash
 cd polybius
 flutter pub get
-flutter test          # 52 tests on this branch at last count
+flutter test          # 59 tests on this branch at last count
 flutter analyze
 flutter build apk --release
 # → build/app/outputs/flutter-apk/app-release.apk

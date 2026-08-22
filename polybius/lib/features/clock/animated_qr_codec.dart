@@ -29,9 +29,9 @@ class AnimatedQrCodec {
     ];
   }
 
-  static bool isKeyboardFrame(String raw) => parseFrame(raw) != null;
+  static bool isKeyboardFrame(String raw) => _parseFrame(raw) != null;
 
-  static _Frame? parseFrame(String raw) {
+  static _Frame? _parseFrame(String raw) {
     final parts = raw.split('|');
     if (parts.length < 5) return null;
     if (parts[0] != magic) return null;
@@ -53,7 +53,7 @@ class AnimatedQrCodec {
     var count = 0;
     String? seenSid = sid;
     for (final raw in frames) {
-      final f = parseFrame(raw);
+      final f = _parseFrame(raw);
       if (f == null) continue;
       if (seenSid != null && f.sid != seenSid) continue;
       seenSid = f.sid;

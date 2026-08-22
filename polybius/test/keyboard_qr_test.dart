@@ -58,7 +58,7 @@ void main() {
   group('AnimatedQrCodec', () {
     test('splits and joins including a pipe inside a chunk', () {
       final key = SessionBinaryKey.create();
-      final envelope = 'head|' + ('x' * 200) + '|tail';
+      final envelope = 'head${'x' * 200}|tail';
       final frames = AnimatedQrCodec.split(key, envelope);
       expect(frames.length, greaterThan(1));
       expect(frames.first, startsWith('PBK1|0|'));
@@ -82,6 +82,21 @@ void main() {
 
   group('MakeQrPanel', () {
     testWidgets('CREATE then CUT copies a PBK key', (tester) async {
+      String? clipped;
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'Clipboard.setData') {
+            clipped = (call.arguments as Map)['text'] as String?;
+            return null;
+          }
+          if (call.method == 'Clipboard.getData') {
+            return <String, dynamic>{'text': clipped};
+          }
+          return null;
+        },
+      );
+
       final enter = TextEditingController();
       final created = TextEditingController();
       String? last;
@@ -106,8 +121,7 @@ void main() {
 
       await tester.tap(find.byKey(const Key('session-key-cut')));
       await tester.pump();
-      final clip = await Clipboard.getData(Clipboard.kTextPlain);
-      expect(clip?.text, last);
+      expect(clipped, last);
       expect(created.text, isEmpty);
     });
   });
