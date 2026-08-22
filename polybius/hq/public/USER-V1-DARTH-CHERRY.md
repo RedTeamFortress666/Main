@@ -1,12 +1,12 @@
 # PØLYBĪUS ADMIN HQ — User V1 & Darth Cherry
 
-Public operator sheet for the `1.0.0-cherry.1` Android build.
+Public operator sheet for the `1.0.0-cherry.2` Android build.
 
 ## Download
 
 - APK: [`polybius/downloads/polybius-darth-cherry.apk`](../../downloads/polybius-darth-cherry.apk)
 - Package: `com.polybius.polybius`
-- Version name: `1.0.0-cherry.1` · versionCode `2`
+- Version name: `1.0.0-cherry.2` · versionCode `3`
 - Signing: debug-signed BETA (side-load only)
 
 Direct file (collaborators on this repo):

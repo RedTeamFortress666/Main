@@ -31,7 +31,7 @@ https://github.com/RedTeamFortress666/Main/blob/cursor/floating-glyph-keyboard-b
 | Glyph keys | `/clock/keys` | `A POLYBĪUS SQU\R3` floating keys |
 | Cipher engine | `/cipher` | Portal-only after rituals |
 
-APK: `polybius/downloads/polybius-darth-cherry.apk` · `1.0.0-cherry.1+2`
+APK: `polybius/downloads/polybius-darth-cherry.apk` · `1.0.0-cherry.2+3`
 
 ## 2. Arcade and portal (existing product)
 
