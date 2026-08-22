@@ -1,5 +1,21 @@
 # PØLYBĪUS — downloadable builds
 
+**ADMIN HQ — User V1 & Darth Cherry (`1.0.0-cherry.1+2`)**
+
+- Public landing: [`hq/public/index.html`](hq/public/index.html)
+- Public user sheet: [`hq/public/USER-V1-DARTH-CHERRY.md`](hq/public/USER-V1-DARTH-CHERRY.md)
+- Side-load APK: [`downloads/polybius-darth-cherry.apk`](downloads/polybius-darth-cherry.apk)
+- Private HQ/V1 guide (collaborators): [`hq/private/POLYBIUS-HQ-V1-GUIDE.md`](hq/private/POLYBIUS-HQ-V1-GUIDE.md)
+
+GitHub (private repo — recipients need access):
+
+- Public pack: https://github.com/RedTeamFortress666/Main/blob/cursor/floating-glyph-keyboard-b248/polybius/hq/public/index.html
+- APK: https://github.com/RedTeamFortress666/Main/raw/cursor/floating-glyph-keyboard-b248/polybius/downloads/polybius-darth-cherry.apk
+- Private guide: https://github.com/RedTeamFortress666/Main/blob/cursor/floating-glyph-keyboard-b248/polybius/hq/private/POLYBIUS-HQ-V1-GUIDE.md
+- Tag (CI draft release when the workflow finishes): https://github.com/RedTeamFortress666/Main/releases/tag/v1.0.0-cherry.1
+
+---
+
 **Current side-load APK (Darth Cherry):** `downloads/polybius-darth-cherry.apk`  
 Version `1.0.0-cherry.1+2` — debug-signed release, `com.polybius.polybius`. Clock face + Cherry desk are in this build.
 
