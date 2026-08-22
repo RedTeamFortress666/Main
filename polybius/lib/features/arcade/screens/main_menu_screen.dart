@@ -76,6 +76,15 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen>
         child: Stack(
           children: [
             SubliminalFlash(phrases: AppConstants.mkUltraPhrases),
+            Positioned(
+              right: 0,
+              top: 0,
+              child: IconButton(
+                tooltip: 'Clock',
+                icon: const Icon(Icons.access_time, color: Color(0xFFC9A227)),
+                onPressed: () => context.go('/clock'),
+              ),
+            ),
             LayoutBuilder(
               builder: (context, constraints) => SingleChildScrollView(
                 child: ConstrainedBox(

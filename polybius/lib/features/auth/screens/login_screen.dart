@@ -173,6 +173,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
             ),
           ),
+          Positioned(
+            right: 12,
+            bottom: 12,
+            child: IconButton(
+              tooltip: 'Clock',
+              icon: const Icon(Icons.access_time, color: Color(0xFFC9A227)),
+              onPressed: () => context.go('/clock'),
+            ),
+          ),
         ],
       ),
     );
