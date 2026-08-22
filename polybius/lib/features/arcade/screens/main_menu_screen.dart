@@ -85,8 +85,17 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen>
               children: [
                 const Spacer(),
                 const SizedBox(
-                  height: 118,
-                  child: IgnorePointer(child: FloatingGlyphKeyboard()),
+                  height: 148,
+                  child: IgnorePointer(
+                    child: FittedBox(
+                      fit: BoxFit.contain,
+                      child: SizedBox(
+                        width: 360,
+                        height: 230,
+                        child: FloatingGlyphKeyboard(),
+                      ),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 10),
                 GestureDetector(

@@ -74,8 +74,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const SizedBox(
-                      height: 168,
-                      child: IgnorePointer(child: FloatingGlyphKeyboard()),
+                      height: 196,
+                      child: IgnorePointer(
+                        child: FittedBox(
+                          fit: BoxFit.contain,
+                          child: SizedBox(
+                            width: 360,
+                            height: 230,
+                            child: FloatingGlyphKeyboard(),
+                          ),
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 10),
                     Text(

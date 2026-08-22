@@ -113,11 +113,13 @@ class FloatingGlyphKeyboardState extends State<FloatingGlyphKeyboard>
           final spinning = visible > 0.08;
           return GridView.builder(
             physics: const NeverScrollableScrollPhysics(),
+            shrinkWrap: true,
             itemCount: _glyphs.length,
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: widget.columns,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
+              mainAxisSpacing: 6,
+              crossAxisSpacing: 6,
+              childAspectRatio: 1.15,
             ),
             itemBuilder: (context, index) {
               final glyph = _glyphs[index];
@@ -177,28 +179,34 @@ class _GlyphKey extends StatelessWidget {
       opacity: opacity,
       child: Transform.translate(
         offset: Offset(0, bob),
-        child: Transform.rotate(
-          angle: angle,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.08),
-              border: Border.all(color: color.withValues(alpha: 0.85), width: 1.4),
-              boxShadow: [
-                BoxShadow(
-                  color: color.withValues(alpha: 0.35 * opacity),
-                  blurRadius: 10,
+        child: Padding(
+          padding: const EdgeInsets.all(5),
+          child: Transform.rotate(
+            angle: angle,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.08),
+                border: Border.all(
+                  color: color.withValues(alpha: 0.85),
+                  width: 1.4,
                 ),
-              ],
-            ),
-            child: Center(
-              child: Text(
-                glyph,
-                style: TextStyle(
-                  fontFamily: 'monospace',
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                  shadows: [Shadow(color: color, blurRadius: 8)],
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.35 * opacity),
+                    blurRadius: 10,
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Text(
+                  glyph,
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                    shadows: [Shadow(color: color, blurRadius: 8)],
+                  ),
                 ),
               ),
             ),
