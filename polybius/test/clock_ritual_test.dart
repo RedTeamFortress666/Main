@@ -64,6 +64,7 @@ void main() {
       expect(ClockRitual.makeHold, const Duration(seconds: 2));
       expect(ClockRitual.vanishDelay, const Duration(milliseconds: 800));
       expect(ClockRitual.eternityHold, const Duration(seconds: 2));
+      expect(ClockRitual.cameraCherryHold, const Duration(seconds: 3));
       expect(ClockRitual.factoryPassword, 'oneeyedking');
     });
   });

@@ -51,6 +51,9 @@ If those four are not true, the face only says `Alarm saved`.
 
 - Typebox for notes
 - **MAKE** — hold 2 seconds; typed line clears after 0.8 seconds
+- **MAKE QR?** — paste a session key (`PBK-…`) or CREATE one and CUT it
+- Hold the **camera cherry** 3 seconds to play a keyboard-only square
+- **SCAN KEYBOARD** on the desk, or **SCAN** on the glyph keys, to read that square
 - Steg / hieroglyph / sigil set share via QR (NEW SET / SHARE / SCAN)
 - **?∞** — tap once, then hold 2 seconds: return to the face and a false **ALARM** banner
 - **SLEEP** — two taps: glyph keyboard (`A POLYBĪUS SQU\R3`)

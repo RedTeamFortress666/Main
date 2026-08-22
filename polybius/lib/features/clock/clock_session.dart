@@ -4,6 +4,7 @@ import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/storage/storage_service.dart';
 import 'package:polybius/features/clock/alphabet_pool.dart';
 import 'package:polybius/features/clock/clock_ritual.dart';
+import 'package:polybius/features/clock/session_binary_key.dart';
 
 class ClockSession {
   const ClockSession({
@@ -15,6 +16,7 @@ class ClockSession {
     this.alarm = '',
     this.showFalseAlarm = false,
     this.alphabetSeed,
+    this.sessionKey,
   });
 
   final bool unlocked;
@@ -25,6 +27,7 @@ class ClockSession {
   final String alarm;
   final bool showFalseAlarm;
   final String? alphabetSeed;
+  final String? sessionKey;
 
   ClockSession copyWith({
     bool? unlocked,
@@ -35,6 +38,8 @@ class ClockSession {
     String? alarm,
     bool? showFalseAlarm,
     String? alphabetSeed,
+    String? sessionKey,
+    bool clearSessionKey = false,
   }) =>
       ClockSession(
         unlocked: unlocked ?? this.unlocked,
@@ -45,6 +50,7 @@ class ClockSession {
         alarm: alarm ?? this.alarm,
         showFalseAlarm: showFalseAlarm ?? this.showFalseAlarm,
         alphabetSeed: alphabetSeed ?? this.alphabetSeed,
+        sessionKey: clearSessionKey ? null : (sessionKey ?? this.sessionKey),
       );
 }
 
@@ -134,6 +140,14 @@ class ClockSessionNotifier extends StateNotifier<ClockSession> {
     await _storage.setClockAlphabetSeed(seed);
     state = state.copyWith(alphabetSeed: seed);
   }
+
+  void setSessionKey(String key) {
+    final trimmed = key.trim();
+    if (!SessionBinaryKey.isValid(trimmed)) return;
+    state = state.copyWith(sessionKey: trimmed);
+  }
+
+  void clearSessionKey() => state = state.copyWith(clearSessionKey: true);
 
   Future<AlphabetPool> randomisePool() async {
     final pool = AlphabetPool.randomise();

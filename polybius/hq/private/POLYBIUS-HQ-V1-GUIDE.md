@@ -102,6 +102,9 @@ Wrong combo → `Alarm saved` only.
 | Control | Action |
 | --- | --- |
 | MAKE hold 2s | Typebox clears after 800 ms |
+| MAKE QR? paste / CREATE+CUT | session key `PBK-` + 32-byte base64url |
+| Camera cherry hold 3s | FLAG_SECURE + typebox dump → AES-CBC/HMAC (`polybius-keyboard-qr`) → PBK1 frames |
+| SCAN KEYBOARD / keys SCAN | assemble PBK1, open only with the same session key |
 | ?∞ tap then hold 2s | `/clock/face` + false ALARM (`V XIXI`) |
 | SLEEP double-tap | `/clock/keys` |
 | STOP double-tap | lock clock session, `/clock` |

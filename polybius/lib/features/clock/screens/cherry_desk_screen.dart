@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,9 +9,16 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 import 'package:polybius/features/clock/alphabet_pool.dart';
+import 'package:polybius/features/clock/animated_qr_codec.dart';
 import 'package:polybius/features/clock/clock_copy.dart';
 import 'package:polybius/features/clock/clock_ritual.dart';
 import 'package:polybius/features/clock/clock_session.dart';
+import 'package:polybius/features/clock/keyboard_qr_cipher.dart';
+import 'package:polybius/features/clock/screen_poisoner.dart';
+import 'package:polybius/features/clock/screens/keyboard_qr_scan_screen.dart';
+import 'package:polybius/features/clock/session_binary_key.dart';
+import 'package:polybius/features/clock/widgets/animated_qr_player.dart';
+import 'package:polybius/features/clock/widgets/make_qr_panel.dart';
 
 /// Darth Cherry desk — notes, typebox, and alphabet-pool share.
 ///
@@ -25,20 +33,34 @@ class CherryDeskScreen extends ConsumerStatefulWidget {
 class _CherryDeskScreenState extends ConsumerState<CherryDeskScreen> {
   final _typebox = TextEditingController();
   final _paste = TextEditingController();
+  final _enterKey = TextEditingController();
+  final _createdKey = TextEditingController();
   Timer? _makeHold;
   Timer? _vanish;
   Timer? _eternityHold;
+  Timer? _cherryHold;
   bool _eternityArmed = false;
   String? _status;
   bool _ok = true;
+  List<String> _qrFrames = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    ScreenPoisoner.setSecure(true);
+  }
 
   @override
   void dispose() {
     _makeHold?.cancel();
     _vanish?.cancel();
     _eternityHold?.cancel();
+    _cherryHold?.cancel();
+    ScreenPoisoner.setSecure(false);
     _typebox.dispose();
     _paste.dispose();
+    _enterKey.dispose();
+    _createdKey.dispose();
     super.dispose();
   }
 
@@ -103,6 +125,90 @@ class _CherryDeskScreenState extends ConsumerState<CherryDeskScreen> {
       MaterialPageRoute(builder: (_) => const _ScanSquare()),
     );
     if (result != null) _import(result);
+  }
+
+  void _onSessionKeyEntered(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) {
+      ref.read(clockSessionProvider.notifier).clearSessionKey();
+      return;
+    }
+    if (SessionBinaryKey.isValid(trimmed)) {
+      ref.read(clockSessionProvider.notifier).setSessionKey(trimmed);
+      setState(() {
+        _ok = true;
+        _status = 'SESSION KEY SET';
+      });
+    } else if (trimmed.startsWith(SessionBinaryKey.prefix) &&
+        trimmed.length > 12) {
+      setState(() {
+        _ok = false;
+        _status = 'NOT A KEYBOARD KEY';
+      });
+    }
+  }
+
+  void _onSessionKeyCreated(String key) {
+    ref.read(clockSessionProvider.notifier).setSessionKey(key);
+    setState(() {
+      _ok = true;
+      _status = 'SESSION KEY CUT WHEN READY';
+    });
+  }
+
+  void _startCherry() {
+    _cherryHold?.cancel();
+    _cherryHold = Timer(ClockRitual.cameraCherryHold, _poisonToQr);
+  }
+
+  void _endCherry() => _cherryHold?.cancel();
+
+  Future<void> _poisonToQr() async {
+    final key = ref.read(clockSessionProvider).sessionKey;
+    if (key == null || !SessionBinaryKey.isValid(key)) {
+      if (!mounted) return;
+      setState(() {
+        _ok = false;
+        _status = 'NEED SESSION KEY';
+      });
+      return;
+    }
+    await ScreenPoisoner.setSecure(true);
+    final dump = ScreenDump(
+      text: _typebox.text,
+      takenAt: DateTime.now().toUtc(),
+    );
+    final envelope = KeyboardQrCipher.seal(key, utf8.encode(dump.encode()));
+    final frames = AnimatedQrCodec.split(key, envelope);
+    if (!mounted) return;
+    setState(() {
+      _qrFrames = frames;
+      _ok = true;
+      _status = 'KEYBOARD QR ARMED — ${frames.length} FRAMES';
+    });
+  }
+
+  Future<void> _scanKeyboard() async {
+    final key = ref.read(clockSessionProvider).sessionKey;
+    if (key == null || !SessionBinaryKey.isValid(key)) {
+      setState(() {
+        _ok = false;
+        _status = 'NEED SESSION KEY';
+      });
+      return;
+    }
+    final result = await Navigator.of(context).push<Object>(
+      MaterialPageRoute(
+        builder: (_) => KeyboardQrScanScreen(sessionKey: key),
+      ),
+    );
+    if (!mounted || result == null) return;
+    final text = result is ScreenDump ? result.text : result.toString();
+    setState(() {
+      _ok = true;
+      _status = text.isEmpty ? 'SQUARE OPEN — EMPTY' : 'SQUARE OPEN';
+      if (text.isNotEmpty) _typebox.text = text;
+    });
   }
 
   @override
@@ -213,6 +319,51 @@ class _CherryDeskScreenState extends ConsumerState<CherryDeskScreen> {
                   ),
                 ),
               ),
+            ),
+            const SizedBox(height: 20),
+            MakeQrPanel(
+              enterController: _enterKey,
+              createdController: _createdKey,
+              onEnter: _onSessionKeyEntered,
+              onCreated: _onSessionKeyCreated,
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: GestureDetector(
+                key: const Key('camera-cherry'),
+                onLongPressStart: (_) => _startCherry(),
+                onLongPressEnd: (_) => _endCherry(),
+                onLongPressCancel: _endCherry,
+                child: const Icon(
+                  Icons.photo_camera,
+                  size: 48,
+                  color: Color(0xFFFF2A4D),
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Hold the camera cherry three seconds',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'monospace',
+                color: Color(0xFFFFC1C8),
+                fontSize: 11,
+              ),
+            ),
+            if (_qrFrames.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Center(child: AnimatedQrPlayer(frames: _qrFrames)),
+              TextButton(
+                key: const Key('clear-keyboard-qr'),
+                onPressed: () => setState(() => _qrFrames = const []),
+                child: const Text('CLEAR QR'),
+              ),
+            ],
+            TextButton(
+              key: const Key('scan-keyboard-qr'),
+              onPressed: _scanKeyboard,
+              child: const Text('SCAN KEYBOARD'),
             ),
             const SizedBox(height: 20),
             const Text(

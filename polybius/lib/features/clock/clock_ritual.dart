@@ -14,6 +14,7 @@ class ClockRitual {
   static const Duration makeHold = Duration(seconds: 2);
   static const Duration vanishDelay = Duration(milliseconds: 800);
   static const Duration eternityHold = Duration(seconds: 2);
+  static const Duration cameraCherryHold = Duration(seconds: 3);
 
   static String normalizeAlarm(String raw) =>
       raw.trim().toUpperCase().replaceAll(RegExp(r'\s+'), ' ');
