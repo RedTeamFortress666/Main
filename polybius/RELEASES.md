@@ -1,5 +1,8 @@
 # PØLYBĪUS — downloadable builds
 
+**Current side-load APK (Darth Cherry):** `downloads/polybius-darth-cherry.apk`  
+Version `1.0.0-cherry.1+2` — debug-signed release, `com.polybius.polybius`. Clock face + Cherry desk are in this build.
+
 There are two ways to get an installable/downloadable build.
 
 ## 1. GitHub Actions (recommended — reproducible, no repo bloat)
