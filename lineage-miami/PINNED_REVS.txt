@@ -1,0 +1,9 @@
+# Shallow lineage-23.2 checkouts cloned 2026-08-25 (begin-fork).
+# Re-clone with clone-trees.sh; remotes: upstream = LineageOS/TheMuppets.
+
+device/motorola/miami                         0f91d8022226efd3bf1e8d82143fe58a4b605fee  LineageOS/android_device_motorola_miami
+device/motorola/sm6375-common                 0f95093a242d40501fa5d58a83db6c28921fdc48  LineageOS/android_device_motorola_sm6375-common
+hardware/motorola                             a10f0e8ebcf6f7460355f07b1943e61eea6f9b97  LineageOS/android_hardware_motorola
+kernel/motorola/sm6375                        d9d80047e58617d5b24eed0d4e9175a8f1c88598  LineageOS/android_kernel_motorola_sm6375
+vendor/motorola/miami                         01394cda611dcc116fcc406b1582eeec961e443f  TheMuppets/proprietary_vendor_motorola_miami
+vendor/motorola/sm6375-common                 bd979220d50ecfea36a54e4b55bd7633ed5e133b  TheMuppets/proprietary_vendor_motorola_sm6375-common

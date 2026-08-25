@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Fork-target local manifest for Motorola edge 30 neo (miami).
+
+  GitHub forks are not created yet (this agent cannot create GitHub repos).
+  After they exist under RedTeamFortress666, copy this file to:
+    .repo/local_manifests/miami.xml
+  (replace the upstream copy) and `repo sync`.
+
+  Create the forks with lineage-miami/create-github-forks.sh
+-->
+<manifest>
+  <project name="RedTeamFortress666/android_device_motorola_miami"
+           path="device/motorola/miami"
+           remote="github"
+           revision="lineage-23.2" />
+  <project name="RedTeamFortress666/android_device_motorola_sm6375-common"
+           path="device/motorola/sm6375-common"
+           remote="github"
+           revision="lineage-23.2" />
+  <project name="RedTeamFortress666/android_kernel_motorola_sm6375"
+           path="kernel/motorola/sm6375"
+           remote="github"
+           revision="lineage-23.2" />
+  <project name="RedTeamFortress666/android_hardware_motorola"
+           path="hardware/motorola"
+           remote="github"
+           revision="lineage-23.2" />
+  <project name="RedTeamFortress666/proprietary_vendor_motorola_miami"
+           path="vendor/motorola/miami"
+           remote="github"
+           revision="lineage-23.2" />
+  <project name="RedTeamFortress666/proprietary_vendor_motorola_sm6375-common"
+           path="vendor/motorola/sm6375-common"
+           remote="github"
+           revision="lineage-23.2" />
+</manifest>
