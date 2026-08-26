@@ -1,5 +1,35 @@
 # Downloadable BETA builds
 
+## PØLYBĪUS V1 STABLE 1.1.0+5 (wave 3 + PixelWiz VALKYRIE relink)
+
+Branch: `cursor/polybius-v1-wave3-accounts-21f4`
+
+Two Android forks + Safari web portables. Wave-3 operator accounts are
+bootstrapped on first install (24 PORTAL logins, 50 V.1 USER logins).
+OPERATION VALKYRIE relinks the certified roster (PixelWiz / `PIXELW1Z`
+works again on V.1 USER). See [`../docs/V1_STABLE.md`](../docs/V1_STABLE.md) and
+[`../docs/OPERATOR_ACCOUNTS.md`](../docs/OPERATOR_ACCOUNTS.md).
+
+| Build | File |
+| --- | --- |
+| **PØLYBÎŪS PORTAL / HQ** (dev/admin) | `polybius-v1-stable-hq-android-arm64.apk` |
+| **PØLYBÎŪS V.1 USER** (operators/agents) | `polybius-v1-stable-user-android-arm64.apk` |
+| iOS / Safari PORTAL (web portable) | `polybius-v1-stable-hq-ios-web-portable.zip` |
+| iOS / Safari V.1 USER (web portable) | `polybius-v1-stable-user-ios-web-portable.zip` |
+| Checksums | `SHA256SUMS.txt` |
+
+Aliases (same blobs): `POLYBIUS-V1-STABLE-hq-emojinigma-android-arm64.apk`,
+`POLYBIUS-V1-STABLE-user-android-arm64.apk`.
+
+Version: **1.1.0+5** (`versionCode` 5). Debug-signed for side-load. ~~DEVELOPER~~ is stricken. Login as **PixelWiz** (alias of `PIXELW1Z`) on V.1 USER with `PixelZap12` / `WizPixel5` / PIN `367879`.
+
+Raw GitHub:
+
+- https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-v1-wave3-accounts-21f4/polybius/dist/polybius-v1-stable-hq-android-arm64.apk
+- https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-v1-wave3-accounts-21f4/polybius/dist/polybius-v1-stable-user-android-arm64.apk
+
+## Legacy beta.2 (single binary)
+
 `polybius-1.0.0-beta.2-android-arm64.apk` — Android **arm64-v8a** release APK
 (**beta.2**, includes DARTH CHERRY cipher eyeball / fade / matrix modes). Debug-signed
 for BETA side-loading. Mirrored as the beta.1 filenames below for older links.

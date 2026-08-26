@@ -277,7 +277,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  Future<bool> login(String username, String password) async {
+  Future<bool> login(
+    String username,
+    String password, {
+    PolybiusFlavor? flavor,
+  }) async {
     if (_isLockedOut) {
       state = const AuthState(error: 'TOO MANY ATTEMPTS — TRY AGAIN LATER');
       return false;
@@ -293,9 +297,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return false;
     }
     state = const AuthState(isLoading: true);
-    // Resolve display-name aliases (e.g. Art3mas → ARTEM3S) before lookup.
+    // Resolve display-name / typed aliases (Art3mas → ARTEM3S, PixelWiz → PIXELW1Z).
     var lookupKey = normalized;
     final byName = OperatorIdentities.byUsername(normalized) ??
+        OperatorIdentities.byDisplayName(username.trim()) ??
         OperatorIdentities.byDisplayName(normalized);
     if (byName != null) {
       lookupKey = byName.username.toUpperCase();
@@ -313,14 +318,20 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = const AuthState(error: 'ACCESS DENIED');
       return false;
     }
-    if (!LoginPolicy.tierAllowed(account.tier)) {
+    final resolvedFlavor = flavor ?? AppFlavor.current;
+    if (!LoginPolicy.tierAllowed(account.tier, flavor: resolvedFlavor)) {
       _recordFailure();
       await _storage.logAudit(
         'LOGIN_FAIL',
         username,
-        'tier ${account.tier.name} rejected for ${AppFlavor.current.name}',
+        'tier ${account.tier.name} rejected for ${resolvedFlavor.name}',
       );
-      state = AuthState(error: LoginPolicy.rejectionMessage(account.tier));
+      state = AuthState(
+        error: LoginPolicy.rejectionMessage(
+          account.tier,
+          flavor: resolvedFlavor,
+        ),
+      );
       return false;
     }
     _failedAttempts = 0;

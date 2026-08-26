@@ -6,6 +6,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:polybius/core/constants/app_constants.dart';
 import 'package:polybius/core/constants/operator_roster.dart';
 import 'package:polybius/core/constants/operator_wave2.dart';
+import 'package:polybius/core/constants/operator_wave3.dart';
 import 'package:polybius/core/crypto/encryption_service.dart';
 import 'package:polybius/core/models/models.dart';
 import 'package:polybius/core/storage/polybius_secret_store.dart';
@@ -311,8 +312,8 @@ void main() {
       final invite = await storage.getInvite(seed.inviteCode);
       expect(invite, isNotNull, reason: seed.inviteCode);
     }
-    // Pool (10) + T3mptress + CrownOfCorns + MizzPickl3s + P!k.ZuP + wave2 (28)
-    expect(OperatorRoster.inviteCodes, hasLength(42));
+    // Pool (10) + T3mptress + CrownOfCorns + MizzPickl3s + P!k.ZuP + wave2 (28) + wave3 (28)
+    expect(OperatorRoster.inviteCodes, hasLength(70));
   });
 
   test('bootstraps wave-2 admins, developers, and users', () async {
@@ -320,6 +321,23 @@ void main() {
     expect(OperatorWave2.developers, hasLength(3));
     expect(OperatorWave2.users, hasLength(20));
     for (final seed in OperatorWave2.all) {
+      final op = await storage.getAccount(seed.username);
+      expect(op, isNotNull, reason: seed.displayName);
+      expect(op!.tier, seed.tier);
+      expect(
+        EncryptionService.verifyPassword(seed.password, op.passwordHash),
+        isTrue,
+      );
+      expect(EncryptionService.verifyPin(seed.pin, op.pinHash), isTrue);
+      expect(await storage.getInvite(seed.inviteCode), isNotNull);
+    }
+  });
+
+  test('bootstraps wave-3 admins, developers, and users', () async {
+    expect(OperatorWave3.admins, hasLength(5));
+    expect(OperatorWave3.developers, hasLength(3));
+    expect(OperatorWave3.users, hasLength(20));
+    for (final seed in OperatorWave3.all) {
       final op = await storage.getAccount(seed.username);
       expect(op, isNotNull, reason: seed.displayName);
       expect(op!.tier, seed.tier);

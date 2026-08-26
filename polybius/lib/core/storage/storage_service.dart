@@ -5,6 +5,7 @@ import 'package:polybius/core/constants/app_constants.dart';
 import 'package:polybius/core/constants/operator_roster.dart';
 import 'package:polybius/core/constants/unlock_codes.dart';
 import 'package:polybius/core/constants/operator_wave2.dart';
+import 'package:polybius/core/constants/operator_wave3.dart';
 import 'package:polybius/core/crypto/encryption_service.dart';
 import 'package:polybius/core/models/models.dart';
 
@@ -182,6 +183,31 @@ class StorageService {
     }
     // Wave 2 — 5 admins + 3 developers + 20 users.
     for (final op in OperatorWave2.all) {
+      await _bootstrapOperator(
+        username: op.username,
+        displayName: op.displayName,
+        password: op.password,
+        backupPassword: op.backupPassword,
+        pin: op.pin,
+        tier: op.tier,
+        note: '${op.displayName} ${op.tier.name} (${op.inviteCode})',
+      );
+      if (await getInvite(op.inviteCode) == null) {
+        final inviteTier = switch (op.tier) {
+          UserTier.developer => InviteTier.developer,
+          UserTier.admin => InviteTier.admin,
+          _ => InviteTier.standard,
+        };
+        await saveInvite(InviteCode(
+          code: op.inviteCode.toUpperCase(),
+          tier: inviteTier,
+          createdBy: 'SYSTEM',
+          createdAt: DateTime.now(),
+        ));
+      }
+    }
+    // Wave 3 — 5 admins + 3 developers + 20 users.
+    for (final op in OperatorWave3.all) {
       await _bootstrapOperator(
         username: op.username,
         displayName: op.displayName,
@@ -488,8 +514,9 @@ class StorageService {
     await Hive.box(accountsBox).delete(username.toUpperCase());
   }
 
-  /// VALKYRIE: wipe transient network state (invites, audit, sessions) and all
-  /// non-developer accounts, so the network can be re-established from scratch.
+  /// VALKYRIE: wipe live network state (invites, audit, sessions) and all
+  /// non-developer accounts, then relink the certified operator roster so
+  /// V.1 USER agents (PixelWiz / PIXELW1Z, pool, wave-2/3) can log in again.
   Future<void> wipeNetworkState() async {
     await Hive.box(invitesBox).clear();
     await Hive.box(auditBox).clear();
@@ -500,7 +527,12 @@ class StorageService {
         await deleteAccount(a.username);
       }
     }
+    await relinkOperatorRoster();
   }
+
+  /// Re-seed missing certified operator accounts and invite codes.
+  /// Existing developer accounts are left in place.
+  Future<void> relinkOperatorRoster() => _bootstrapDeveloper();
 
   Future<void> logAudit(String action, String actor, [String? details]) async {
     final box = Hive.box(auditBox);

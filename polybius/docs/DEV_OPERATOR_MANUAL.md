@@ -2,7 +2,7 @@
 
 **Classification:** DEV / ADMIN ONLY — do not distribute to everyday V.1 users.  
 **Scope:** PORTAL (`hq`), V.1 (`user`), DARTH CHERRY, DOØMSDAY CLØCK, mesh / hardware roadmap.  
-**Branch reference:** `cursor/pool-pin-bt-ui-d8fa` (update links when cutting a new release).
+**Branch reference:** `cursor/polybius-v1-wave3-accounts-21f4` (V1 1.1.0+5 / wave 3 + PixelWiz VALKYRIE relink).
 
 ---
 
@@ -291,6 +291,7 @@ Replace branch segment if you cut a new release branch.
 
 - PORTAL APK: `polybius/dist/polybius-v1-stable-hq-android-arm64.apk`
 - V.1 APK: `polybius/dist/polybius-v1-stable-user-android-arm64.apk`
+- PORTAL iOS (Safari web portable): `polybius/dist/polybius-v1-stable-hq-ios-web-portable.zip`
 - V.1 iOS (Safari web portable): `polybius/dist/polybius-v1-stable-user-ios-web-portable.zip`
 - DARTH CHERRY: `polybius/dist/darth-cherry-1.0.2-android-arm64.apk`
 - DOØMSDAY CLØCK: `polybius/dist/doomsday_clock/doomsday-clock-2.0.0-android-arm64.apk`

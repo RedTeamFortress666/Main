@@ -1,0 +1,4 @@
+41957e12853e05af766cde3fd5d98b1dc7eb61e3daa4e44a671c99e015861d4f  polybius-v1-stable-hq-android-arm64.apk
+20e880677895e5c598512a3b364adc6cae73d7f067afcb7165fed65fd2401327  polybius-v1-stable-user-android-arm64.apk
+550ecf90c5941f16f7fbbc55b7cbb12a4bee7dbbb962ece9e1c03dc026230a95  polybius-v1-stable-hq-ios-web-portable.zip
+16d0338f0a1af902d8fef8cdd5a7474e2ee5ef19c89d66d80366e0d6b1c9024f  polybius-v1-stable-user-ios-web-portable.zip

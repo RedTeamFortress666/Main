@@ -9,6 +9,7 @@ library;
 import 'package:polybius/core/constants/app_constants.dart';
 import 'package:polybius/core/constants/operator_roster.dart';
 import 'package:polybius/core/constants/operator_wave2.dart';
+import 'package:polybius/core/constants/operator_wave3.dart';
 
 class OperatorIdentity {
   const OperatorIdentity({
@@ -105,9 +106,10 @@ class OperatorIdentities {
       backupPassword: AppConstants.opPikZupBackupPassword,
       tier: UserTier.admin,
     ),
-    // BETA pool + wave-2 operators.
+    // BETA pool + wave-2 / wave-3 operators.
     ..._poolIdentities,
     ..._wave2Identities,
+    ..._wave3Identities,
   ];
 
   static const List<OperatorIdentity> _poolIdentities = [
@@ -217,6 +219,20 @@ class OperatorIdentities {
       )
       .toList();
 
+  static final List<OperatorIdentity> _wave3Identities = OperatorWave3.all
+      .map(
+        (o) => OperatorIdentity(
+          username: o.username,
+          displayName: o.displayName,
+          inviteOrFileCode: o.inviteCode,
+          pin: o.pin,
+          password: o.password,
+          backupPassword: o.backupPassword,
+          tier: o.tier,
+        ),
+      )
+      .toList();
+
   /// Deduped list (pool Art3mas overlaps specialised naming).
   static List<OperatorIdentity> get unique {
     final seen = <String>{};
@@ -228,21 +244,32 @@ class OperatorIdentities {
     return out;
   }
 
+  /// Typed-name aliases → canonical Hive username.
+  /// PixelWiz uses a digit 1 in the seed (`PIXELW1Z`); operators type `I`.
+  static const Map<String, String> loginAliases = {
+    'PIXELWIZ': 'PIXELW1Z',
+  };
+
   static OperatorIdentity? byUsername(String username) {
     final u = username.trim().toUpperCase();
+    if (u.isEmpty) return null;
+    final canonical = loginAliases[u] ?? u;
     for (final id in unique) {
-      if (id.username.toUpperCase() == u) return id;
+      if (id.username.toUpperCase() == canonical) return id;
     }
     return null;
   }
 
-  /// Match login aliases like `Art3mas` → seeded username `ARTEM3S`.
+  /// Match login aliases like `Art3mas` → seeded username `ARTEM3S`,
+  /// and `PixelWiz` → `PIXELW1Z`.
   static OperatorIdentity? byDisplayName(String name) {
     final n = name.trim().toUpperCase();
     if (n.isEmpty) return null;
     for (final id in unique) {
       if (id.displayName.toUpperCase() == n) return id;
     }
+    final aliased = loginAliases[n];
+    if (aliased != null) return byUsername(aliased);
     return null;
   }
 
