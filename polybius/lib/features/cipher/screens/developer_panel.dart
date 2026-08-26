@@ -69,10 +69,11 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
             style: TextStyle(
                 fontFamily: 'monospace', color: NeonTheme.dangerRed)),
         content: const Text(
-          'Wipes network state (invites, audit, sessions, all non-developer '
-          'accounts), rotates to a fresh pool at MAXIMUM complexity (6), sets a '
-          '2-hour rotation window, and reveals the admin recovery bundle. '
-          'This cannot be undone. Proceed?',
+          'Wipes live network state (invites, audit, sessions), then relinks '
+          'the certified operator roster — V.1 USER agents such as PixelWiz '
+          '(PW9-66-3R) are restored. Rotates to a fresh pool at MAXIMUM '
+          'complexity (6), sets a 2-hour rotation window, and reveals the '
+          'admin recovery bundle. This cannot be undone. Proceed?',
           style: TextStyle(color: Colors.white70, fontSize: 12),
         ),
         actions: [
@@ -97,7 +98,7 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
     await storage.logAudit(
       'VALKYRIE',
       ref.read(authProvider).user?.username ?? AppConstants.adminUsername,
-        'Network wiped; max complexity; 2h window');
+        'Network wiped then operator roster relinked; max complexity; 2h window');
 
     final poolId = ref.read(cipherEngineProvider).poolId;
     if (!mounted) return;
@@ -105,9 +106,10 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
       _valkyrieReveal =
           'RECOVERY BUNDLE (authorised admins only):\n'
           'New pool ID $poolId · complexity 6 · 2h window.\n'
-          'Directive: re-establish the network from this pool, re-issue admin '
-          'invites (B1/D1), rotate keys, and distribute the SYNC code from the '
-          'cipher SYNC tab to trusted admins to realign.';
+          'Certified operator roster relinked (PixelWiz / PW9-66-3R and all '
+          'V1 seeds). Directive: re-establish the live network from this pool, '
+          'rotate keys, and distribute the SYNC code from the cipher SYNC tab '
+          'to trusted admins to realign.';
     });
     await _load();
   }
@@ -237,7 +239,8 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
           ]),
           _section('OPERATION VALKYRIE', [
             const Text(
-              'Fail-safe for a rogue developer: wipe + restart the network, '
+              'Fail-safe for a rogue developer: wipe live network state, '
+              'relink the certified operator roster (PixelWiz and V1 seeds), '
               'dial rotor complexity to maximum, switch to a 2-hour pool '
               'rotation, and reveal the admin recovery bundle.',
               style: TextStyle(color: Colors.white54, fontSize: 11),

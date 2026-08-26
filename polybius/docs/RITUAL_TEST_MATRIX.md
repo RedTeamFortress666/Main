@@ -75,7 +75,7 @@ Shared privileged codes (PORTAL HQ): `B1-66-3R`, `D1-66-3R`, `W1-66-3R` (privile
 | V3ctorKid | V3CTORKID | agent | VK6-66-3R | 244949 | VecTor99 | KidVector3 | ☐ | ☐ |
 | Gl1tchCat | GL1TCHCAT | agent | GC7-66-3R | 264575 | CatGlitch1 | GlitchMe2 | ☐ | ☐ |
 | H0neyBad | H0NEYBAD | agent | HB8-66-3R | 331127 | HoneyRun7 | BadHoney9 | ☐ | ☐ |
-| PixelW1z | PIXELW1Z | agent | PW9-66-3R | 367879 | PixelZap12 | WizPixel5 | ☐ | ☐ |
+| PixelW1z / PixelWiz | PIXELW1Z (alias PixelWiz) | agent | PW9-66-3R | 367879 | PixelZap12 | WizPixel5 | ☐ | ☐ |
 
 ---
 

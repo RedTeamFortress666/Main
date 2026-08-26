@@ -32,6 +32,8 @@ See also [`docs/V1_STABLE.md`](./V1_STABLE.md).
 
 Use invite / access codes at **LOAD GAME** / portal. Login with username + password; PIN for re-auth. Backup password is an alternate login password.
 
+**PixelWiz** (V.1 USER): type `PixelWiz` or `PIXELW1Z`. Password `PixelZap12`, backup `WizPixel5`, PIN `367879`, invite `PW9-66-3R`. OPERATION VALKYRIE on PORTAL relinks this account after a network wipe.
+
 ---
 
 ## Built-in / named operators
@@ -63,7 +65,7 @@ Use invite / access codes at **LOAD GAME** / portal. Login with username + passw
 | V3ctorKid | `V3CTORKID` | agent | `VK6-66-3R` | `244949` | `VecTor99` | `KidVector3` |
 | Gl1tchCat | `GL1TCHCAT` | agent | `GC7-66-3R` | `264575` | `CatGlitch1` | `GlitchMe2` |
 | H0neyBad | `H0NEYBAD` | agent | `HB8-66-3R` | `331127` | `HoneyRun7` | `BadHoney9` |
-| PixelW1z | `PIXELW1Z` | agent | `PW9-66-3R` | `367879` | `PixelZap12` | `WizPixel5` |
+| PixelW1z / **PixelWiz** | `PIXELW1Z` (login also `PixelWiz`) | agent | `PW9-66-3R` | `367879` | `PixelZap12` | `WizPixel5` |
 
 ---
 

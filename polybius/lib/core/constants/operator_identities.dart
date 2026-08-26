@@ -244,21 +244,32 @@ class OperatorIdentities {
     return out;
   }
 
+  /// Typed-name aliases → canonical Hive username.
+  /// PixelWiz uses a digit 1 in the seed (`PIXELW1Z`); operators type `I`.
+  static const Map<String, String> loginAliases = {
+    'PIXELWIZ': 'PIXELW1Z',
+  };
+
   static OperatorIdentity? byUsername(String username) {
     final u = username.trim().toUpperCase();
+    if (u.isEmpty) return null;
+    final canonical = loginAliases[u] ?? u;
     for (final id in unique) {
-      if (id.username.toUpperCase() == u) return id;
+      if (id.username.toUpperCase() == canonical) return id;
     }
     return null;
   }
 
-  /// Match login aliases like `Art3mas` → seeded username `ARTEM3S`.
+  /// Match login aliases like `Art3mas` → seeded username `ARTEM3S`,
+  /// and `PixelWiz` → `PIXELW1Z`.
   static OperatorIdentity? byDisplayName(String name) {
     final n = name.trim().toUpperCase();
     if (n.isEmpty) return null;
     for (final id in unique) {
       if (id.displayName.toUpperCase() == n) return id;
     }
+    final aliased = loginAliases[n];
+    if (aliased != null) return byUsername(aliased);
     return null;
   }
 

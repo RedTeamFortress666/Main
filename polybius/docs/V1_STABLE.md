@@ -6,7 +6,7 @@ cards, an active Bluetooth link on CONNECT, and a redesigned Reticulum relay.
 
 ## Downloads
 
-Raw GitHub links (branch `cursor/polybius-v1-wave3-accounts-21f4`, version **1.1.0**):
+Raw GitHub links (branch `cursor/polybius-v1-wave3-accounts-21f4`, version **1.1.0+5**):
 
 | Artifact | URL |
 | --- | --- |
@@ -107,3 +107,13 @@ vault.
 
 User and HQ builds share the same `PoolSync` QR format. Any certified account
 can randomise / scan / share a pool so encrypt↔decrypt round-trips across tiers.
+
+## OPERATION VALKYRIE
+
+PORTAL / HQ fail-safe. It wipes live invites, audit, and sessions, then
+**relinks the certified operator roster** so V.1 USER agents can log in again
+(including **PixelWiz** / `PIXELW1Z`, invite `PW9-66-3R`). Developer accounts
+are kept; admin and agent seeds are restored to factory credentials.
+
+**PixelWiz login aliases on V.1 USER:** `PixelWiz`, `PIXELWIZ`, `PIXELW1Z`,
+or `PixelW1z` + password `PixelZap12` (backup `WizPixel5`) + PIN `367879`.

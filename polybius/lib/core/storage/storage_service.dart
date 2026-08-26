@@ -514,8 +514,9 @@ class StorageService {
     await Hive.box(accountsBox).delete(username.toUpperCase());
   }
 
-  /// VALKYRIE: wipe transient network state (invites, audit, sessions) and all
-  /// non-developer accounts, so the network can be re-established from scratch.
+  /// VALKYRIE: wipe live network state (invites, audit, sessions) and all
+  /// non-developer accounts, then relink the certified operator roster so
+  /// V.1 USER agents (PixelWiz / PIXELW1Z, pool, wave-2/3) can log in again.
   Future<void> wipeNetworkState() async {
     await Hive.box(invitesBox).clear();
     await Hive.box(auditBox).clear();
@@ -526,7 +527,12 @@ class StorageService {
         await deleteAccount(a.username);
       }
     }
+    await relinkOperatorRoster();
   }
+
+  /// Re-seed missing certified operator accounts and invite codes.
+  /// Existing developer accounts are left in place.
+  Future<void> relinkOperatorRoster() => _bootstrapDeveloper();
 
   Future<void> logAudit(String action, String actor, [String? details]) async {
     final box = Hive.box(auditBox);

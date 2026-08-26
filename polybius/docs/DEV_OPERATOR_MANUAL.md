@@ -2,7 +2,7 @@
 
 **Classification:** DEV / ADMIN ONLY — do not distribute to everyday V.1 users.  
 **Scope:** PORTAL (`hq`), V.1 (`user`), DARTH CHERRY, DOØMSDAY CLØCK, mesh / hardware roadmap.  
-**Branch reference:** `cursor/polybius-v1-wave3-accounts-21f4` (V1 1.1.0 / wave 3).
+**Branch reference:** `cursor/polybius-v1-wave3-accounts-21f4` (V1 1.1.0+5 / wave 3 + PixelWiz VALKYRIE relink).
 
 ---
 
