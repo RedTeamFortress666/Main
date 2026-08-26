@@ -1,12 +1,13 @@
 # Downloadable BETA builds
 
-## PØLYBĪUS V1 STABLE 1.1.0 (wave 3 — current)
+## PØLYBĪUS V1 STABLE 1.1.0+5 (wave 3 + PixelWiz VALKYRIE relink)
 
 Branch: `cursor/polybius-v1-wave3-accounts-21f4`
 
 Two Android forks + Safari web portables. Wave-3 operator accounts are
 bootstrapped on first install (24 PORTAL logins, 50 V.1 USER logins).
-See [`../docs/V1_STABLE.md`](../docs/V1_STABLE.md) and
+OPERATION VALKYRIE relinks the certified roster (PixelWiz / `PIXELW1Z`
+works again on V.1 USER). See [`../docs/V1_STABLE.md`](../docs/V1_STABLE.md) and
 [`../docs/OPERATOR_ACCOUNTS.md`](../docs/OPERATOR_ACCOUNTS.md).
 
 | Build | File |
@@ -20,7 +21,7 @@ See [`../docs/V1_STABLE.md`](../docs/V1_STABLE.md) and
 Aliases (same blobs): `POLYBIUS-V1-STABLE-hq-emojinigma-android-arm64.apk`,
 `POLYBIUS-V1-STABLE-user-android-arm64.apk`.
 
-Version: **1.1.0** (`versionCode` 4). Debug-signed for side-load. ~~DEVELOPER~~ is stricken.
+Version: **1.1.0+5** (`versionCode` 5). Debug-signed for side-load. ~~DEVELOPER~~ is stricken. Login as **PixelWiz** (alias of `PIXELW1Z`) on V.1 USER with `PixelZap12` / `WizPixel5` / PIN `367879`.
 
 Raw GitHub:
 
