@@ -73,9 +73,10 @@ class _PinScreenState extends ConsumerState<PinScreen> {
               ),
               const SizedBox(height: 32),
               SizedBox(
-                width: 200,
+                width: 280,
                 child: TextField(
                   controller: _pinController,
+                  autofocus: true,
                   maxLength: 6,
                   obscureText: true,
                   keyboardType: TextInputType.number,
@@ -86,13 +87,22 @@ class _PinScreenState extends ConsumerState<PinScreen> {
                     letterSpacing: 12,
                     color: NeonTheme.neonCyan,
                   ),
-                  decoration: const InputDecoration(
-                    counterText: '',
-                    enabledBorder: UnderlineInputBorder(
+                  decoration: InputDecoration(
+                    counterText: '${_pinController.text.length}/6',
+                    hintText: '------',
+                    hintStyle: const TextStyle(
+                      color: Colors.white24,
+                      letterSpacing: 12,
+                    ),
+                    enabledBorder: const UnderlineInputBorder(
                       borderSide: BorderSide(color: NeonTheme.neonCyan),
+                    ),
+                    focusedBorder: const UnderlineInputBorder(
+                      borderSide: BorderSide(color: NeonTheme.neonPink, width: 2),
                     ),
                   ),
                   enabled: !_submitting,
+                  onChanged: (_) => setState(() {}),
                   onSubmitted: (_) => _submit(),
                 ),
               ),
