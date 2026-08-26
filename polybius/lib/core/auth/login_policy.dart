@@ -2,12 +2,13 @@ import 'package:polybius/core/constants/app_constants.dart';
 import 'package:polybius/core/constants/app_flavor.dart';
 import 'package:polybius/core/constants/operator_roster.dart';
 import 'package:polybius/core/constants/operator_wave2.dart';
+import 'package:polybius/core/constants/operator_wave3.dart';
 import 'package:polybius/core/models/models.dart';
 
 /// Layer-1 login rules per APK flavor.
 ///
-/// - **PORTAL (hq):** developer + admin operators only (16 accounts).
-/// - **V.1 USER:** agent / standard operators only (30 accounts).
+/// - **PORTAL (hq):** developer + admin operators only (24 accounts).
+/// - **V.1 USER:** agent / standard operators only (50 accounts).
 class LoginPolicy {
   LoginPolicy._();
 
@@ -45,6 +46,8 @@ class LoginPolicy {
             .map((o) => o.username),
         ...OperatorWave2.admins.map((o) => o.username),
         ...OperatorWave2.developers.map((o) => o.username),
+        ...OperatorWave3.admins.map((o) => o.username),
+        ...OperatorWave3.developers.map((o) => o.username),
       };
 
   /// All user/agent operator usernames bootstrapped for V.1 USER login tests.
@@ -55,5 +58,6 @@ class LoginPolicy {
             .where((o) => o.tier == UserTier.agent)
             .map((o) => o.username),
         ...OperatorWave2.users.map((o) => o.username),
+        ...OperatorWave3.users.map((o) => o.username),
       };
 }

@@ -10,8 +10,8 @@ Raw GitHub links (branch `cursor/pool-pin-bt-ui-d8fa`):
 
 | Artifact | URL |
 | --- | --- |
-| **PØLYBÎŪS PORTAL** (16 dev/admin logins) | https://github.com/RedTeamFortress666/Main/raw/cursor/portal-user-login-e16f/polybius/dist/polybius-v1-stable-hq-android-arm64.apk |
-| **PØLYBÎŪS V.1 USER** (30 user logins) | https://github.com/RedTeamFortress666/Main/raw/cursor/portal-user-login-e16f/polybius/dist/polybius-v1-stable-user-android-arm64.apk |
+| **PØLYBÎŪS PORTAL** (24 dev/admin logins) | https://github.com/RedTeamFortress666/Main/raw/cursor/portal-user-login-e16f/polybius/dist/polybius-v1-stable-hq-android-arm64.apk |
+| **PØLYBÎŪS V.1 USER** (50 user logins) | https://github.com/RedTeamFortress666/Main/raw/cursor/portal-user-login-e16f/polybius/dist/polybius-v1-stable-user-android-arm64.apk |
 | **PØLYBÎŪS V.1 — iOS** (Safari web portable) | https://github.com/RedTeamFortress666/Main/raw/cursor/portal-user-login-e16f/polybius/dist/polybius-v1-stable-user-ios-web-portable.zip |
 | DARTH CHERRY | https://github.com/RedTeamFortress666/Main/raw/cursor/portal-user-login-e16f/polybius/dist/darth-cherry-1.0.2-android-arm64.apk |
 
@@ -46,8 +46,8 @@ Both flavors require **Layer-1 operator login** (username + password + PIN). Acc
 
 | APK | Who can log in at startup |
 | --- | --- |
-| **PØLYBÎŪS PORTAL** | All **16** dev/admin accounts (5 developer + 11 admin) |
-| **PØLYBÎŪS V.1 USER** | All **30** user/agent accounts |
+| **PØLYBÎŪS PORTAL** | All **24** dev/admin accounts (8 developer + 16 admin) |
+| **PØLYBÎŪS V.1 USER** | All **50** user/agent accounts |
 
 Wrong APK for your tier shows a redirect message (e.g. user account on Portal → install V.1 USER).
 

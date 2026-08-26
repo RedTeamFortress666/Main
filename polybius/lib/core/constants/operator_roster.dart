@@ -6,6 +6,7 @@ library;
 
 import 'package:polybius/core/constants/app_constants.dart';
 import 'package:polybius/core/constants/operator_wave2.dart';
+import 'package:polybius/core/constants/operator_wave3.dart';
 
 class OperatorSeed {
   const OperatorSeed({
@@ -123,16 +124,18 @@ class OperatorRoster {
   ];
 
   /// Invite codes accepted at the portal for this Admin/user pool, plus any
-  /// specialised named operators (e.g. T3mptress) and wave-2 seeds.
+  /// specialised named operators (e.g. T3mptress) and wave-2 / wave-3 seeds.
   static Set<String> get inviteCodes => {
         ...pool.map((o) => o.inviteCode.toUpperCase()),
         ...OperatorWave2.all.map((o) => o.inviteCode.toUpperCase()),
+        ...OperatorWave3.all.map((o) => o.inviteCode.toUpperCase()),
         AppConstants.opTemptressInviteCode.toUpperCase(),
         AppConstants.opCrownOfCornsInviteCode.toUpperCase(),
         AppConstants.opMizzPicklesInviteCode.toUpperCase(),
         AppConstants.opPikZupInviteCode.toUpperCase(),
       };
 
-  /// Every roster seed including wave 2.
-  static List<OperatorSeed> get allSeeds => [...pool, ...OperatorWave2.all];
+  /// Every roster seed including wave 2 and wave 3.
+  static List<OperatorSeed> get allSeeds =>
+      [...pool, ...OperatorWave2.all, ...OperatorWave3.all];
 }

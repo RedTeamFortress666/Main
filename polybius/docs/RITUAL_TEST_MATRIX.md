@@ -1,7 +1,7 @@
 # PØLYBÎŪS — Ritual & Credentials Test Matrix
 
 **Audience:** you (tester) — mark PASS / FAIL / NOTES after each check.  
-**Builds:** reinstall fresh APKs from this branch so wave-2 accounts bootstrap.  
+**Builds:** reinstall fresh APKs from this branch so wave-3 accounts bootstrap.  
 **Important:** on an old install, new accounts appear only after a fresh install (or clear app data). Existing accounts keep prior passwords.
 
 ---
@@ -142,6 +142,58 @@ Shared privileged codes (PORTAL HQ): `B1-66-3R`, `D1-66-3R`, `W1-66-3R` (privile
 | G8 | Wave2 user U01 on USER APK | Cipher after ritual | ☐ |
 | G9 | Wave2 developer on PORTAL with W1 | Developer unlock | ☐ |
 | G10 | Art3mas display-name login | Works as ARTEM3S | ☐ |
+| G11 | Wave3 admin V0ltStag on PORTAL | Layer-1 login + PIN `701122` | ☐ |
+| G12 | Wave3 user Aur0raFox on USER APK | Cipher after ritual (`U21-44-3R`) | ☐ |
+| G13 | Wave3 developer B1tF0rge backup pw | `ForgeBit2` logs in on PORTAL | ☐ |
+
+---
+
+## I. Wave 3 — 5 new admins
+
+| Display | Username | Invite | PIN | Password | Temp / backup | PORTAL | USER |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| V0ltStag | V0LTSTAG | VS1-99-3R | 701122 | VoltStag91 | StagVolt3 | ☐ | ☐ |
+| Cr1ms0nRx | CR1MS0NRX | CX2-99-3R | 712233 | CrimsonRx2 | RxCrimson8 | ☐ | ☐ |
+| Obs1dian | OBS1DIAN | OD3-99-3R | 723344 | Obsidian77 | DianObsi5 | ☐ | ☐ |
+| StormK3l | STORMK3L | SK4-99-3R | 734455 | StormKel44 | KelStorm6 | ☐ | ☐ |
+| ApexW0lf | APEXW0LF | AW5-99-3R | 745566 | ApexWolf9 | WolfApex1 | ☐ | ☐ |
+
+---
+
+## J. Wave 3 — 3 new developers
+
+| Display | Username | Invite | PIN | Password | Temp / backup | PORTAL (+ B1/D1/W1 OK) | USER |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| B1tF0rge | B1TF0RGE | BF1-00-3R | 801177 | BitForge91 | ForgeBit2 | ☐ | ☐ |
+| GhostAsm | GHOSTASM | GA2-00-3R | 812288 | GhostAsm8 | AsmGhost4 | ☐ | ☐ |
+| Zer0Kern | ZER0KERN | ZK3-00-3R | 823399 | ZeroKern7 | KernZero3 | ☐ | ☐ |
+
+---
+
+## K. Wave 3 — 20 new users (agents)
+
+| Display | Username | Invite | PIN | Password | Temp / backup | PORTAL | USER |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Aur0raFox | AUR0RAFOX | U21-44-3R | 710101 | AuroraFx21 | FoxAurora1 | ☐ | ☐ |
+| B0real1s | B0REAL1S | U22-44-3R | 710202 | Borealis22 | LisBorea2 | ☐ | ☐ |
+| C1nderSki | C1NDERSKI | U23-44-3R | 710303 | CinderSki3 | SkiCinder3 | ☐ | ☐ |
+| DuskRav3n | DUSKRAV3N | U24-44-3R | 710404 | DuskRaven4 | RavenDusk4 | ☐ | ☐ |
+| EmberLynx | EMBERLYNX | U25-44-3R | 710505 | EmberLynx5 | LynxEmber5 | ☐ | ☐ |
+| FrostW1sp | FROSTW1SP | U26-44-3R | 710606 | FrostWisp6 | WispFrost6 | ☐ | ☐ |
+| Gild3dFin | GILD3DFIN | U27-44-3R | 710707 | GildedFin7 | FinGilded7 | ☐ | ☐ |
+| Hal0Drift | HAL0DRIFT | U28-44-3R | 710808 | HaloDrift8 | DriftHalo8 | ☐ | ☐ |
+| IrisNova | IRISNOVA | U29-44-3R | 710909 | IrisNova29 | NovaIris9 | ☐ | ☐ |
+| Jad3Spark | JAD3SPARK | U30-44-3R | 711010 | JadeSpark0 | SparkJade1 | ☐ | ☐ |
+| K0iWave | K0IWAVE | U31-44-3R | 711111 | KoiWave31 | WaveKoi2 | ☐ | ☐ |
+| LunarB1t | LUNARB1T | U32-44-3R | 711212 | LunarBit32 | BitLunar3 | ☐ | ☐ |
+| MystW1re | MYSTW1RE | U33-44-3R | 711313 | MystWire33 | WireMyst4 | ☐ | ☐ |
+| NyxFlare | NYXFLARE | U34-44-3R | 711414 | NyxFlare34 | FlareNyx5 | ☐ | ☐ |
+| OpalR1ft | OPALR1FT | U35-44-3R | 711515 | OpalRift35 | RiftOpal6 | ☐ | ☐ |
+| PulseF0x | PULSEF0X | U36-44-3R | 711616 | PulseFox36 | FoxPulse7 | ☐ | ☐ |
+| QuasarK1t | QUASARK1T | U37-44-3R | 711717 | QuasarKit7 | KitQuasar8 | ☐ | ☐ |
+| RuneW1sp | RUNEW1SP | U38-44-3R | 711818 | RuneWisp38 | WispRune9 | ☐ | ☐ |
+| Solst1ce | SOLST1CE | U39-44-3R | 711919 | Solstice39 | SticeSol1 | ☐ | ☐ |
+| TidalNyx | TIDALNYX | U40-44-3R | 712020 | TidalNyx40 | NyxTidal2 | ☐ | ☐ |
 
 ---
 

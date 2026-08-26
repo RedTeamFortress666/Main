@@ -81,4 +81,12 @@ void main() {
     expect(cat, isFalse);
     expect(auth.state.error, contains('V.1 USER'));
   });
+
+  test('wave-3 V0ltStag is on identity cards and PORTAL login', () async {
+    expect(OperatorIdentities.byUsername('V0LTSTAG')?.inviteOrFileCode,
+        'VS1-99-3R');
+    final ok = await auth.login('V0ltStag', 'VoltStag91');
+    expect(ok, isTrue);
+    expect(auth.state.user?.tier.name, 'admin');
+  });
 }

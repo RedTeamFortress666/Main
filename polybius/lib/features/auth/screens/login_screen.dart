@@ -150,8 +150,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       const SizedBox(height: 16),
                       Text(
                         AppFlavor.isHq
-                            ? 'PORTAL: RedTeam01, SpamKat2, KASP3R, wave-2 admins/devs'
-                            : 'V.1 USER: T3mptress, Gl1tchCat, wave-2 users',
+                            ? 'PORTAL: RedTeam01, SpamKat2, KASP3R, wave-2/3 admins/devs'
+                            : 'V.1 USER: T3mptress, Gl1tchCat, wave-2/3 users',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontSize: 11,
                               color: Colors.white38,

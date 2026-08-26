@@ -4,23 +4,29 @@ import 'package:polybius/core/constants/app_constants.dart';
 import 'package:polybius/core/constants/app_flavor.dart';
 import 'package:polybius/core/constants/operator_roster.dart';
 import 'package:polybius/core/constants/operator_wave2.dart';
+import 'package:polybius/core/constants/operator_wave3.dart';
 import 'package:polybius/core/models/models.dart';
 
 void main() {
-  test('dev admin roster has 16 operators', () {
-    expect(LoginPolicy.devAdminUsernames, hasLength(16));
+  test('dev admin roster has 24 operators', () {
+    expect(LoginPolicy.devAdminUsernames, hasLength(24));
     expect(LoginPolicy.devAdminUsernames, contains('REDTEAM01'));
     expect(LoginPolicy.devAdminUsernames, contains('SPAMKAT2'));
     expect(LoginPolicy.devAdminUsernames, contains('NEONVULT'));
     expect(LoginPolicy.devAdminUsernames, contains('HEXWRAITH'));
+    expect(LoginPolicy.devAdminUsernames, contains('APEXW0LF'));
+    expect(LoginPolicy.devAdminUsernames, contains('ZER0KERN'));
     expect(LoginPolicy.devAdminUsernames, isNot(contains('GL1TCHCAT')));
+    expect(LoginPolicy.devAdminUsernames, isNot(contains('AUR0RAFOX')));
   });
 
-  test('user agent roster has 30 operators', () {
-    expect(LoginPolicy.userAgentUsernames, hasLength(30));
+  test('user agent roster has 50 operators', () {
+    expect(LoginPolicy.userAgentUsernames, hasLength(50));
     expect(LoginPolicy.userAgentUsernames, contains('T3MPTRESS'));
     expect(LoginPolicy.userAgentUsernames, contains('GL1TCHCAT'));
     expect(LoginPolicy.userAgentUsernames, contains('TACHY0N'));
+    expect(LoginPolicy.userAgentUsernames, contains('AUR0RAFOX'));
+    expect(LoginPolicy.userAgentUsernames, contains('TIDALNYX'));
     expect(LoginPolicy.userAgentUsernames, isNot(contains('REDTEAM01')));
   });
 
@@ -73,6 +79,8 @@ void main() {
       ...OperatorRoster.pool.where((o) => o.tier != UserTier.agent),
       ...OperatorWave2.admins,
       ...OperatorWave2.developers,
+      ...OperatorWave3.admins,
+      ...OperatorWave3.developers,
     ];
     for (final seed in seeds) {
       expect(
@@ -95,6 +103,7 @@ void main() {
     final seeds = [
       ...OperatorRoster.pool.where((o) => o.tier == UserTier.agent),
       ...OperatorWave2.users,
+      ...OperatorWave3.users,
     ];
     for (final seed in seeds) {
       expect(

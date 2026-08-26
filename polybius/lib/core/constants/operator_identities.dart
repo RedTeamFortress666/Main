@@ -9,6 +9,7 @@ library;
 import 'package:polybius/core/constants/app_constants.dart';
 import 'package:polybius/core/constants/operator_roster.dart';
 import 'package:polybius/core/constants/operator_wave2.dart';
+import 'package:polybius/core/constants/operator_wave3.dart';
 
 class OperatorIdentity {
   const OperatorIdentity({
@@ -105,9 +106,10 @@ class OperatorIdentities {
       backupPassword: AppConstants.opPikZupBackupPassword,
       tier: UserTier.admin,
     ),
-    // BETA pool + wave-2 operators.
+    // BETA pool + wave-2 / wave-3 operators.
     ..._poolIdentities,
     ..._wave2Identities,
+    ..._wave3Identities,
   ];
 
   static const List<OperatorIdentity> _poolIdentities = [
@@ -204,6 +206,20 @@ class OperatorIdentities {
   ];
 
   static final List<OperatorIdentity> _wave2Identities = OperatorWave2.all
+      .map(
+        (o) => OperatorIdentity(
+          username: o.username,
+          displayName: o.displayName,
+          inviteOrFileCode: o.inviteCode,
+          pin: o.pin,
+          password: o.password,
+          backupPassword: o.backupPassword,
+          tier: o.tier,
+        ),
+      )
+      .toList();
+
+  static final List<OperatorIdentity> _wave3Identities = OperatorWave3.all
       .map(
         (o) => OperatorIdentity(
           username: o.username,
