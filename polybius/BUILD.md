@@ -1,6 +1,6 @@
 # PØLYBĪUS — BETA build guide
 
-Version: `1.0.0-beta.1+1` (see `pubspec.yaml`).
+Version: `1.1.0+4` (see `pubspec.yaml`).
 
 Flutter app (Dart). One codebase targets web, Linux desktop, Android and iOS.
 This document lists the exact commands, prerequisites and known blockers per

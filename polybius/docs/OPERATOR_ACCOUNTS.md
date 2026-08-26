@@ -4,12 +4,12 @@
 
 | Build | Accounts at login | APK |
 | --- | --- | --- |
-| **PØLYBÎŪS PORTAL** (Dev Admin) | All **24** dev/admin operators | [polybius-v1-stable-hq-android-arm64.apk](https://github.com/RedTeamFortress666/Main/raw/cursor/portal-user-login-e16f/polybius/dist/polybius-v1-stable-hq-android-arm64.apk) |
-| **PØLYBÎŪS V.1 USER** | All **50** user/agent operators | [polybius-v1-stable-user-android-arm64.apk](https://github.com/RedTeamFortress666/Main/raw/cursor/portal-user-login-e16f/polybius/dist/polybius-v1-stable-user-android-arm64.apk) |
+| **PØLYBÎŪS PORTAL** (Dev Admin) | All **24** dev/admin operators | [polybius-v1-stable-hq-android-arm64.apk](https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-v1-wave3-accounts-21f4/polybius/dist/polybius-v1-stable-hq-android-arm64.apk) |
+| **PØLYBÎŪS V.1 USER** | All **50** user/agent operators | [polybius-v1-stable-user-android-arm64.apk](https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-v1-wave3-accounts-21f4/polybius/dist/polybius-v1-stable-user-android-arm64.apk) |
 
 **Login rules:** Portal accepts developer + admin tiers only. V.1 USER accepts agent tier only. Wrong APK shows a redirect hint. Full credential tables below.
 
-Also: [iOS web portable](https://github.com/RedTeamFortress666/Main/raw/cursor/portal-user-login-e16f/polybius/dist/polybius-v1-stable-user-ios-web-portable.zip) · [DARTH CHERRY](https://github.com/RedTeamFortress666/Main/raw/cursor/portal-user-login-e16f/polybius/dist/darth-cherry-1.0.2-android-arm64.apk)
+Also: [PORTAL iOS web portable](https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-v1-wave3-accounts-21f4/polybius/dist/polybius-v1-stable-hq-ios-web-portable.zip) · [V.1 iOS web portable](https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-v1-wave3-accounts-21f4/polybius/dist/polybius-v1-stable-user-ios-web-portable.zip) · [DARTH CHERRY](https://github.com/RedTeamFortress666/Main/raw/cursor/v1-stable-logins-ios-b952/polybius/dist/darth-cherry-1.0.2-android-arm64.apk)
 
 Credentials bootstrapped on first install. Source of truth:
 

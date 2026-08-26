@@ -201,7 +201,7 @@ Shared privileged codes (PORTAL HQ): `B1-66-3R`, `D1-66-3R`, `W1-66-3R` (privile
 
 - PORTAL: `polybius/dist/polybius-v1-stable-hq-android-arm64.apk`
 - V.1: `polybius/dist/polybius-v1-stable-user-android-arm64.apk`
-- Raw base: `https://github.com/RedTeamFortress666/Main/raw/cursor/pool-pin-bt-ui-d8fa/`
+- Raw base: `https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-v1-wave3-accounts-21f4/`
 
 Reply with which rows failed and what you saw (error text / screen). Fresh install recommended after this cut.
 

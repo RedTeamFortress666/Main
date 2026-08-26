@@ -6,19 +6,20 @@ cards, an active Bluetooth link on CONNECT, and a redesigned Reticulum relay.
 
 ## Downloads
 
-Raw GitHub links (branch `cursor/pool-pin-bt-ui-d8fa`):
+Raw GitHub links (branch `cursor/polybius-v1-wave3-accounts-21f4`, version **1.1.0**):
 
 | Artifact | URL |
 | --- | --- |
-| **PØLYBÎŪS PORTAL** (24 dev/admin logins) | https://github.com/RedTeamFortress666/Main/raw/cursor/portal-user-login-e16f/polybius/dist/polybius-v1-stable-hq-android-arm64.apk |
-| **PØLYBÎŪS V.1 USER** (50 user logins) | https://github.com/RedTeamFortress666/Main/raw/cursor/portal-user-login-e16f/polybius/dist/polybius-v1-stable-user-android-arm64.apk |
-| **PØLYBÎŪS V.1 — iOS** (Safari web portable) | https://github.com/RedTeamFortress666/Main/raw/cursor/portal-user-login-e16f/polybius/dist/polybius-v1-stable-user-ios-web-portable.zip |
-| DARTH CHERRY | https://github.com/RedTeamFortress666/Main/raw/cursor/portal-user-login-e16f/polybius/dist/darth-cherry-1.0.2-android-arm64.apk |
+| **PØLYBÎŪS PORTAL / HQ** (24 dev/admin logins) | https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-v1-wave3-accounts-21f4/polybius/dist/polybius-v1-stable-hq-android-arm64.apk |
+| **PØLYBÎŪS V.1 USER** (50 user logins) | https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-v1-wave3-accounts-21f4/polybius/dist/polybius-v1-stable-user-android-arm64.apk |
+| **PØLYBÎŪS PORTAL — iOS** (Safari web portable) | https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-v1-wave3-accounts-21f4/polybius/dist/polybius-v1-stable-hq-ios-web-portable.zip |
+| **PØLYBÎŪS V.1 — iOS** (Safari web portable) | https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-v1-wave3-accounts-21f4/polybius/dist/polybius-v1-stable-user-ios-web-portable.zip |
+| DARTH CHERRY | https://github.com/RedTeamFortress666/Main/raw/cursor/v1-stable-logins-ios-b952/polybius/dist/darth-cherry-1.0.2-android-arm64.apk |
 
 Aliases (same binaries):
 
-- https://github.com/RedTeamFortress666/Main/raw/cursor/portal-user-login-e16f/polybius/dist/POLYBIUS-V1-STABLE-hq-emojinigma-android-arm64.apk
-- https://github.com/RedTeamFortress666/Main/raw/cursor/portal-user-login-e16f/polybius/dist/POLYBIUS-V1-STABLE-user-android-arm64.apk
+- https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-v1-wave3-accounts-21f4/polybius/dist/POLYBIUS-V1-STABLE-hq-emojinigma-android-arm64.apk
+- https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-v1-wave3-accounts-21f4/polybius/dist/POLYBIUS-V1-STABLE-user-android-arm64.apk
 
 Build locally:
 
