@@ -87,8 +87,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const SizedBox(height: 10),
                     Text(
                       AppFlavor.isHq
-                          ? 'Dev/admin operators only (16). User ops → V.1 USER APK.'
-                          : 'User operators only (30). Dev/admin → PORTAL APK.',
+                          ? 'Dev/admin operators only (24). User ops → V.1 USER APK.'
+                          : 'User operators only (50). Dev/admin → PORTAL APK.',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             fontSize: 11,
