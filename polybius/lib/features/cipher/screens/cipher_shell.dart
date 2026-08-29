@@ -11,6 +11,7 @@ import 'package:polybius/features/cipher/screens/encrypt_tab.dart';
 import 'package:polybius/features/cipher/screens/pool_tab.dart';
 import 'package:polybius/features/cipher/screens/rotor_gear_sheet.dart';
 import 'package:polybius/features/cipher/screens/sync_tab.dart';
+import 'package:polybius/features/redlight/cabinet_lamp.dart';
 
 /// Layer 3 hidden cipher tool — accessible only after unlock rituals.
 class CipherShell extends ConsumerStatefulWidget {
@@ -48,6 +49,7 @@ class _CipherShellState extends ConsumerState<CipherShell>
   Widget build(BuildContext context) {
     final unlock = ref.watch(unlockProvider);
     final isDev = unlock.state == UnlockState.developer;
+    final lamp = ref.watch(cabinetLampProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -61,6 +63,15 @@ class _CipherShellState extends ConsumerState<CipherShell>
           onPressed: () => context.go('/menu'),
         ),
         actions: [
+          IconButton(
+            icon: Icon(
+              lamp ? Icons.lightbulb : Icons.lightbulb_outline,
+              color: lamp ? NeonTheme.dangerRed : NeonTheme.neonYellow,
+            ),
+            tooltip: lamp ? 'Cabinet lamp' : 'House lights',
+            onPressed: () =>
+                ref.read(cabinetLampProvider.notifier).state = !lamp,
+          ),
           IconButton(
             icon: const Icon(Icons.settings, color: NeonTheme.neonPink),
             tooltip: 'Rotor Gear',
@@ -94,15 +105,18 @@ class _CipherShellState extends ConsumerState<CipherShell>
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: const [
-          EncryptTab(),
-          DecryptTab(),
-          PoolTab(),
-          SyncTab(),
-          ConnectTab(),
-        ],
+      body: CabinetLamp.wrap(
+        on: lamp,
+        child: TabBarView(
+          controller: _tabController,
+          children: const [
+            EncryptTab(),
+            DecryptTab(),
+            PoolTab(),
+            SyncTab(),
+            ConnectTab(),
+          ],
+        ),
       ),
     );
   }

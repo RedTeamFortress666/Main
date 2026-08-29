@@ -5,6 +5,7 @@ import 'package:polybius/core/constants/app_constants.dart';
 import 'package:polybius/core/constants/unlock_codes.dart';
 import 'package:polybius/core/crypto/encryption_service.dart';
 import 'package:polybius/core/models/models.dart';
+import 'package:polybius/features/duress/cabinet_identity.dart';
 
 class StorageService {
   StorageService(this._encryption);
@@ -223,6 +224,37 @@ class StorageService {
 
   Future<void> setPoolSeed(String seed) async {
     await Hive.box(settingsBox).put('poolSeed', seed);
+  }
+
+  Future<CabinetIdentity?> getCabinet(String username) async {
+    final raw = Hive.box(settingsBox).get('cabinet::$username');
+    if (raw is! String || raw.isEmpty) return null;
+    try {
+      final map = jsonDecode(_encryption.decrypt(raw));
+      if (map is Map) {
+        return CabinetIdentity.fromJson(Map<dynamic, dynamic>.from(map));
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<void> saveCabinet(String username, CabinetIdentity cabinet) async {
+    await Hive.box(settingsBox).put(
+      'cabinet::$username',
+      _encryption.encrypt(jsonEncode(cabinet.toJson())),
+    );
+  }
+
+  Future<String> getOperatorInitials() async {
+    final raw = Hive.box(settingsBox).get('operatorInitials');
+    return raw is String && raw.isNotEmpty ? raw : 'YOU';
+  }
+
+  Future<void> setOperatorInitials(String initials) async {
+    await Hive.box(settingsBox).put(
+      'operatorInitials',
+      initials.toUpperCase().padRight(3).substring(0, 3),
+    );
   }
 
   Future<void> logAudit(String action, String actor, [String? details]) async {

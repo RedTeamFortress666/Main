@@ -18,6 +18,10 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
   String? _lastInvite;
   final _pinController = TextEditingController();
   final _pubKeyController = TextEditingController();
+  final _coverPinController = TextEditingController();
+  final _coverInitialsController = TextEditingController(text: 'CLX');
+  final _coverTextController =
+      TextEditingController(text: 'HIGH SCORE AT DAWN');
   List<AuditLogEntry> _logs = [];
   List<InviteCode> _invites = [];
   int _securityScore = 87;
@@ -33,6 +37,9 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
   void dispose() {
     _pinController.dispose();
     _pubKeyController.dispose();
+    _coverPinController.dispose();
+    _coverInitialsController.dispose();
+    _coverTextController.dispose();
     super.dispose();
   }
 
@@ -148,6 +155,54 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
             ElevatedButton(
               onPressed: _saveTrustedKey,
               child: const Text('SAVE TRUSTED MODULUS'),
+            ),
+          ]),
+          _section('MIDNIGHT CLIMAX CABINET', [
+            const Text(
+              'Cover PIN looks like a normal checkpoint. Same PIN_OK audit. '
+              'Do not use the same digits as the real PIN.',
+              style: TextStyle(color: Colors.white54, fontSize: 11),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _coverPinController,
+              maxLength: 6,
+              obscureText: true,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Cover PIN (6)',
+                labelStyle: TextStyle(color: NeonTheme.neonPink, fontSize: 11),
+              ),
+            ),
+            TextField(
+              controller: _coverInitialsController,
+              maxLength: 3,
+              decoration: const InputDecoration(
+                labelText: 'Cover initials',
+                labelStyle: TextStyle(color: NeonTheme.neonCyan, fontSize: 11),
+              ),
+            ),
+            TextField(
+              controller: _coverTextController,
+              decoration: const InputDecoration(
+                labelText: 'Cover plaintext (auto-encrypt if field empty)',
+                labelStyle: TextStyle(color: NeonTheme.neonGreen, fontSize: 11),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (_coverPinController.text.length != 6) return;
+                await ref.read(authProvider.notifier).armCabinet(
+                      coverPin: _coverPinController.text,
+                      initials: _coverInitialsController.text,
+                      coverPlaintext: _coverTextController.text,
+                    );
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('CABINET ARMED')),
+                );
+              },
+              child: const Text('ARM COVER IDENTITY'),
             ),
           ]),
           _section('ADMIN PIN', [

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 import 'package:polybius/core/widgets/arcade_ui.dart';
 
@@ -37,6 +38,8 @@ class _HighScoreScreenState extends ConsumerState<HighScoreScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final cover = ref.watch(duressProvider);
+    final identity = cover.active ? cover.coverInitials : 'YOU';
     return ArcadeScaffold(
       accent: NeonTheme.neonCyan,
       child: Column(
@@ -84,9 +87,9 @@ class _HighScoreScreenState extends ConsumerState<HighScoreScreen> {
           ),
           Row(
             children: [
-              const Text(
-                'ENTER INITIALS:',
-                style: TextStyle(
+              Text(
+                'ENTER INITIALS: $identity',
+                style: const TextStyle(
                   fontFamily: 'monospace',
                   color: Colors.white70,
                   letterSpacing: 2,

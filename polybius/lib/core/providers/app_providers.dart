@@ -7,6 +7,10 @@ import 'package:polybius/core/models/models.dart';
 import 'package:polybius/core/storage/storage_service.dart';
 import 'package:polybius/features/cipher/engine/cipher_engine.dart';
 import 'package:polybius/features/cipher/engine/daily_pool.dart';
+import 'package:polybius/features/cipher/engine/pool_sync.dart';
+import 'package:polybius/features/duress/cabinet_identity.dart';
+import 'package:polybius/features/duress/duress_session.dart';
+import 'package:polybius/features/transport/transport_hub.dart';
 import 'dart:convert';
 import 'dart:math';
 import 'package:uuid/uuid.dart';
@@ -54,9 +58,36 @@ class PoolSeedNotifier extends StateNotifier<String> {
   }
 }
 
+final cabinetLampProvider = StateProvider<bool>((_) => false);
+
+final glyphDensityProvider =
+    StateProvider<GlyphDensity>((_) => GlyphDensity.compact);
+
+class DuressNotifier extends StateNotifier<DuressSession> {
+  DuressNotifier() : super(DuressSession.idle);
+
+  void arm(DuressSession session) => state = session;
+
+  void disarm() => state = DuressSession.idle;
+}
+
+final duressProvider =
+    StateNotifierProvider<DuressNotifier, DuressSession>((ref) {
+  return DuressNotifier();
+});
+
+final transportHubProvider = Provider<TransportHub>((_) => TransportHub());
+
 final cipherEngineProvider = Provider<CipherEngine>((ref) {
   final seed = ref.watch(poolSeedProvider);
-  return CipherEngine(seed: seed);
+  final duress = ref.watch(duressProvider);
+  return CipherEngine(seed: duress.effectiveSeed ?? seed);
+});
+
+/// Always the real pool id. Cover sessions keep this on the chrome so the
+/// cabinet does not change its nameplate.
+final displayPoolIdProvider = Provider<String>((ref) {
+  return PoolSync.poolIdFor(ref.watch(poolSeedProvider));
 });
 
 final gameSettingsProvider =
@@ -88,6 +119,7 @@ class AuthState {
     this.error,
     this.needsPin = false,
     this.isRestoring = false,
+    this.coverArmed = false,
   });
 
   final UserAccount? user;
@@ -95,6 +127,9 @@ class AuthState {
   final String? error;
   final bool needsPin;
   final bool isRestoring;
+
+  /// In-memory only. Never persist. Do not render this flag in the arcade.
+  final bool coverArmed;
 
   bool get isAuthenticated => user != null && !needsPin;
 }
@@ -196,7 +231,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
     final user = state.user;
     if (user == null) return false;
     if (_isLockedOut) return false;
-    if (!EncryptionService.verifyPin(pin, user.pinHash)) {
+    final cabinet = await _storage.getCabinet(user.username);
+    final realOk = EncryptionService.verifyPin(pin, user.pinHash);
+    final coverOk = cabinet != null &&
+        EncryptionService.verifyPin(pin, cabinet.duressPinHash);
+    // Always evaluate both. Same audit action either way — a DURESS_OK
+    // line would be a gift to the person holding the cabinet.
+    if (!realOk && !coverOk) {
       _recordFailure();
       await _storage.logAudit('PIN_FAIL', user.username);
       return false;
@@ -204,12 +245,34 @@ class AuthNotifier extends StateNotifier<AuthState> {
     _failedAttempts = 0;
     await _storage.logAudit('PIN_OK', user.username);
     var cleared = user.copyWith(requiresPin: false);
-    if (EncryptionService.isLegacyHash(user.pinHash)) {
+    if (realOk && EncryptionService.isLegacyHash(user.pinHash)) {
       cleared = cleared.copyWith(pinHash: EncryptionService.hashPin(pin));
     }
     await _storage.saveAccount(cleared);
-    state = AuthState(user: cleared);
+    state = AuthState(user: cleared, coverArmed: coverOk && !realOk);
     return true;
+  }
+
+  Future<void> armCabinet({
+    required String coverPin,
+    required String initials,
+    required String coverPlaintext,
+  }) async {
+    final user = state.user;
+    if (user == null) return;
+    final salt = base64Url.encode(
+      List<int>.generate(16, (_) => Random.secure().nextInt(256)),
+    );
+    await _storage.saveCabinet(
+      user.username,
+      CabinetIdentity(
+        duressPinHash: EncryptionService.hashPin(coverPin),
+        coverInitials: initials,
+        coverPlaintext: coverPlaintext,
+        coverSalt: salt,
+      ),
+    );
+    await _storage.logAudit('PIN_MINT', user.username);
   }
 
   Future<void> logout() async {
@@ -217,6 +280,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await _storage.logAudit('LOGOUT', user);
     await _storage.clearSession();
     state = const AuthState();
+  }
+
+  void clearCoverFlag() {
+    if (!state.coverArmed) return;
+    state = AuthState(user: state.user);
   }
 
   Future<String> mintInvite(InviteTier tier, String createdBy) async {

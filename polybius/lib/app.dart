@@ -101,6 +101,9 @@ class _PolybiusAppState extends ConsumerState<PolybiusApp> {
     ref.listen(gameSettingsProvider.select((s) => s.soundEnabled), (_, enabled) {
       ref.read(musicServiceProvider).setEnabled(enabled);
     });
+    ref.listen(authProvider.select((s) => s.user?.username), (prev, next) {
+      if (next == null) ref.read(duressProvider.notifier).disarm();
+    });
 
     final router = ref.watch(routerProvider);
     final unlock = ref.watch(unlockProvider);

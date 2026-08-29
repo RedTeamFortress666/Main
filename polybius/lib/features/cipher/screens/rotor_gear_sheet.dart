@@ -61,7 +61,7 @@ class RotorGearSheet extends ConsumerWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Pool: ${engine.poolId} | Alphabet: ${Rotor.alphabetSize}',
+                  'Pool: ${ref.watch(displayPoolIdProvider)} | SLOT ${engine.slot} | ODO ${Rotor.alphabetSize}',
                   style: const TextStyle(color: Colors.white38, fontSize: 10),
                 ),
               ],
@@ -115,7 +115,7 @@ class _RotorCard extends StatelessWidget {
                 style: const TextStyle(color: Colors.white54, fontSize: 10),
               ),
               Text(
-                'NOTCH: ${rotor.notch}',
+                'NOTCH (FLAVOUR): ${rotor.notch}',
                 style: const TextStyle(color: Colors.white38, fontSize: 10),
               ),
             ],

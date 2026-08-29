@@ -87,7 +87,7 @@ class _SyncTabState extends ConsumerState<SyncTab> {
         ),
         const SizedBox(height: 4),
         Text(
-          'Active pool: ${engine.poolId}',
+          'Active pool: ${ref.watch(displayPoolIdProvider)} · slot ${engine.slot}',
           textAlign: TextAlign.center,
           style: const TextStyle(color: Colors.white54, fontSize: 12),
         ),

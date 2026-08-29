@@ -21,17 +21,37 @@ flutter run -d chrome # web
 
 ## Architecture
 
+Five cabinets, one arcade. They do not share state except through the
+providers in `lib/core/providers/app_providers.dart`.
+
 ```
 lib/
-├── core/           # constants, crypto, models, storage, theme, widgets
+├── core/                # constants, AES-at-rest, HKDF, hybrid envelope
 ├── features/
-│   ├── auth/       # login gate + PIN re-auth
-│   ├── arcade/     # decoy main menu, settings, load game
-│   ├── cipher/     # Enigma-style emoji rotor engine + tabs
-│   └── game/       # Flame space shooter (Galaga-inspired)
-├── app.dart        # routing + CRT overlay
+│   ├── auth/            # login gate + PIN (real or cover)
+│   ├── arcade/          # decoy menu, high scores, settings
+│   ├── cipher/          # rotors, pool manager, QR sync
+│   ├── redlight/        # vanishing field + dual-layer keyboard
+│   ├── duress/          # cover identity (in-memory session)
+│   ├── transport/       # QR + Reticulum sidecar + Matrix fallback
+│   └── game/            # Flame shooter
+├── app.dart
 └── main.dart
 ```
+
+| Layer | Owns | Must not own |
+|---|---|---|
+| Arcade shell | CRT, scores, lamp chrome | Seeds, PINs, frames |
+| Cipher engine | Rotors, 2/3-glyph map, stego decoys | UI, network |
+| Pool manager | 24h draw, 2h remap | Transport |
+| Redlight | Derangement, vanishing buffer | Ciphertext |
+| Transport | Padded frames, RNS/Matrix/QR | Plaintext |
+
+Honest limits: AES-256-GCM is the payload cipher (there is no AES-512).
+X25519 is live. ML-KEM is a format slot, not an audited Kyber. Reticulum
+is a loopback sidecar, not an embedded Python stack. Cover PIN sessions
+look identical in the arcade; a Hive dump still shows that a cover record
+exists.
 
 ## Three Layers
 

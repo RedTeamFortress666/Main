@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
+import 'package:polybius/features/cipher/engine/cipher_engine.dart';
 import 'package:polybius/features/cipher/screens/clipboard_row.dart';
 
 class DecryptTab extends ConsumerStatefulWidget {
@@ -22,7 +23,10 @@ class _DecryptTabState extends ConsumerState<DecryptTab> {
   }
 
   void _decrypt() {
-    final engine = ref.read(cipherEngineProvider);
+    final engine = CipherEngine(
+      seed: ref.read(cipherEngineProvider).seed,
+      density: ref.read(glyphDensityProvider),
+    );
     setState(() {
       _output = engine.decrypt(_inputController.text);
     });

@@ -11,6 +11,7 @@ class PoolTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final engine = ref.watch(cipherEngineProvider);
     final pool = engine.pool;
+    final nameplate = ref.watch(displayPoolIdProvider);
 
     return Column(
       children: [
@@ -19,7 +20,7 @@ class PoolTab extends ConsumerWidget {
           child: Column(
             children: [
               Text(
-                'ACTIVE POOL — ${engine.poolId}',
+                'ACTIVE POOL — $nameplate',
                 style: const TextStyle(
                   fontFamily: 'monospace',
                   color: NeonTheme.neonCyan,
@@ -28,7 +29,7 @@ class PoolTab extends ConsumerWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                '${pool.length} / ${AppConstants.poolSize} emojis active',
+                '${pool.length} / ${AppConstants.poolSize} active · slot ${engine.slot} · master ${AppConstants.masterPoolTarget} target',
                 style: const TextStyle(color: Colors.white54, fontSize: 12),
               ),
             ],
