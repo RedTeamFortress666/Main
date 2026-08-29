@@ -77,7 +77,7 @@ class _RedlightKeyboardState extends State<RedlightKeyboard> {
               setState(() => _shift = !_shift);
               Keyclick.tick(audio: widget.audio);
             }),
-            Expanded(flex: 3, child: _special('SPACE', _space)),
+            _special('SPACE', _space, flex: 3),
             _special('DEL', _backspace),
           ],
         ),
@@ -91,6 +91,7 @@ class _RedlightKeyboardState extends State<RedlightKeyboard> {
         for (final k in keys)
           Expanded(
             child: _Keycap(
+              key: ValueKey<String>('cabinet-key-$k'),
               house: k,
               phosphor: widget.derangement.mapGlyph(k),
               onTap: () => _type(k),
@@ -100,8 +101,9 @@ class _RedlightKeyboardState extends State<RedlightKeyboard> {
     );
   }
 
-  Widget _special(String label, VoidCallback onTap) {
+  Widget _special(String label, VoidCallback onTap, {int flex = 1}) {
     return Expanded(
+      flex: flex,
       child: Padding(
         padding: const EdgeInsets.all(2),
         child: InkWell(
@@ -130,6 +132,7 @@ class _RedlightKeyboardState extends State<RedlightKeyboard> {
 
 class _Keycap extends StatelessWidget {
   const _Keycap({
+    super.key,
     required this.house,
     required this.phosphor,
     required this.onTap,
