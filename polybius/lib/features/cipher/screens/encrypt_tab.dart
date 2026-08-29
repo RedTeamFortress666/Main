@@ -105,7 +105,6 @@ class _EncryptTabState extends ConsumerState<EncryptTab> {
                       .state = GlyphDensity.cabinet,
                 ),
               ),
-              ),
             ],
           ),
           const SizedBox(height: 4),

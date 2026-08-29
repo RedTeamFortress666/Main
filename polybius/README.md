@@ -62,7 +62,9 @@ Replit-style OIDC login. First install creates built-in `DEVELOPER` account.
 Psychedelic neon CRT main menu with playable space shooter. MKUltra-themed level names, subliminal glitch text, ship upgrades MK-I → MK-V.
 
 ### Layer 3 — Hidden Cipher
-Multi-rotor Enigma variant. Each character → 2 emojis from a daily 560-emoji pool (date-seeded).
+Multi-rotor engine. Default **2 glyphs per character** (optional 3). Daily
+master draw, remapped every 2 UTC hours. The second glyph is *not* the
+plaintext index.
 
 ## Unlock Rituals
 
@@ -76,11 +78,12 @@ Multi-rotor Enigma variant. Each character → 2 emojis from a daily 560-emoji p
 
 ## Cipher Tabs
 
-- **🔒 ENCRYPT** — plaintext → emoji ciphertext
+- **🔒 ENCRYPT** — vanishing redlight keyboard → emoji ciphertext
 - **🔓 DECRYPT** — emoji → plaintext
-- **🎲 POOL** — today's 560-emoji cipher pool
-- **📡 CONNECT** — device info, Bluetooth placeholder, logout
-- **⚙ Rotor Gear** — live rotor positions and step counts
+- **🎲 POOL** — active 560-glyph window + slot
+- **🔗 SYNC** — QR / padded courier token
+- **📡 CONNECT** — QR / RNS / Matrix status, logout
+- **⚙ Rotor Gear** — odometer positions (notch is flavour only)
 
 ## Build
 
