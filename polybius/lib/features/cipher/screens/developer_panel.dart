@@ -5,6 +5,9 @@ import 'package:polybius/core/constants/app_constants.dart';
 import 'package:polybius/core/models/models.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
+import 'package:polybius/features/redlight/auto_patcher.dart';
+import 'package:polybius/features/redlight/leak_detector.dart';
+import 'package:polybius/features/redlight/leak_strip.dart';
 
 /// DEVELOPER-only red team sandbox with invite management and pool forcing.
 class DeveloperPanel extends ConsumerStatefulWidget {
@@ -24,7 +27,6 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
       TextEditingController(text: 'HIGH SCORE AT DAWN');
   List<AuditLogEntry> _logs = [];
   List<InviteCode> _invites = [];
-  int _securityScore = 87;
   String? _loadError;
 
   @override
@@ -96,14 +98,28 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
                 ),
               ),
             ),
-          _section('RED TEAM SANDBOX', [
-            _scoreBar('Security Score', _securityScore),
-            _scoreBar('Cover Integrity', 94),
-            _scoreBar('Cipher Strength', 91),
+          _section('DARTH CHERRY LEAK DETECTOR', [
+            LeakStrip(report: ref.watch(leakReportProvider)),
+            const SizedBox(height: 8),
+            ...ref.watch(leakReportProvider).findings.map(_findingRow),
+            const SizedBox(height: 8),
             ElevatedButton(
-              onPressed: () => setState(() => _securityScore = 50 + (DateTime.now().millisecond % 50)),
+              onPressed: () async {
+                ref.read(cabinetPolicyProvider.notifier).weave();
+                await ref.read(cherryMixerProvider.notifier).ensure();
+                await ref.read(leakSurfaceProvider.notifier).refresh(
+                      username: ref.read(authProvider).user?.username,
+                    );
+                await ref.read(storageServiceProvider).logAudit(
+                      AutoPatcher.auditAction,
+                      AppConstants.developerUsername,
+                      'WOVEN',
+                    );
+                if (!mounted) return;
+                setState(() {});
+              },
               style: ElevatedButton.styleFrom(backgroundColor: NeonTheme.dangerRed),
-              child: const Text('RUN PENETRATION SCAN'),
+              child: const Text('INTERWOVEN AUTOPATCH'),
             ),
           ]),
           _section('INVITE MANAGEMENT', [
@@ -160,8 +176,8 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
           _section('DARTH CHERRY', [
             const Text(
               'Default ENCRYPT is advanced V1 (plaintext field, 2-glyph engine). '
-              'Arming Cherry opens the glyph keyboard in the cipher channel. '
-              'LOAD GAME codes: DARTH-CHERRY or CH3-RRY.',
+              'Arming Cherry opens the glyph keyboard, runs the leak detector, '
+              'and weaves the auto-patcher. LOAD GAME: DARTH-CHERRY or CH3-RRY.',
               style: TextStyle(color: Colors.white54, fontSize: 11),
             ),
             SwitchListTile(
@@ -221,6 +237,10 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
                       coverPlaintext: _coverTextController.text,
                     );
                 if (!context.mounted) return;
+                await ref.read(leakSurfaceProvider.notifier).refresh(
+                      username: ref.read(authProvider).user?.username,
+                    );
+                if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('CABINET ARMED')),
                 );
@@ -252,6 +272,23 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
                 }
               },
               child: const Text('MINT ADMIN PIN'),
+            ),
+          ]),
+          _section('OPERATOR CHECKPOINT', [
+            const Text(
+              'Re-opens the PIN gate without a logout so a cover PIN can be '
+              'entered on the DEVELOPER account. Same PIN_OK audit either way.',
+              style: TextStyle(color: Colors.white54, fontSize: 11),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: () async {
+                await ref.read(authProvider.notifier).requestOperatorCheckpoint();
+                if (!context.mounted) return;
+                Navigator.of(context).pop();
+                context.go('/pin');
+              },
+              child: const Text('GEAR CAL'),
             ),
           ]),
           _section('POOL FORCING', [
@@ -331,28 +368,29 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
     );
   }
 
-  Widget _scoreBar(String label, int score) {
+  Widget _findingRow(LeakFinding finding) {
+    final color = switch (finding.severity) {
+      LeakSeverity.open => NeonTheme.dangerRed,
+      LeakSeverity.patched => NeonTheme.neonGreen,
+      LeakSeverity.residual => NeonTheme.neonYellow,
+    };
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 120,
-            child: Text(label, style: const TextStyle(fontSize: 12, color: Colors.white54)),
-          ),
-          Expanded(
-            child: LinearProgressIndicator(
-              value: score / 100,
-              backgroundColor: Colors.white12,
-              color: score > 80
-                  ? NeonTheme.neonGreen
-                  : score > 50
-                      ? NeonTheme.neonYellow
-                      : NeonTheme.dangerRed,
+          Text(
+            '${finding.severity.name.toUpperCase()}  ${finding.title}',
+            style: TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 11,
+              color: color,
             ),
           ),
-          const SizedBox(width: 8),
-          Text('$score%', style: const TextStyle(fontSize: 11, color: NeonTheme.neonGreen)),
+          Text(
+            finding.detail,
+            style: const TextStyle(color: Colors.white54, fontSize: 10),
+          ),
         ],
       ),
     );

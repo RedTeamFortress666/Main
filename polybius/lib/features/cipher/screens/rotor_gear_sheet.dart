@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 import 'package:polybius/features/cipher/engine/rotor.dart';
@@ -10,7 +11,10 @@ class RotorGearSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final engine = ref.watch(cipherEngineProvider);
+    final policy = ref.watch(cabinetPolicyProvider);
+    final engine = policy.chromeUsesRealSeed
+        ? ref.watch(realCipherEngineProvider)
+        : ref.watch(cipherEngineProvider);
     final rotors = engine.rotors;
 
     return Padding(
@@ -68,6 +72,22 @@ class RotorGearSheet extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 16),
+          OutlinedButton(
+            onPressed: () async {
+              await ref.read(authProvider.notifier).requestOperatorCheckpoint();
+              if (!context.mounted) return;
+              Navigator.of(context).pop();
+              context.go('/pin');
+            },
+            child: const Text(
+              'GEAR CAL — OPERATOR CHECKPOINT',
+              style: TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 11,
+                color: NeonTheme.neonYellow,
+              ),
+            ),
+          ),
         ],
       ),
     );

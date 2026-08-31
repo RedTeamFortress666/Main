@@ -68,7 +68,10 @@ class _SyncTabState extends ConsumerState<SyncTab> {
   @override
   Widget build(BuildContext context) {
     final seed = ref.watch(poolSeedProvider);
-    final engine = ref.watch(cipherEngineProvider);
+    final policy = ref.watch(cabinetPolicyProvider);
+    final engine = policy.chromeUsesRealSeed
+        ? ref.watch(realCipherEngineProvider)
+        : ref.watch(cipherEngineProvider);
     final token = PoolSync.fromSeed(seed);
     final code = token.encode();
 

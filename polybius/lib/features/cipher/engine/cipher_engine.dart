@@ -235,6 +235,26 @@ class CipherEngine {
     return buffer.toString();
   }
 
+  /// Try compact then cabinet. V1 and Cherry chips must not strand ciphertext.
+  static String decryptAuto({
+    required String seed,
+    required String text,
+    DateTime? at,
+  }) {
+    String? best;
+    for (final density in GlyphDensity.values) {
+      final out = CipherEngine(
+        seed: seed,
+        density: density,
+        stego: false,
+        at: at,
+      ).decrypt(text);
+      if (out.isEmpty) continue;
+      if (best == null || out.length > best.length) best = out;
+    }
+    return best ?? '';
+  }
+
   CipherEngine clone() {
     final engine = CipherEngine(
       seed: _seed,

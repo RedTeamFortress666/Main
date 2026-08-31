@@ -1,10 +1,12 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:polybius/core/constants/app_constants.dart';
 import 'package:polybius/core/constants/unlock_codes.dart';
 import 'package:polybius/core/crypto/encryption_service.dart';
 import 'package:polybius/core/models/models.dart';
+import 'package:polybius/features/auth/v2_login_protocol.dart';
 import 'package:polybius/features/duress/cabinet_identity.dart';
 
 class StorageService {
@@ -261,6 +263,35 @@ class StorageService {
     await Hive.box(settingsBox).put('darthCherry', enabled);
   }
 
+  /// Random mixer for the phosphor keyboard. Never the operator username.
+  Future<String?> getCherryMixer() async {
+    final raw = Hive.box(settingsBox).get('cherryMixer');
+    if (raw is! String || raw.isEmpty) return null;
+    try {
+      return _encryption.decrypt(raw);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> setCherryMixer(String mixer) async {
+    await Hive.box(settingsBox).put(
+      'cherryMixer',
+      _encryption.encrypt(mixer),
+    );
+  }
+
+  Future<String> ensureCherryMixer() async {
+    final existing = await getCherryMixer();
+    if (existing != null && existing.isNotEmpty && existing.length >= 8) {
+      return existing;
+    }
+    final bytes = List<int>.generate(16, (_) => Random.secure().nextInt(256));
+    final mixer = base64Url.encode(bytes);
+    await setCherryMixer(mixer);
+    return mixer;
+  }
+
   Future<void> setOperatorInitials(String initials) async {
     await Hive.box(settingsBox).put(
       'operatorInitials',
@@ -294,19 +325,52 @@ class StorageService {
     return entries.take(limit).toList();
   }
 
-  Future<void> setSessionUser(String? username) async {
+  Future<void> setV2Session(String username) async {
+    final ticket = V2SessionTicket.issue(
+      username: username,
+      mac: _encryption.mac,
+    );
     final box = Hive.box(sessionBox);
+    await box.put('ticket', ticket.wire);
+    await box.put('user', ticket.username);
+  }
+
+  Future<bool> hasV2Ticket() async {
+    final raw = Hive.box(sessionBox).get('ticket');
+    if (raw is! String || raw.isEmpty) return false;
+    final ticket = V2SessionTicket.parse(raw);
+    return ticket != null && ticket.verify(_encryption.mac);
+  }
+
+  Future<void> setSessionUser(String? username) async {
     if (username == null) {
-      await box.delete('user');
-    } else {
-      await box.put('user', username);
+      await clearSession();
+      return;
     }
+    await setV2Session(username);
   }
 
   Future<String?> getSessionUser() async {
     final box = Hive.box(sessionBox);
-    return box.get('user') as String?;
+    final raw = box.get('ticket');
+    if (raw is String && raw.isNotEmpty) {
+      final ticket = V2SessionTicket.parse(raw);
+      if (ticket != null && ticket.verify(_encryption.mac)) {
+        return ticket.username;
+      }
+      await box.delete('ticket');
+    }
+    final legacy = box.get('user');
+    if (legacy is String && legacy.isNotEmpty) {
+      await setV2Session(legacy);
+      return legacy.trim().toUpperCase();
+    }
+    return null;
   }
 
-  Future<void> clearSession() => setSessionUser(null);
+  Future<void> clearSession() async {
+    final box = Hive.box(sessionBox);
+    await box.delete('user');
+    await box.delete('ticket');
+  }
 }

@@ -6,6 +6,8 @@ import 'package:polybius/core/constants/app_constants.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 import 'package:polybius/core/widgets/crt_widgets.dart';
+import 'package:polybius/features/auth/v2_login_protocol.dart';
+import 'package:polybius/features/auth/widgets/v2_protocol_console.dart';
 
 /// Replit-style OIDC login gate. First install ships with DEVELOPER account.
 class LoginScreen extends ConsumerStatefulWidget {
@@ -19,6 +21,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscure = true;
+  int _visibleLines = 0;
 
   @override
   void dispose() {
@@ -28,12 +31,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _submit() async {
+    setState(() => _visibleLines = 0);
     final ok = await ref.read(authProvider.notifier).login(
           _usernameController.text.trim(),
           _passwordController.text,
         );
     if (!mounted) return;
+    final handshake = ref.read(authProvider).handshake;
+    for (var i = 1; i <= handshake.lines.length; i++) {
+      if (!mounted) return;
+      setState(() => _visibleLines = i);
+      await Future<void>.delayed(const Duration(milliseconds: 70));
+    }
+    if (!mounted) return;
     if (ok) {
+      ref.read(cabinetPolicyProvider.notifier).weave();
+      await ref.read(cherryMixerProvider.notifier).ensure();
+      await ref.read(leakSurfaceProvider.notifier).refresh(
+            username: ref.read(authProvider).user?.username,
+          );
+      if (!mounted) return;
       final auth = ref.read(authProvider);
       if (auth.needsPin) {
         context.go('/pin');
@@ -77,7 +94,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'CLASSIFIED ARCADE TERMINAL',
+                      '${V2LoginProtocol.name}  PROTOCOL',
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                             color: NeonTheme.neonGreen,
                           ),
@@ -108,6 +125,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       Text(
                         auth.error!,
                         style: const TextStyle(color: NeonTheme.dangerRed),
+                      ),
+                    ],
+                    if (auth.handshake.lines.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      V2ProtocolConsole(
+                        log: auth.handshake,
+                        visibleLines: _visibleLines,
                       ),
                     ],
                     const SizedBox(height: 24),

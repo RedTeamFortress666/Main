@@ -44,6 +44,11 @@ class _LoadGameScreenState extends ConsumerState<LoadGameScreen> {
 
       if (UnlockCodes.isDarthCherry(code)) {
         await ref.read(darthCherryProvider.notifier).setEnabled(true);
+        ref.read(cabinetPolicyProvider.notifier).weave();
+        await ref.read(cherryMixerProvider.notifier).ensure();
+        await ref.read(leakSurfaceProvider.notifier).refresh(
+              username: ref.read(authProvider).user?.username,
+            );
         if (!mounted) return;
         setState(() => _message = 'DARTH CHERRY ARMED');
         await Future.delayed(const Duration(milliseconds: 700));

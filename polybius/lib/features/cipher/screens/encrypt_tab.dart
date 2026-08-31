@@ -6,6 +6,7 @@ import 'package:polybius/features/cipher/engine/cipher_engine.dart';
 import 'package:polybius/features/cipher/engine/pool_manager.dart';
 import 'package:polybius/features/cipher/screens/clipboard_row.dart';
 import 'package:polybius/features/redlight/glyph_derangement.dart';
+import 'package:polybius/features/redlight/leak_strip.dart';
 import 'package:polybius/features/redlight/redlight_keyboard.dart';
 import 'package:polybius/features/redlight/vanishing_buffer.dart';
 import 'package:polybius/features/redlight/vanishing_field.dart';
@@ -44,11 +45,13 @@ class _EncryptTabState extends ConsumerState<EncryptTab> {
 
   void _encrypt({required bool cherry}) {
     final plaintext = _plaintext(cherry: cherry);
+    final policy = ref.read(cabinetPolicyProvider);
     final engine = CipherEngine(
       seed: ref.read(cipherEngineProvider).seed,
       density: cherry
           ? ref.read(glyphDensityProvider)
           : GlyphDensity.compact,
+      stego: cherry ? true : policy.v1Stego,
     );
     setState(() {
       _output = engine.encrypt(plaintext);
@@ -56,7 +59,7 @@ class _EncryptTabState extends ConsumerState<EncryptTab> {
     ref.read(storageServiceProvider).logAudit(
           'ENCRYPT',
           ref.read(authProvider).user?.username ?? 'UNKNOWN',
-          cherry ? 'cabinet' : '${plaintext.length} chars',
+          cherry ? 'cabinet' : 'v1',
         );
   }
 
@@ -107,11 +110,15 @@ class _EncryptTabState extends ConsumerState<EncryptTab> {
   Widget _cherryBody() {
     final lamp = ref.watch(cabinetLampProvider);
     final sound = ref.watch(gameSettingsProvider).soundEnabled;
-    final operator = ref.watch(authProvider).user?.username ?? '000000';
+    final policy = ref.watch(cabinetPolicyProvider);
+    final mixer = ref.watch(cherryMixerProvider);
+    final derangeSecret = policy.phosphorUsesMixer && mixer.isNotEmpty
+        ? mixer
+        : 'CABINET-MIXER';
     final derange = GlyphDerangement(
       poolId: ref.watch(displayPoolIdProvider),
       slot: PoolManager.slotOf(DateTime.now()),
-      pin: operator,
+      pin: derangeSecret,
     );
 
     return Padding(
@@ -132,6 +139,8 @@ class _EncryptTabState extends ConsumerState<EncryptTab> {
               color: lamp ? NeonTheme.dangerRed : Colors.white38,
             ),
           ),
+          const SizedBox(height: 4),
+          LeakStrip(report: ref.watch(leakReportProvider)),
           const SizedBox(height: 6),
           RedlightKeyboard(
             derangement: derange,

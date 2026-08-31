@@ -23,12 +23,18 @@ class _DecryptTabState extends ConsumerState<DecryptTab> {
   }
 
   void _decrypt() {
-    final engine = CipherEngine(
-      seed: ref.read(cipherEngineProvider).seed,
-      density: ref.read(glyphDensityProvider),
-    );
+    final seed = ref.read(cipherEngineProvider).seed;
+    final policy = ref.read(cabinetPolicyProvider);
+    final text = _inputController.text;
+    final out = policy.autoDensity
+        ? CipherEngine.decryptAuto(seed: seed, text: text)
+        : CipherEngine(
+            seed: seed,
+            density: ref.read(glyphDensityProvider),
+            stego: false,
+          ).decrypt(text);
     setState(() {
-      _output = engine.decrypt(_inputController.text);
+      _output = out;
     });
     ref.read(storageServiceProvider).logAudit(
           'DECRYPT',

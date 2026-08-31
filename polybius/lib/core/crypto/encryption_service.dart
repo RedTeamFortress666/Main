@@ -72,6 +72,15 @@ class EncryptionService {
     return List<int>.generate(length, (_) => random.nextInt(256));
   }
 
+  /// HMAC-SHA256 under the working AES key. Used by V2 session tickets.
+  List<int> mac(List<int> data) {
+    final key = _key;
+    if (key == null) {
+      throw StateError('EncryptionService not initialised');
+    }
+    return Hmac(sha256, key.bytes).convert(data).bytes;
+  }
+
   String encrypt(String plain) {
     final iv = enc.IV(Uint8List.fromList(_randomBytes(16)));
     final encrypter = enc.Encrypter(enc.AES(_key!, mode: enc.AESMode.cbc));

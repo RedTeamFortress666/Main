@@ -103,6 +103,11 @@ class _PolybiusAppState extends ConsumerState<PolybiusApp> {
     });
     ref.listen(authProvider.select((s) => s.user?.username), (prev, next) {
       if (next == null) ref.read(duressProvider.notifier).disarm();
+      ref.read(leakSurfaceProvider.notifier).refresh(username: next);
+      if (next != null) {
+        ref.read(cabinetPolicyProvider.notifier).weave();
+        ref.read(cherryMixerProvider.notifier).ensure();
+      }
     });
 
     final router = ref.watch(routerProvider);

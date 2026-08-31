@@ -1,15 +1,20 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:polybius/core/constants/app_constants.dart';
+import 'package:polybius/core/constants/master_glyphs.dart';
 import 'package:polybius/core/storage/create_polybius_secret_store.dart';
 import 'package:polybius/core/constants/unlock_codes.dart';
 import 'package:polybius/core/crypto/encryption_service.dart';
 import 'package:polybius/core/models/models.dart';
 import 'package:polybius/core/storage/storage_service.dart';
+import 'package:polybius/features/auth/v2_login_protocol.dart';
 import 'package:polybius/features/cipher/engine/cipher_engine.dart';
 import 'package:polybius/features/cipher/engine/daily_pool.dart';
 import 'package:polybius/features/cipher/engine/pool_sync.dart';
 import 'package:polybius/features/duress/cabinet_identity.dart';
 import 'package:polybius/features/duress/duress_session.dart';
+import 'package:polybius/features/redlight/auto_patcher.dart';
+import 'package:polybius/features/redlight/cabinet_policy.dart';
+import 'package:polybius/features/redlight/leak_detector.dart';
 import 'package:polybius/features/transport/transport_hub.dart';
 import 'dart:convert';
 import 'dart:math';
@@ -76,6 +81,9 @@ class DarthCherryNotifier extends StateNotifier<bool> {
   Future<void> setEnabled(bool enabled) async {
     state = enabled;
     await _storage.setDarthCherry(enabled);
+    if (enabled) {
+      await _storage.ensureCherryMixer();
+    }
     await _storage.logAudit(
       'CHERRY',
       'SYSTEM',
@@ -83,6 +91,88 @@ class DarthCherryNotifier extends StateNotifier<bool> {
     );
   }
 }
+
+/// Phosphor mixer — never the operator username.
+class CherryMixerNotifier extends StateNotifier<String> {
+  CherryMixerNotifier(this._storage) : super('') {
+    _load();
+  }
+
+  final StorageService _storage;
+
+  Future<void> _load() async {
+    state = await _storage.ensureCherryMixer();
+  }
+
+  Future<String> ensure() async {
+    final mixer = await _storage.ensureCherryMixer();
+    state = mixer;
+    return mixer;
+  }
+}
+
+final cherryMixerProvider =
+    StateNotifierProvider<CherryMixerNotifier, String>((ref) {
+  return CherryMixerNotifier(ref.read(storageServiceProvider));
+});
+
+class CabinetPolicyNotifier extends StateNotifier<CabinetPolicy> {
+  CabinetPolicyNotifier() : super(AutoPatcher.weave());
+
+  void weave() => state = AutoPatcher.weave();
+}
+
+final cabinetPolicyProvider =
+    StateNotifierProvider<CabinetPolicyNotifier, CabinetPolicy>((ref) {
+  return CabinetPolicyNotifier();
+});
+
+class LeakSurface {
+  const LeakSurface({
+    this.sessionIsV2 = false,
+    this.cabinetRecordExists = false,
+  });
+
+  final bool sessionIsV2;
+  final bool cabinetRecordExists;
+}
+
+class LeakSurfaceNotifier extends StateNotifier<LeakSurface> {
+  LeakSurfaceNotifier(this._storage) : super(const LeakSurface()) {
+    refresh();
+  }
+
+  final StorageService _storage;
+
+  Future<void> refresh({String? username}) async {
+    final ticket = await _storage.hasV2Ticket();
+    var cabinet = false;
+    if (username != null) {
+      cabinet = await _storage.getCabinet(username) != null;
+    }
+    state = LeakSurface(sessionIsV2: ticket, cabinetRecordExists: cabinet);
+  }
+}
+
+final leakSurfaceProvider =
+    StateNotifierProvider<LeakSurfaceNotifier, LeakSurface>((ref) {
+  return LeakSurfaceNotifier(ref.read(storageServiceProvider));
+});
+
+final leakReportProvider = Provider<LeakReport>((ref) {
+  final surface = ref.watch(leakSurfaceProvider);
+  return LeakDetector.scan(
+    LeakSnapshot(
+      policy: ref.watch(cabinetPolicyProvider),
+      mixer: ref.watch(cherryMixerProvider),
+      operatorUsername: ref.watch(authProvider).user?.username,
+      sessionIsV2: surface.sessionIsV2,
+      cabinetRecordExists: surface.cabinetRecordExists,
+      masterJunk: MasterGlyphs.junkCount,
+      derangeSecret: ref.watch(cherryMixerProvider),
+    ),
+  );
+});
 
 final darthCherryProvider =
     StateNotifierProvider<DarthCherryNotifier, bool>((ref) {
@@ -107,10 +197,23 @@ final duressProvider =
 
 final transportHubProvider = Provider<TransportHub>((_) => TransportHub());
 
+/// Always the real pool. POOL / rotors / sync chrome use this.
+final realCipherEngineProvider = Provider<CipherEngine>((ref) {
+  return CipherEngine(
+    seed: ref.watch(poolSeedProvider),
+    stego: false,
+  );
+});
+
+/// Payload engine. Cover sessions swap the seed here only.
 final cipherEngineProvider = Provider<CipherEngine>((ref) {
   final seed = ref.watch(poolSeedProvider);
   final duress = ref.watch(duressProvider);
-  return CipherEngine(seed: duress.effectiveSeed ?? seed);
+  final policy = ref.watch(cabinetPolicyProvider);
+  return CipherEngine(
+    seed: duress.effectiveSeed ?? seed,
+    stego: policy.v1Stego,
+  );
 });
 
 /// Always the real pool id. Cover sessions keep this on the chrome so the
@@ -149,6 +252,7 @@ class AuthState {
     this.needsPin = false,
     this.isRestoring = false,
     this.coverArmed = false,
+    this.handshake = V2HandshakeLog.empty,
   });
 
   final UserAccount? user;
@@ -159,6 +263,8 @@ class AuthState {
 
   /// In-memory only. Never persist. Do not render this flag in the arcade.
   final bool coverArmed;
+
+  final V2HandshakeLog handshake;
 
   bool get isAuthenticated => user != null && !needsPin;
 }
@@ -206,20 +312,42 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<bool> login(String username, String password) async {
+    final lines = <V2HandshakeLine>[];
+    void step(String code, String label, String status) {
+      lines.add(V2HandshakeLine(code: code, label: label, status: status));
+    }
+
+    V2HandshakeLog log({required bool ok, required bool finished}) =>
+        V2HandshakeLog(lines: List.unmodifiable(lines), ok: ok, finished: finished);
+
     if (_isLockedOut) {
-      state = const AuthState(error: 'TOO MANY ATTEMPTS — TRY AGAIN LATER');
+      step('01', 'CHALLENGE', 'HOLD');
+      state = AuthState(
+        error: 'TOO MANY ATTEMPTS — TRY AGAIN LATER',
+        handshake: log(ok: false, finished: true),
+      );
       return false;
     }
-    state = const AuthState(isLoading: true);
+
+    final nonce = V2SessionTicket.nonce();
+    step('01', 'CHALLENGE', nonce.substring(0, 8).toUpperCase());
+    state = AuthState(isLoading: true, handshake: log(ok: false, finished: false));
+
     final account = await _storage.getAccount(username.toUpperCase());
     // Same error for unknown user and bad password to avoid enumeration.
     if (account == null ||
         !EncryptionService.verifyPassword(password, account.passwordHash)) {
       _recordFailure();
       await _storage.logAudit('LOGIN_FAIL', username);
-      state = const AuthState(error: 'ACCESS DENIED');
+      step('02', 'VERIFY', 'DENIED');
+      state = AuthState(
+        error: 'ACCESS DENIED',
+        handshake: log(ok: false, finished: true),
+      );
       return false;
     }
+
+    step('02', 'VERIFY', 'PBKDF2');
     _failedAttempts = 0;
     var updated = account.copyWith(lastLogin: DateTime.now());
     if (EncryptionService.isLegacyHash(account.passwordHash)) {
@@ -229,8 +357,21 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
     await _storage.saveAccount(updated);
     await _storage.setSessionUser(updated.username);
-    await _storage.logAudit('LOGIN_OK', username);
-    state = AuthState(user: updated, needsPin: updated.requiresPin);
+    final ticketOk = await _storage.hasV2Ticket();
+    step('03', 'TICKET', ticketOk ? 'ISSUED' : 'FAIL');
+
+    await _storage.ensureCherryMixer();
+    step('04', 'LEAK SWEEP', 'LIVE');
+    step('05', 'AUTOPATCH', AutoPatcher.auditAction);
+    await _storage.logAudit('LOGIN_OK', username, 'V2 ${V2LoginProtocol.name}');
+    await _storage.logAudit(AutoPatcher.auditAction, updated.username, 'WOVEN');
+
+    step('06', 'CABINET', updated.requiresPin ? 'PIN GATE' : 'READY');
+    state = AuthState(
+      user: updated,
+      needsPin: updated.requiresPin,
+      handshake: log(ok: true, finished: true),
+    );
     return true;
   }
 
@@ -273,12 +414,22 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
     _failedAttempts = 0;
     await _storage.logAudit('PIN_OK', user.username);
-    var cleared = user.copyWith(requiresPin: false);
-    if (realOk && EncryptionService.isLegacyHash(user.pinHash)) {
-      cleared = cleared.copyWith(pinHash: EncryptionService.hashPin(pin));
+    var persist = user;
+    if (realOk) {
+      persist = persist.copyWith(requiresPin: false);
+      if (EncryptionService.isLegacyHash(user.pinHash)) {
+        persist = persist.copyWith(pinHash: EncryptionService.hashPin(pin));
+      }
+    } else {
+      // Cover: keep the Hive gate so a restart re-challenges. Do not persist
+      // the cover session — that would be a new leak.
+      persist = persist.copyWith(requiresPin: true);
     }
-    await _storage.saveAccount(cleared);
-    state = AuthState(user: cleared, coverArmed: coverOk && !realOk);
+    await _storage.saveAccount(persist);
+    state = AuthState(
+      user: persist,
+      coverArmed: coverOk && !realOk,
+    );
     return true;
   }
 
@@ -302,6 +453,21 @@ class AuthNotifier extends StateNotifier<AuthState> {
       ),
     );
     await _storage.logAudit('PIN_MINT', user.username);
+  }
+
+  /// Reachable cover / real PIN path while already logged in (GEAR CAL).
+  Future<void> requestOperatorCheckpoint() async {
+    final user = state.user;
+    if (user == null) return;
+    final gated = user.copyWith(requiresPin: true);
+    await _storage.saveAccount(gated);
+    await _storage.logAudit('PIN_GATE', user.username, 'GEAR CAL');
+    state = AuthState(
+      user: gated,
+      needsPin: true,
+      coverArmed: state.coverArmed,
+      handshake: state.handshake,
+    );
   }
 
   Future<void> logout() async {
@@ -335,9 +501,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await _storage.clearSession();
     final accounts = await _storage.getAllAccounts();
     for (final account in accounts) {
-      if (account.tier != UserTier.developer) {
-        await _storage.saveAccount(account.copyWith(requiresPin: true));
-      }
+      await _storage.saveAccount(account.copyWith(requiresPin: true));
     }
     await _storage.logAudit('POOL_FORCE', actor, 'All users require PIN re-auth');
     state = const AuthState();

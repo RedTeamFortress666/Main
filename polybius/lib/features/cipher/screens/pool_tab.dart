@@ -9,7 +9,10 @@ class PoolTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final engine = ref.watch(cipherEngineProvider);
+    final policy = ref.watch(cabinetPolicyProvider);
+    final engine = policy.chromeUsesRealSeed
+        ? ref.watch(realCipherEngineProvider)
+        : ref.watch(cipherEngineProvider);
     final pool = engine.pool;
     final nameplate = ref.watch(displayPoolIdProvider);
 
