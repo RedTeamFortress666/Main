@@ -84,4 +84,12 @@ void main() {
     final decrypted = encryption.decrypt(reloadedRaw);
     expect(jsonDecode(decrypted), isA<Map>());
   });
+
+  test('Darth Cherry defaults off and persists', () async {
+    expect(await storage.getDarthCherry(), isFalse);
+    await storage.setDarthCherry(true);
+    expect(await storage.getDarthCherry(), isTrue);
+    await storage.setDarthCherry(false);
+    expect(await storage.getDarthCherry(), isFalse);
+  });
 }

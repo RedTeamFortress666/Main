@@ -12,6 +12,17 @@ class UnlockCodes {
   static const String devB1663R = 'B1-66-3R';
   static const String devD1663R = 'D1-66-3R';
   static const String userTr1663R = 'TR1-66-3R';
+
+  /// Arms the redlight glyph keyboard in the open cipher. Default V1
+  /// encrypt stays a plaintext field until this is enabled.
+  static const String darthCherry = 'DARTH-CHERRY';
+  static const String darthCherryShort = 'CH3-RRY';
+
+  static bool isDarthCherry(String raw) {
+    final upper = raw.trim().toUpperCase();
+    return upper == darthCherry || upper == darthCherryShort;
+  }
+
   static const String compoundDifficulty = '7';
   static const String compoundLanguage = 'RUSSIAN';
   static const String ritualLanguage = 'CHINESE';

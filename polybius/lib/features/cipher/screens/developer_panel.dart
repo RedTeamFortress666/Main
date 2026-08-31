@@ -157,6 +157,29 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
               child: const Text('SAVE TRUSTED MODULUS'),
             ),
           ]),
+          _section('DARTH CHERRY', [
+            const Text(
+              'Default ENCRYPT is advanced V1 (plaintext field, 2-glyph engine). '
+              'Arming Cherry opens the glyph keyboard in the cipher channel. '
+              'LOAD GAME codes: DARTH-CHERRY or CH3-RRY.',
+              style: TextStyle(color: Colors.white54, fontSize: 11),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'ARM DARTH CHERRY',
+                style: TextStyle(
+                  fontFamily: 'monospace',
+                  color: NeonTheme.dangerRed,
+                  fontSize: 12,
+                ),
+              ),
+              value: ref.watch(darthCherryProvider),
+              activeThumbColor: NeonTheme.dangerRed,
+              onChanged: (v) =>
+                  ref.read(darthCherryProvider.notifier).setEnabled(v),
+            ),
+          ]),
           _section('MIDNIGHT CLIMAX CABINET', [
             const Text(
               'Cover PIN looks like a normal checkpoint. Same PIN_OK audit. '

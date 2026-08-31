@@ -42,6 +42,15 @@ class _LoadGameScreenState extends ConsumerState<LoadGameScreen> {
     try {
       final storage = ref.read(storageServiceProvider);
 
+      if (UnlockCodes.isDarthCherry(code)) {
+        await ref.read(darthCherryProvider.notifier).setEnabled(true);
+        if (!mounted) return;
+        setState(() => _message = 'DARTH CHERRY ARMED');
+        await Future.delayed(const Duration(milliseconds: 700));
+        if (mounted) context.pop();
+        return;
+      }
+
       // Loading only records the game file number bound to this copy — it
       // never opens the cipher. The crypto engine is reachable solely through
       // the dev access portal login. A signed token is validated before being

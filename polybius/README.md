@@ -75,10 +75,11 @@ plaintext index.
 | Compound | SETTINGS → difficulty 7 + RUSSIAN | Full cipher unlock |
 | Invite code | LOAD GAME → valid `PB-XXXXXXXX` code | Cipher unlock |
 | Dev codes | LOAD GAME → `B1-66-3R` or `D1-66-3R` + CHINESE language | Developer panel |
+| Darth Cherry | LOAD GAME → `DARTH-CHERRY` or `CH3-RRY`, or Developer panel toggle | Glyph keyboard in ENCRYPT |
 
 ## Cipher Tabs
 
-- **🔒 ENCRYPT** — vanishing redlight keyboard → emoji ciphertext
+- **🔒 ENCRYPT** — advanced V1 plaintext field → emoji ciphertext. Glyph keyboard only after **Darth Cherry** is armed.
 - **🔓 DECRYPT** — emoji → plaintext
 - **🎲 POOL** — active 560-glyph window + slot
 - **🔗 SYNC** — QR / padded courier token

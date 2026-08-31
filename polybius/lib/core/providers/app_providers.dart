@@ -60,6 +60,35 @@ class PoolSeedNotifier extends StateNotifier<String> {
 
 final cabinetLampProvider = StateProvider<bool>((_) => false);
 
+/// Darth Cherry: the only switch that opens the glyph keyboard.
+/// Off (default) keeps ENCRYPT as advanced-V1 plaintext.
+class DarthCherryNotifier extends StateNotifier<bool> {
+  DarthCherryNotifier(this._storage) : super(false) {
+    _load();
+  }
+
+  final StorageService _storage;
+
+  Future<void> _load() async {
+    state = await _storage.getDarthCherry();
+  }
+
+  Future<void> setEnabled(bool enabled) async {
+    state = enabled;
+    await _storage.setDarthCherry(enabled);
+    await _storage.logAudit(
+      'CHERRY',
+      'SYSTEM',
+      enabled ? 'DARTH CHERRY ARMED' : 'DARTH CHERRY DARK',
+    );
+  }
+}
+
+final darthCherryProvider =
+    StateNotifierProvider<DarthCherryNotifier, bool>((ref) {
+  return DarthCherryNotifier(ref.read(storageServiceProvider));
+});
+
 final glyphDensityProvider =
     StateProvider<GlyphDensity>((_) => GlyphDensity.compact);
 

@@ -250,6 +250,17 @@ class StorageService {
     return raw is String && raw.isNotEmpty ? raw : 'YOU';
   }
 
+  Future<bool> getDarthCherry() async {
+    final raw = Hive.box(settingsBox).get('darthCherry');
+    if (raw is bool) return raw;
+    if (raw is String) return raw.toLowerCase() == 'true';
+    return false;
+  }
+
+  Future<void> setDarthCherry(bool enabled) async {
+    await Hive.box(settingsBox).put('darthCherry', enabled);
+  }
+
   Future<void> setOperatorInitials(String initials) async {
     await Hive.box(settingsBox).put(
       'operatorInitials',
