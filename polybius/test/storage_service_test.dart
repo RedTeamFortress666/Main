@@ -107,6 +107,21 @@ void main() {
     expect(await storage.hasV2Ticket(), isFalse);
   });
 
+  test('stale DEVELOPER ciphertext is rebuilt on init', () async {
+    await Hive.box(StorageService.accountsBox).put(
+      AppConstants.developerUsername,
+      'v2:not-valid-ciphertext',
+    );
+    expect(await storage.getAccount(AppConstants.developerUsername), isNull);
+    await storage.init(hivePath: tempDir.path);
+    final account = await storage.getAccount(AppConstants.developerUsername);
+    expect(account, isNotNull);
+    expect(
+      EncryptionService.verifyPassword('developer', account!.passwordHash),
+      isTrue,
+    );
+  });
+
   test('cherry mixer is not the operator name and survives reload', () async {
     final a = await storage.ensureCherryMixer();
     expect(a, isNot(equals('DEVELOPER')));

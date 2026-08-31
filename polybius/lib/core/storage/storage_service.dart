@@ -35,8 +35,8 @@ class StorageService {
   }
 
   Future<void> _bootstrapDeveloper() async {
-    final box = Hive.box(accountsBox);
-    if (!box.containsKey(AppConstants.developerUsername)) {
+    final existing = await getAccount(AppConstants.developerUsername);
+    if (existing == null) {
       final dev = UserAccount(
         username: AppConstants.developerUsername,
         passwordHash: EncryptionService.hashPassword('developer'),
@@ -44,10 +44,7 @@ class StorageService {
         tier: UserTier.developer,
         createdAt: DateTime.now(),
       );
-      await box.put(
-        dev.username,
-        _encryption.encrypt(_encodeJson(dev.toJson())),
-      );
+      await saveAccount(dev);
       await logAudit('BOOTSTRAP', AppConstants.developerUsername,
           'DEVELOPER account created on first install');
     }
