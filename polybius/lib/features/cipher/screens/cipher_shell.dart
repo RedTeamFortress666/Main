@@ -54,10 +54,17 @@ class _CipherShellState extends ConsumerState<CipherShell>
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: NeonTheme.surface,
-        title: const Text(
-          '◈ CIPHER CHANNEL ◈',
-          style: TextStyle(fontFamily: 'monospace', fontSize: 16),
+        backgroundColor: cherry ? NeonTheme.cherryDeep : NeonTheme.surface,
+        title: Text(
+          cherry ? '◈ DΛRTH CHERRY CHANNEL ◈' : '◈ CIPHER CHANNEL ◈',
+          style: TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 15,
+            color: cherry ? NeonTheme.cherry : Colors.white,
+            shadows: cherry
+                ? const [Shadow(color: NeonTheme.dangerRed, blurRadius: 12)]
+                : null,
+          ),
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: NeonTheme.neonCyan),

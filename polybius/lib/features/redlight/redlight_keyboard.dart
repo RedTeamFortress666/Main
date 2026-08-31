@@ -152,8 +152,14 @@ class _Keycap extends StatelessWidget {
           height: 36,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            border: Border.all(color: Colors.white24),
-            color: const Color(0xFF0A0014),
+            border: Border.all(color: NeonTheme.neonCyan.withValues(alpha: 0.35)),
+            color: const Color(0xCC0A0014),
+            boxShadow: [
+              BoxShadow(
+                color: NeonTheme.cherry.withValues(alpha: 0.18),
+                blurRadius: 6,
+              ),
+            ],
           ),
           child: Stack(
             alignment: Alignment.center,

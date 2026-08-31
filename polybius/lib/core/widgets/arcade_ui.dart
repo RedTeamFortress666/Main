@@ -297,16 +297,49 @@ class _ArcadeFooter extends StatelessWidget {
 }
 
 /// Faint neon lines radiating from a point, as in the mockups.
-class _VectorField extends StatelessWidget {
+class _VectorField extends StatefulWidget {
   const _VectorField();
 
   @override
+  State<_VectorField> createState() => _VectorFieldState();
+}
+
+class _VectorFieldState extends State<_VectorField>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _spin;
+
+  @override
+  void initState() {
+    super.initState();
+    _spin = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 28),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _spin.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return CustomPaint(painter: _VectorFieldPainter(), size: Size.infinite);
+    return AnimatedBuilder(
+      animation: _spin,
+      builder: (context, _) => CustomPaint(
+        painter: _VectorFieldPainter(turn: _spin.value),
+        size: Size.infinite,
+      ),
+    );
   }
 }
 
 class _VectorFieldPainter extends CustomPainter {
+  _VectorFieldPainter({required this.turn});
+
+  final double turn;
+
   static const _colors = [
     NeonTheme.neonPink,
     NeonTheme.neonCyan,
@@ -318,26 +351,27 @@ class _VectorFieldPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final origin = Offset(size.width * 0.5, size.height * 0.42);
     final reach = size.width + size.height;
-    for (var i = 0; i < 16; i++) {
-      final angle = i * pi / 8 + 0.15;
+    for (var i = 0; i < 20; i++) {
+      final angle = i * pi / 10 + 0.15 + turn * 2 * pi;
       final end = origin + Offset(cos(angle), sin(angle)) * reach;
       canvas.drawLine(
         origin,
         end,
         Paint()
-          ..color = _colors[i % _colors.length].withValues(alpha: 0.10)
-          ..strokeWidth = 1,
+          ..color = _colors[i % _colors.length].withValues(alpha: 0.14)
+          ..strokeWidth = i.isEven ? 1.4 : 0.8,
       );
     }
     canvas.drawCircle(
       origin,
-      2,
-      Paint()..color = NeonTheme.dangerRed.withValues(alpha: 0.6),
+      3 + 2 * sin(turn * 2 * pi),
+      Paint()..color = NeonTheme.dangerRed.withValues(alpha: 0.75),
     );
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _VectorFieldPainter oldDelegate) =>
+      oldDelegate.turn != turn;
 }
 
 class _FramePainter extends CustomPainter {

@@ -58,11 +58,20 @@ binary or hide a Hive dump.
 
 ## Three Layers
 
-### Layer 1 — Login Gate
-**PØLYBĪUS V2 protocol.** OPERATOR ID + ACCESS KEY, then a device-bound
-session ticket (`v2:USER:issued:nonce:mac`). First install still creates
-`DEVELOPER`. The handshake also runs the Darth Cherry leak sweep and
-interwoven auto-patcher before the cabinet opens.
+### Layer 1 — Login Gate (V2 protocol)
+
+OPERATOR ID + ACCESS KEY. The CRT then runs six steps:
+
+| Step | Name | What actually happens |
+|---|---|---|
+| 01 | CHALLENGE | Random nonce for this handshake |
+| 02 | VERIFY | PBKDF2 on the access key. Same `ACCESS DENIED` for unknown operator or bad key |
+| 03 | TICKET | Device-bound session `v2:USER:issued:nonce:mac` |
+| 04 | LEAK SWEEP | Darth Cherry detector names known surfaces |
+| 05 | AUTOPATCH | Weaves cabinet policy (not a binary patch) |
+| 06 | CABINET | Ready, or PIN gate |
+
+The ticket is HMAC’d with the working AES key. Swapping the operator name in the session box fails the MAC. It is **not** a password proof after the fact. First install still creates `DEVELOPER`.
 
 ### Layer 2 — Decoy Arcade
 Psychedelic neon CRT main menu with playable space shooter. MKUltra-themed level names, subliminal glitch text, ship upgrades MK-I → MK-V.

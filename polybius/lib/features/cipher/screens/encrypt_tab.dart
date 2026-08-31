@@ -5,8 +5,9 @@ import 'package:polybius/core/theme/neon_theme.dart';
 import 'package:polybius/features/cipher/engine/cipher_engine.dart';
 import 'package:polybius/features/cipher/engine/pool_manager.dart';
 import 'package:polybius/features/cipher/screens/clipboard_row.dart';
+import 'package:polybius/core/widgets/cabinet_atmosphere.dart';
+import 'package:polybius/features/redlight/cherry_banner.dart';
 import 'package:polybius/features/redlight/glyph_derangement.dart';
-import 'package:polybius/features/redlight/leak_strip.dart';
 import 'package:polybius/features/redlight/redlight_keyboard.dart';
 import 'package:polybius/features/redlight/vanishing_buffer.dart';
 import 'package:polybius/features/redlight/vanishing_field.dart';
@@ -121,26 +122,19 @@ class _EncryptTabState extends ConsumerState<EncryptTab> {
       pin: derangeSecret,
     );
 
-    return Padding(
+    return CabinetAtmosphere(
+      cherry: true,
+      child: Padding(
       padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           VanishingField(buffer: _buffer),
           const SizedBox(height: 6),
-          Text(
-            lamp
-                ? 'DARTH CHERRY — PHOSPHOR MAP LIVE'
-                : 'DARTH CHERRY — HOUSE LIGHTS',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: 'monospace',
-              fontSize: 10,
-              color: lamp ? NeonTheme.dangerRed : Colors.white38,
-            ),
+          CherryBanner(
+            lampOn: lamp,
+            report: ref.watch(leakReportProvider),
           ),
-          const SizedBox(height: 4),
-          LeakStrip(report: ref.watch(leakReportProvider)),
           const SizedBox(height: 6),
           RedlightKeyboard(
             derangement: derange,
@@ -189,6 +183,7 @@ class _EncryptTabState extends ConsumerState<EncryptTab> {
           ),
         ],
       ),
+      ),
     );
   }
 
@@ -197,7 +192,13 @@ class _EncryptTabState extends ConsumerState<EncryptTab> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         border: Border.all(color: NeonTheme.neonCyan),
-        color: NeonTheme.surface,
+        color: NeonTheme.surface.withValues(alpha: 0.82),
+        boxShadow: [
+          BoxShadow(
+            color: NeonTheme.neonCyan.withValues(alpha: 0.22),
+            blurRadius: 12,
+          ),
+        ],
       ),
       child: SingleChildScrollView(
         child: SelectableText(

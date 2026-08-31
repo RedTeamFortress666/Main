@@ -9,9 +9,9 @@ class CabinetLamp {
   static const houseCyan = Color(0xFF00FFFF);
 
   static const ColorFilter matrix = ColorFilter.matrix(<double>[
-    1.15, 0, 0, 0, 18,
-    0, 0.04, 0, 0, 0,
-    0, 0, 0.04, 0, 0,
+    1.35, 0, 0, 0, 28,
+    0, 0.03, 0, 0, 0,
+    0, 0, 0.03, 0, 0,
     0, 0, 0, 1, 0,
   ]);
 

@@ -15,13 +15,42 @@ class LeakStrip extends StatelessWidget {
         : report.residualCount > 0
             ? NeonTheme.neonYellow
             : NeonTheme.neonGreen;
-    return Text(
-      'LEAK SWEEP  ${report.openCount} OPEN  ·  ${report.patchedCount} PATCHED  ·  ${report.residualCount} RESIDUAL',
-      textAlign: TextAlign.center,
-      style: TextStyle(
-        fontFamily: 'monospace',
-        fontSize: 10,
-        color: color,
+    return Column(
+      children: [
+        Text(
+          'LEAK SWEEP  ${report.openCount} OPEN  ·  ${report.patchedCount} PATCHED  ·  ${report.residualCount} RESIDUAL',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 10,
+            letterSpacing: 0.4,
+            color: color,
+            shadows: [Shadow(color: color.withValues(alpha: 0.6), blurRadius: 6)],
+          ),
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            _seg(report.patchedCount, NeonTheme.neonGreen),
+            _seg(report.residualCount, NeonTheme.neonYellow),
+            _seg(report.openCount, NeonTheme.dangerRed),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _seg(int count, Color color) {
+    if (count <= 0) return const SizedBox.shrink();
+    return Expanded(
+      flex: count,
+      child: Container(
+        height: 3,
+        margin: const EdgeInsets.symmetric(horizontal: 1),
+        decoration: BoxDecoration(
+          color: color,
+          boxShadow: [BoxShadow(color: color, blurRadius: 6)],
+        ),
       ),
     );
   }
