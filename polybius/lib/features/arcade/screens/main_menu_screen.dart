@@ -27,6 +27,7 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen>
   late AnimationController _pulse;
   Timer? _holdTimer;
   bool _holding = false;
+  int _debugTitleTaps = 0;
 
   @override
   void initState() {
@@ -62,6 +63,15 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen>
     _holdTimer?.cancel();
   }
 
+  void _onDebugTitleTap() {
+    if (!kDebugMode) return;
+    _debugTitleTaps++;
+    if (_debugTitleTaps >= 6) {
+      _debugTitleTaps = 0;
+      ref.read(unlockProvider.notifier).onTitleHoldComplete();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final unlock = ref.watch(unlockProvider);
@@ -83,12 +93,16 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen>
                     child: Column(
               children: [
                 const Spacer(),
-                GestureDetector(
-                  onTapDown: (_) => _startTitleHold(),
-                  onTapUp: (_) => _endTitleHold(),
-                  onTapCancel: _endTitleHold,
-                  child: ArcadeTitle(
-                    color: _holding ? NeonTheme.neonYellow : NeonTheme.neonPink,
+                Listener(
+                  onPointerDown: (_) => _startTitleHold(),
+                  onPointerUp: (_) => _endTitleHold(),
+                  onPointerCancel: (_) => _endTitleHold(),
+                  child: GestureDetector(
+                    onTap: _onDebugTitleTap,
+                    child: ArcadeTitle(
+                      color:
+                          _holding ? NeonTheme.neonYellow : NeonTheme.neonPink,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 18),
