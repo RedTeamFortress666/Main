@@ -49,6 +49,10 @@ app.*.map.json
 *.jks
 *.keystore
 
+# Never commit binaries
+/dist/*.apk
+*.apk
+
 # Dev signing private keys (never commit)
 tool/*_private*
 

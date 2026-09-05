@@ -7,9 +7,9 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// Load release signing config from android/key.properties if present. This
-// file is gitignored (see key.properties.example). When absent, release builds
-// fall back to debug signing so `flutter run --release` still works for BETA.
+// Load release signing config from android/key.properties if present.
+// This file is gitignored (see key.properties.example). Local `flutter run
+// --release` may still debug-sign when the file is absent. CI must provide it.
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
 val hasReleaseKeystore = keystorePropertiesFile.exists()
@@ -56,6 +56,14 @@ android {
             signingConfig = if (hasReleaseKeystore) {
                 signingConfigs.getByName("release")
             } else {
+                val ci = System.getenv("CI") == "true" ||
+                    System.getenv("GITHUB_ACTIONS") == "true"
+                if (ci) {
+                    throw GradleException(
+                        "Release signing is required in CI. " +
+                            "Provide android/key.properties (ANDROID_KEYSTORE_* secrets).",
+                    )
+                }
                 signingConfigs.getByName("debug")
             }
         }
