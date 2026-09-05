@@ -84,9 +84,9 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen>
               children: [
                 const Spacer(),
                 GestureDetector(
-                  onLongPressStart: (_) => _startTitleHold(),
-                  onLongPressEnd: (_) => _endTitleHold(),
-                  onLongPressCancel: _endTitleHold,
+                  onTapDown: (_) => _startTitleHold(),
+                  onTapUp: (_) => _endTitleHold(),
+                  onTapCancel: _endTitleHold,
                   child: ArcadeTitle(
                     color: _holding ? NeonTheme.neonYellow : NeonTheme.neonPink,
                   ),

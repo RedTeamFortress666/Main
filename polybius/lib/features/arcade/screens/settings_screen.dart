@@ -219,10 +219,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         // Hold-to-select. On RUSSIAN with the pathway primed + difficulty 11,
         // a 3-second hold opens the dev access portal.
         GestureDetector(
-          onLongPressStart: (_) => _startSelectHold(),
-          onLongPressEnd: (_) => _endSelectHold(),
-          onLongPressCancel: _endSelectHold,
-          onTap: () => _endSelectHold(),
+          onTapDown: (_) => _startSelectHold(),
+          onTapUp: (_) => _endSelectHold(),
+          onTapCancel: _endSelectHold,
           child: Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 14),
