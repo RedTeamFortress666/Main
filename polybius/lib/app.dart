@@ -55,6 +55,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       final cipherUnlocked = unlockState.state == UnlockState.unlocked ||
           unlockState.state == UnlockState.developer;
       if (loc == '/cipher' && !cipherUnlocked) return '/menu';
+      if (loc == '/devportal') {
+        if (!unlockState.pathwayPrimed && !cipherUnlocked) return '/menu';
+      }
 
       return null;
     },
@@ -94,8 +97,12 @@ class _PolybiusAppState extends ConsumerState<PolybiusApp> {
 
   @override
   Widget build(BuildContext context) {
-    // Note: logging in does NOT auto-open the cipher. The crypto engine is
-    // reachable only via the dev access portal with a valid access code.
+    // Login never opens the cipher. /cipher and /devportal are router-gated.
+    ref.listen(authProvider, (previous, next) {
+      if (previous?.isAuthenticated == true && !next.isAuthenticated) {
+        ref.read(unlockProvider.notifier).reset();
+      }
+    });
 
     // Start/stop the soundtrack when the sound setting changes.
     ref.listen(gameSettingsProvider.select((s) => s.soundEnabled), (_, enabled) {

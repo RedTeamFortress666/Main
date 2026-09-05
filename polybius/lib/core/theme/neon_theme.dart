@@ -9,6 +9,10 @@ class NeonTheme {
   static const Color neonYellow = Color(0xFFFFFF00);
   static const Color neonOrange = Color(0xFFFF6600);
   static const Color neonPurple = Color(0xFFBF00FF);
+  static const Color cherry = Color(0xFF7A0018);
+  static const Color cherryBright = Color(0xFFFF2A4D);
+  static const Color cherryGlass = Color(0xFF2A000C);
+  static const Color cherryGold = Color(0xFFFFC46B);
   static const Color dangerRed = Color(0xFFFF0040);
   static const Color scanline = Color(0x22000000);
 

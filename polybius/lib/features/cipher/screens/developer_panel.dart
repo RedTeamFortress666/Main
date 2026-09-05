@@ -17,7 +17,6 @@ class DeveloperPanel extends ConsumerStatefulWidget {
 class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
   String? _lastInvite;
   final _pinController = TextEditingController();
-  final _pubKeyController = TextEditingController();
   List<AuditLogEntry> _logs = [];
   List<InviteCode> _invites = [];
   int _securityScore = 87;
@@ -32,18 +31,7 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
   @override
   void dispose() {
     _pinController.dispose();
-    _pubKeyController.dispose();
     super.dispose();
-  }
-
-  Future<void> _saveTrustedKey() async {
-    await ref
-        .read(storageServiceProvider)
-        .setTrustedPublicKey(_pubKeyController.text.trim());
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Trusted RSA modulus saved')),
-    );
   }
 
   Future<void> _load() async {
@@ -107,7 +95,7 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
                   onPressed: () async {
                     final code = await ref.read(authProvider.notifier).mintInvite(
                           tier,
-                          AppConstants.developerUsername,
+                          ref.read(authProvider).user?.username ?? 'OPERATOR',
                         );
                     if (!mounted) return;
                     setState(() => _lastInvite = code);
@@ -128,28 +116,6 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
                   subtitle: Text('${i.tier.name} | used: ${i.isUsed}'),
                 )),
           ]),
-          _section('SIGNING KEY', [
-            const Text(
-              'The app verifies signed invite tokens against the embedded '
-              'RSA public key. Optionally override the trusted modulus for a '
-              'per-SD/USB keyset. Tokens are signed OFFLINE with the private '
-              'key (never entered in the app) — see tool/polybius_sign.dart.',
-              style: TextStyle(color: Colors.white54, fontSize: 11),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _pubKeyController,
-              style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
-              decoration: const InputDecoration(
-                labelText: 'Trusted RSA modulus (base64, optional override)',
-                labelStyle: TextStyle(color: NeonTheme.neonCyan, fontSize: 11),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: _saveTrustedKey,
-              child: const Text('SAVE TRUSTED MODULUS'),
-            ),
-          ]),
           _section('ADMIN PIN', [
             TextField(
               controller: _pinController,
@@ -165,7 +131,7 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
                 if (_pinController.text.length == 6) {
                   await ref.read(authProvider.notifier).setAdminPin(
                         _pinController.text,
-                        AppConstants.developerUsername,
+                        ref.read(authProvider).user?.username ?? 'OPERATOR',
                       );
                   if (!context.mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -186,7 +152,7 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
               onPressed: () async {
                 ref.read(unlockProvider.notifier).reset();
                 await ref.read(authProvider.notifier).forcePoolReset(
-                      AppConstants.developerUsername,
+                      ref.read(authProvider).user?.username ?? 'OPERATOR',
                     );
                 if (!context.mounted) return;
                 Navigator.of(context).pop();

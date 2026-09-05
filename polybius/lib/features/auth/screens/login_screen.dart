@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,7 +6,7 @@ import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 import 'package:polybius/core/widgets/crt_widgets.dart';
 
-/// Replit-style OIDC login gate. First install ships with DEVELOPER account.
+/// Login gate. No factory account — create an operator on first run.
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -132,16 +131,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                       ),
                     ),
-                    if (kDebugMode) ...[
-                      const SizedBox(height: 24),
-                      Text(
-                        'First install: use DEVELOPER / developer',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontSize: 11,
-                              color: Colors.white38,
-                            ),
-                      ),
-                    ],
                   ],
                 ),
               ),

@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:crypto/crypto.dart';
 import 'package:encrypt/encrypt.dart' as enc;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:polybius/core/crypto/encryption_service.dart';
@@ -20,8 +19,8 @@ class _MemorySecretStore implements PolybiusSecretStore {
 }
 
 void main() {
-  group('EncryptionService payloads', () {
-    test('encrypt uses a fresh IV per message', () async {
+  group('EncryptionService AEAD payloads', () {
+    test('encrypt uses a fresh nonce per message', () async {
       final service = EncryptionService(_MemorySecretStore());
       await service.init();
 
@@ -29,9 +28,22 @@ void main() {
       final b = service.encrypt('same plaintext');
 
       expect(a, isNot(equals(b)));
-      expect(a, startsWith('v2:'));
+      expect(a, startsWith('v3:'));
       expect(service.decrypt(a), 'same plaintext');
       expect(service.decrypt(b), 'same plaintext');
+    });
+
+    test('tampering the ciphertext fails closed', () async {
+      final service = EncryptionService(_MemorySecretStore());
+      await service.init();
+      final payload = service.encrypt('secret');
+      final body = payload.substring(3);
+      final bytes = base64Decode(body);
+      bytes[bytes.length - 1] ^= 0x01;
+      expect(
+        () => service.decrypt('v3:${base64Encode(bytes)}'),
+        throwsA(anything),
+      );
     });
 
     test('fresh install binds the working key to a device id', () async {
@@ -63,23 +75,18 @@ void main() {
 
   group('Password and PIN hashing', () {
     test('PBKDF2 hash verifies and is salted', () {
-      final h1 = EncryptionService.hashPassword('hunter2');
-      final h2 = EncryptionService.hashPassword('hunter2');
+      final h1 = EncryptionService.hashPassword('hunter2-longpass');
+      final h2 = EncryptionService.hashPassword('hunter2-longpass');
 
       expect(h1, isNot(equals(h2)));
       expect(h1, startsWith('pbkdf2:'));
-      expect(EncryptionService.verifyPassword('hunter2', h1), isTrue);
+      expect(EncryptionService.verifyPassword('hunter2-longpass', h1), isTrue);
       expect(EncryptionService.verifyPassword('wrong', h1), isFalse);
       expect(EncryptionService.isLegacyHash(h1), isFalse);
     });
 
-    test('legacy sha256 password hashes still verify', () {
-      final legacy =
-          sha256.convert(utf8.encode('polybius_salt_v1::developer')).toString();
-
-      expect(EncryptionService.isLegacyHash(legacy), isTrue);
-      expect(EncryptionService.verifyPassword('developer', legacy), isTrue);
-      expect(EncryptionService.verifyPassword('nope', legacy), isFalse);
+    test('legacy unsalted hashes are rejected', () {
+      expect(EncryptionService.verifyPassword('developer', 'deadbeef'), isFalse);
     });
 
     test('PIN hashing round-trips and rejects wrong PIN', () {
@@ -87,13 +94,6 @@ void main() {
 
       expect(EncryptionService.verifyPin('123456', hash), isTrue);
       expect(EncryptionService.verifyPin('654321', hash), isFalse);
-    });
-
-    test('legacy PIN hashes still verify', () {
-      final legacy = sha256.convert(utf8.encode('pin::000000')).toString();
-
-      expect(EncryptionService.verifyPin('000000', legacy), isTrue);
-      expect(EncryptionService.verifyPin('111111', legacy), isFalse);
     });
   });
 }

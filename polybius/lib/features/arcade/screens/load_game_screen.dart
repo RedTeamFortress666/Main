@@ -1,8 +1,6 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:polybius/core/constants/unlock_codes.dart';
 import 'package:polybius/core/crypto/signature_service.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
@@ -125,14 +123,6 @@ class _LoadGameScreenState extends ConsumerState<LoadGameScreen> {
                     : NeonTheme.dangerRed,
                 letterSpacing: 2,
               ),
-            ),
-          ],
-          if (kDebugMode) ...[
-            const SizedBox(height: 16),
-            Text(
-              'Dev codes: ${UnlockCodes.devB1663R} / ${UnlockCodes.devD1663R}',
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white24, fontSize: 10),
             ),
           ],
           const Spacer(),

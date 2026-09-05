@@ -1,78 +1,74 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
-import 'package:crypto/crypto.dart';
-import 'package:polybius/features/cipher/engine/daily_pool.dart';
+import 'package:polybius/core/crypto/aead.dart';
+import 'package:polybius/core/crypto/hybrid_kem.dart';
+import 'package:polybius/core/crypto/unique_qr.dart';
+import 'package:polybius/features/cipher/engine/cipher_engine.dart';
 
-/// A compact pool-sync token shared between users (QR / copy / share) so both
-/// derive an identical pool + rotor configuration and can encrypt/decrypt to
-/// the same plaintext.
-///
-/// It carries a short-lived window (`expiresAt`) and an `emojiPoolHash`
-/// (SHA-256 over the 560 emojis) for integrity. NOTE: because this build has no
-/// server, the token also carries the pool `seed` so two offline peers can
-/// align. That is a deliberate deviation from the server-fetch model where the
-/// invitation carries only a pool id + signature and the mapping is fetched
-/// separately — see the notes returned with this change.
+/// Public-key alignment token. Carries only a Kyber public key + unique id.
+/// The seed / emoji pool is never serialized.
 class PoolSync {
   const PoolSync({
-    required this.poolId,
-    required this.seed,
+    required this.id,
+    required this.publicKey,
+    required this.fingerprint,
     required this.expiresAt,
-    required this.emojiPoolHash,
   });
 
-  final String poolId;
-  final String seed;
+  final String id;
+  final Uint8List publicKey;
+  final String fingerprint;
   final DateTime expiresAt;
-  final String emojiPoolHash;
 
   bool get isExpired => DateTime.now().isAfter(expiresAt);
 
-  /// Recomputes the pool from the seed and confirms the hash matches.
-  bool verifyIntegrity() => _poolHash(seed) == emojiPoolHash;
+  bool verifyIntegrity() =>
+      HybridKem.fingerprint(publicKey) == fingerprint;
 
   String encode() {
     final json = {
-      'v': 1,
-      'pid': poolId,
-      's': seed,
+      'v': 3,
+      't': 'pk',
+      'id': id,
+      'pk': base64Encode(publicKey),
+      'fp': fingerprint,
       'e': expiresAt.millisecondsSinceEpoch,
-      'h': emojiPoolHash,
     };
     return base64Url.encode(utf8.encode(jsonEncode(json)));
   }
+
+  List<String> qrFrames() => UniqueQrCodec.split(encode(), sid: id);
 
   static PoolSync? tryParse(String raw) {
     try {
       final decoded = jsonDecode(utf8.decode(base64Url.decode(raw.trim())))
           as Map<String, dynamic>;
+      if (decoded['v'] != 3 || decoded['t'] != 'pk') return null;
+      final pk = Uint8List.fromList(base64Decode(decoded['pk'] as String));
       return PoolSync(
-        poolId: decoded['pid'] as String,
-        seed: decoded['s'] as String,
+        id: decoded['id'] as String,
+        publicKey: pk,
+        fingerprint: decoded['fp'] as String,
         expiresAt: DateTime.fromMillisecondsSinceEpoch(decoded['e'] as int),
-        emojiPoolHash: decoded['h'] as String,
       );
     } catch (_) {
       return null;
     }
   }
 
-  /// Builds a token for [seed] valid for [window] (default 6 hours, matching
-  /// the intended 4–6h rotation).
-  static PoolSync fromSeed(String seed, {Duration window = const Duration(hours: 6)}) {
+  static PoolSync fromPublicKey(
+    Uint8List publicKey, {
+    Duration window = const Duration(hours: 6),
+  }) {
     return PoolSync(
-      poolId: poolIdFor(seed),
-      seed: seed,
+      id: base64Url.encode(AesGcmAead.randomBytes(16)),
+      publicKey: publicKey,
+      fingerprint: HybridKem.fingerprint(publicKey),
       expiresAt: DateTime.now().add(window),
-      emojiPoolHash: _poolHash(seed),
     );
   }
 
-  static String poolIdFor(String seed) =>
-      sha256.convert(utf8.encode(seed)).toString().substring(0, 12).toUpperCase();
-
-  static String _poolHash(String seed) {
-    final pool = DailyPool(seed: seed).generate().join();
-    return sha256.convert(utf8.encode(pool)).toString().substring(0, 16);
-  }
+  static String poolIdFor(Uint8List publicKey) =>
+      CipherEngine.poolIdFor(publicKey);
 }

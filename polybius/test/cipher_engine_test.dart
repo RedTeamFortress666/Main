@@ -1,71 +1,89 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
-import 'package:polybius/core/constants/app_constants.dart';
+import 'package:polybius/core/crypto/hybrid_kem.dart';
+import 'package:polybius/core/crypto/kyber_keystore.dart';
+import 'package:polybius/core/crypto/unique_qr.dart';
+import 'package:polybius/core/storage/polybius_secret_store.dart';
 import 'package:polybius/features/cipher/engine/cipher_engine.dart';
-import 'package:polybius/features/cipher/engine/daily_pool.dart';
+
+class _MemorySecretStore implements PolybiusSecretStore {
+  final _data = <String, String>{};
+
+  @override
+  Future<String?> read(String key) async => _data[key];
+
+  @override
+  Future<void> write(String key, String value) async => _data[key] = value;
+}
 
 void main() {
-  group('DailyPool', () {
-    test('generates exactly 560 unique emojis', () {
-      final pool = DailyPool().generate();
-      expect(pool.length, AppConstants.poolSize);
-      expect(pool.toSet().length, AppConstants.poolSize);
-    });
+  late KyberKeystore keystore;
+  late CipherEngine engine;
 
-    test('same date produces same pool', () {
-      final date = DateTime(2026, 7, 22);
-      final a = DailyPool(date: date).generate();
-      final b = DailyPool(date: date).generate();
-      expect(a, equals(b));
-    });
-
-    test('different dates produce different pools', () {
-      final a = DailyPool(date: DateTime(2026, 7, 22)).generate();
-      final b = DailyPool(date: DateTime(2026, 7, 23)).generate();
-      expect(a, isNot(equals(b)));
-    });
+  setUp(() async {
+    keystore = KyberKeystore(_MemorySecretStore());
+    await keystore.init();
+    engine = CipherEngine(keystore: keystore);
   });
 
-  group('CipherEngine', () {
-    late CipherEngine engine;
+  test('hybrid round-trip', () {
+    const plaintext = 'Hello World 123!';
+    final sealed = engine.encrypt(plaintext);
+    expect(engine.decrypt(sealed), plaintext);
+  });
 
-    setUp(() {
-      engine = CipherEngine(date: DateTime(2026, 7, 22));
-    });
+  test('each seal is unique even for identical plaintext', () {
+    final a = engine.encrypt('HELLO');
+    final b = engine.encrypt('HELLO');
+    expect(a, isNot(equals(b)));
+    expect(engine.decrypt(a), 'HELLO');
+    expect(engine.decrypt(b), 'HELLO');
+  });
 
-    test('encrypt produces emoji output', () {
-      final result = engine.encrypt('HELLO');
-      expect(result, isNotEmpty);
-      expect(result.runes.length, greaterThan(4));
-    });
+  test('ciphertext does not encode plaintext character indexes', () {
+    final sealed = engine.encrypt('AAAAA');
+    final env = HybridEnvelope.tryParse(sealed);
+    expect(env, isNotNull);
+    expect(sealed.contains('AAAAA'), isFalse);
+    final json = utf8.decode(base64Url.decode(sealed));
+    expect(json.contains('AAAAA'), isFalse);
+    expect(json.contains('"kem"'), isTrue);
+    expect(json.contains('"ct"'), isTrue);
+  });
 
-    test('encrypt then decrypt round-trips', () {
-      const plaintext = 'Hello World 123!';
-      final encrypted = engine.encrypt(plaintext);
-      final decrypted = CipherEngine(
-        date: DateTime(2026, 7, 22),
-      ).decrypt(encrypted);
-      expect(decrypted, plaintext);
-    });
+  test('private key never appears in the envelope JSON', () {
+    final sealed = engine.encrypt('secret');
+    final json = utf8.decode(base64Url.decode(sealed));
+    expect(json.contains('"sk"'), isFalse);
+    expect(json.contains('polybius_kyber768_sk'), isFalse);
+    expect(json.contains(base64Encode(keystore.publicKey)), isFalse);
+  });
 
-    test('rotors step on each character', () {
-      engine.encrypt('ABC');
-      expect(engine.rotors[0].stepCount, 3);
-      expect(engine.rotors[1].stepCount, 3);
-      expect(engine.rotors[2].stepCount, 3);
-    });
+  test('wrong private key cannot open the envelope', () async {
+    final other = KyberKeystore(_MemorySecretStore());
+    await other.init();
+    final sealed = engine.encrypt('only-for-local');
+    expect(CipherEngine(keystore: other).decrypt(sealed), isEmpty);
+  });
 
-    test('same engine instance round-trips encrypt then decrypt', () {
-      const plaintext = 'MEET AT MIDNIGHT';
-      final encrypted = engine.encrypt(plaintext);
-      // Decrypt on the SAME instance (as the app's shared provider does).
-      expect(engine.decrypt(encrypted), plaintext);
-    });
+  test('unique QR frames reassemble and stay unique', () {
+    final payload = engine.encrypt('QR-PAYLOAD');
+    final a = UniqueQrCodec.split(payload);
+    final b = UniqueQrCodec.split(payload);
+    expect(a.first, isNot(equals(b.first)));
+    expect(UniqueQrCodec.join(a), payload);
+    expect(UniqueQrCodec.join(b), payload);
+    expect(a.every(UniqueQrCodec.isFrame), isTrue);
+  });
 
-    test('a prior encryption does not corrupt a later decryption', () {
-      final cipherA = engine.encrypt('FIRST MESSAGE');
-      // Advancing the rotors with more work must not break decoding cipherA.
-      engine.encrypt('NOISE THAT ADVANCES THE ROTORS');
-      expect(engine.decrypt(cipherA), 'FIRST MESSAGE');
-    });
+  test('QR assembler waits for every unique frame', () {
+    final payload = engine.encrypt('ASSEMBLE-ME');
+    final frames = UniqueQrCodec.split(payload);
+    final assembler = UniqueQrAssembler();
+    for (var i = 0; i < frames.length - 1; i++) {
+      expect(assembler.add(frames[i]), isNull);
+    }
+    expect(assembler.add(frames.last), payload);
   });
 }

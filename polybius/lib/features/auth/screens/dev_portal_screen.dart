@@ -2,18 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:polybius/core/constants/app_constants.dart';
-import 'package:polybius/core/constants/unlock_codes.dart';
-import 'package:polybius/core/crypto/signature_service.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 import 'package:polybius/core/widgets/arcade_ui.dart';
 
-enum _Grant { none, user, developer }
-
-/// POLYBIUS dev access portal — reached via the ritual sequence
-/// (title hold -> difficulty 11 -> Russian hold-to-select). This is the ONLY
-/// entry to the crypto engine: a valid account login plus an access code
-/// (B1-66-3R / D1-66-3R for dev, Tr1-66-3R for user, or a signed invite token).
+/// Portal is reachable only when the router sees [pathwayPrimed] (or an
+/// already-unlocked cipher). Access is the operator passphrase — never a
+/// compiled-in code.
 class DevPortalScreen extends ConsumerStatefulWidget {
   const DevPortalScreen({super.key});
 
@@ -22,17 +17,13 @@ class DevPortalScreen extends ConsumerStatefulWidget {
 }
 
 class _DevPortalScreenState extends ConsumerState<DevPortalScreen> {
-  final _username = TextEditingController();
-  final _password = TextEditingController();
-  final _devCode = TextEditingController();
+  final _pass = TextEditingController();
   String? _error;
   bool _busy = false;
 
   @override
   void dispose() {
-    _username.dispose();
-    _password.dispose();
-    _devCode.dispose();
+    _pass.dispose();
     super.dispose();
   }
 
@@ -43,57 +34,33 @@ class _DevPortalScreenState extends ConsumerState<DevPortalScreen> {
       _error = null;
     });
     try {
-      final storage = ref.read(storageServiceProvider);
-      final rawCode = _devCode.text.trim();
-      final code = rawCode.toUpperCase();
-
-      // A valid account login is always required.
-      final ok = await ref
-          .read(authProvider.notifier)
-          .login(_username.text.trim(), _password.text);
-      if (!mounted) return;
-      if (!ok) {
+      final auth = ref.read(authProvider);
+      final user = auth.user;
+      if (user == null) {
+        setState(() => _error = 'ACCESS DENIED');
+        return;
+      }
+      final pass = _pass.text;
+      if (user.portalPassHash == null) {
+        final err =
+            await ref.read(authProvider.notifier).setPortalPassphrase(pass);
+        if (err != null) {
+          setState(() => _error = err);
+          return;
+        }
+      } else if (!ref.read(authProvider.notifier).verifyPortalPassphrase(pass)) {
         setState(() => _error = 'ACCESS DENIED');
         return;
       }
 
-      final tier = ref.read(authProvider).user?.tier;
       final privileged =
-          tier == UserTier.developer || tier == UserTier.admin;
-
-      // Resolve which access the supplied code grants.
-      //   B1-66-3R / D1-66-3R -> developer (requires privileged account)
-      //   Tr1-66-3R           -> user-only cipher (no dev panel)
-      //   signed invite token -> tier per token (dev needs privileged account)
-      _Grant grant = _Grant.none;
-      if (code == UnlockCodes.devB1663R || code == UnlockCodes.devD1663R) {
-        if (privileged) grant = _Grant.developer;
-      } else if (code == UnlockCodes.userTr1663R) {
-        grant = _Grant.user;
+          user.tier == UserTier.developer || user.tier == UserTier.admin;
+      if (privileged) {
+        ref.read(unlockProvider.notifier).grantDeveloperAccess();
       } else {
-        final token = SignedToken.tryParse(rawCode);
-        if (token != null) {
-          final trusted = await storage.getTrustedPublicKey();
-          final verified =
-              await SignatureService(modulusB64: trusted).verifyToken(token);
-          if (verified) {
-            final devTier =
-                token.tier == 'developer' || token.tier == 'admin';
-            grant = (devTier && privileged) ? _Grant.developer : _Grant.user;
-          }
-        }
+        ref.read(unlockProvider.notifier).grantUserAccess();
       }
-
-      switch (grant) {
-        case _Grant.developer:
-          ref.read(unlockProvider.notifier).grantDeveloperAccess();
-          if (mounted) context.go('/cipher');
-        case _Grant.user:
-          ref.read(unlockProvider.notifier).grantUserAccess();
-          if (mounted) context.go('/cipher');
-        case _Grant.none:
-          setState(() => _error = 'ACCESS DENIED');
-      }
+      if (mounted) context.go('/cipher');
     } catch (_) {
       if (mounted) setState(() => _error = 'ACCESS DENIED');
     } finally {
@@ -103,8 +70,10 @@ class _DevPortalScreenState extends ConsumerState<DevPortalScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = ref.watch(authProvider).user;
+    final first = user?.portalPassHash == null;
     return ArcadeScaffold(
-      accent: NeonTheme.dangerRed,
+      accent: NeonTheme.cherryBright,
       showFooter: false,
       child: LayoutBuilder(
         builder: (context, constraints) => SingleChildScrollView(
@@ -112,107 +81,86 @@ class _DevPortalScreenState extends ConsumerState<DevPortalScreen> {
             constraints: BoxConstraints(minHeight: constraints.maxHeight),
             child: IntrinsicHeight(
               child: Column(
-        children: [
-          const Spacer(),
-          const Text(
-            'PØLYBĪUS',
-            style: TextStyle(
-              fontFamily: 'monospace',
-              fontSize: 28,
-              color: NeonTheme.neonPink,
-              letterSpacing: 6,
-              shadows: [Shadow(color: NeonTheme.neonCyan, blurRadius: 16)],
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'DEV ACCESS PORTAL',
-            style: TextStyle(
-              fontFamily: 'monospace',
-              color: NeonTheme.dangerRed,
-              letterSpacing: 4,
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 28),
-          _labelled('USERNAME', _username),
-          const SizedBox(height: 14),
-          _labelled('PASSWORD', _password, obscure: true),
-          const SizedBox(height: 14),
-          _labelled('DEV CODE', _devCode),
-          if (_error != null) ...[
-            const SizedBox(height: 14),
-            Text(_error!,
-                style: const TextStyle(
-                    color: NeonTheme.dangerRed,
-                    fontFamily: 'monospace',
-                    letterSpacing: 2)),
-          ],
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: ArcadeMenuButton(
-                  label: 'CANCEL',
-                  color: NeonTheme.neonPink,
-                  dense: true,
-                  onPressed: _busy ? null : () => context.pop(),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ArcadeMenuButton(
-                  label: _busy ? '...' : 'LOG IN?',
-                  color: NeonTheme.neonGreen,
-                  dense: true,
-                  onPressed: _busy ? null : _login,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'UNAUTHORISED ACCESS IS A CRIMINAL OFFENCE',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: 'monospace',
-              color: Colors.white38,
-              fontSize: 10,
-              letterSpacing: 1.5,
-            ),
-          ),
-          const Spacer(),
-        ],
+                children: [
+                  const Spacer(),
+                  const Text(
+                    'DARTH CHERRY',
+                    style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 22,
+                      color: NeonTheme.cherryBright,
+                      letterSpacing: 6,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'v3 ACCESS PORTAL',
+                    style: TextStyle(
+                      fontFamily: 'monospace',
+                      color: NeonTheme.cherryGold,
+                      letterSpacing: 4,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  Text(
+                    first
+                        ? 'SET PORTAL PASSPHRASE (${AppConstants.minPasswordLength}+)'
+                        : 'PORTAL PASSPHRASE',
+                    style: const TextStyle(
+                      color: NeonTheme.neonGreen,
+                      fontFamily: 'monospace',
+                      fontSize: 11,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ArcadeField(
+                    controller: _pass,
+                    obscure: true,
+                    textAlign: TextAlign.left,
+                    fontSize: 16,
+                    letterSpacing: 1,
+                    color: NeonTheme.cherryBright,
+                    textColor: Colors.white,
+                  ),
+                  if (_error != null) ...[
+                    const SizedBox(height: 14),
+                    Text(_error!,
+                        style: const TextStyle(
+                            color: NeonTheme.dangerRed,
+                            fontFamily: 'monospace',
+                            letterSpacing: 2)),
+                  ],
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ArcadeMenuButton(
+                          label: 'CANCEL',
+                          color: NeonTheme.neonPink,
+                          dense: true,
+                          onPressed: _busy ? null : () => context.pop(),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ArcadeMenuButton(
+                          label: _busy ? '...' : (first ? 'SET + OPEN' : 'OPEN'),
+                          color: NeonTheme.neonGreen,
+                          dense: true,
+                          onPressed: _busy ? null : _login,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                ],
               ),
             ),
           ),
         ),
       ),
-    );
-  }
-
-  Widget _labelled(String label, TextEditingController controller,
-      {bool obscure = false}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label,
-            style: const TextStyle(
-                color: NeonTheme.neonGreen,
-                fontFamily: 'monospace',
-                fontSize: 11,
-                letterSpacing: 2)),
-        const SizedBox(height: 4),
-        ArcadeField(
-          controller: controller,
-          obscure: obscure,
-          textAlign: TextAlign.left,
-          fontSize: 16,
-          letterSpacing: 1,
-          color: NeonTheme.neonCyan,
-          textColor: Colors.white,
-        ),
-      ],
     );
   }
 }

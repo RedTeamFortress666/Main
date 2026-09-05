@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:intl/intl.dart';
-import 'package:polybius/core/constants/app_constants.dart';
 import 'package:polybius/core/constants/emoji_pool.dart';
 
 /// Generates the 560-emoji cipher pool from a seed key. The seed is normally
@@ -25,7 +24,7 @@ class DailyPool {
         .where((e) => e.runes.length == 1)
         .toList();
     corpus.shuffle(rng);
-    return corpus.take(AppConstants.poolSize).toList();
+        return corpus.take(560).toList();
   }
 
   static List<String> forDate(DateTime date) => DailyPool(date: date).generate();
