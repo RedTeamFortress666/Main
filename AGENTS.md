@@ -22,7 +22,7 @@ Dependencies for both are refreshed automatically on startup via the update scri
 - **Running the web app:** use the headless `web-server` device, not the `chrome` device:
   `cd polybius && flutter run -d web-server --web-hostname 0.0.0.0 --web-port 8080`
   The first compile is slow (~20–40s) and the page is blank/black until it finishes — be patient. Then open `http://localhost:8080`.
-- **Login:** the app opens on a login gate. The bootstrapped account is username `DEVELOPER` / password `developer` (username is case-sensitive uppercase). After login you land on the neon arcade main menu.
+- **Login:** the app opens on a login gate. There is **no** factory account. Tap CREATE ACCOUNT, choose an operator id, a password of 12+ characters, and a 6-digit PIN. After login you land on the neon arcade main menu. `/cipher` and `/devportal` are router-gated — see `polybius/README.md`.
 This repo contains two separate products:
 
 1. **Root React app** (`/`) — a small Vite + React + TypeScript frontend (`name: first-app`). No backend/database.
@@ -43,4 +43,4 @@ Dependencies for both are refreshed automatically on startup via the update scri
 - Standard commands (run from inside `polybius/`): `flutter pub get`, `flutter test`, `flutter analyze` (lint), `flutter build web` / `flutter run`. See `polybius/README.md` for build targets and the cipher/unlock details.
 - `flutter analyze` currently reports only pre-existing `info`-level lints (no errors) — that is the expected baseline.
 - Only the **web** toolchain is set up (Chrome is present). Android/iOS/Linux-desktop toolchains are intentionally not installed (`flutter doctor` will flag them). To run/see the app, serve web: `flutter run -d web-server --web-hostname 0.0.0.0 --web-port 8080`, then open `http://localhost:8080` (the `web-server` device compiles for ~15-20s before it is served; a Dart Debug Chrome extension warning is normal and harmless).
-- First login (bootstrapped on first install): username `DEVELOPER`, password `developer`. Login lands on the neon arcade main menu; `START GAME` launches the Flame space shooter. The hidden cipher layer requires the unlock rituals documented in `polybius/README.md`.
+- First run: tap **CREATE ACCOUNT** (no bootstrapped `DEVELOPER`/`developer` credentials). Password must be 12+ characters; choose a 6-digit PIN. Login lands on the neon arcade main menu; `START GAME` launches the Flame space shooter. The hidden cipher layer is router-gated — see `polybius/README.md`.

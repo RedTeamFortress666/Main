@@ -1,6 +1,6 @@
 # PØLYBĪUS — BETA build guide
 
-Version: `1.0.0-beta.1+1` (see `pubspec.yaml`).
+Version: `3.0.0+3` (see `pubspec.yaml`).
 
 Flutter app (Dart). One codebase targets web, Linux desktop, Android and iOS.
 This document lists the exact commands, prerequisites and known blockers per
@@ -61,9 +61,9 @@ flutter build appbundle --release  # Play/AAB
 # output: build/app/outputs/
 ```
 
-Release signing is now wired: if `android/key.properties` exists it is used to
-sign release builds; otherwise the build falls back to debug signing so
-`flutter run --release` still works for BETA. To ship a distributable build:
+Release signing is required for CI and for any APK you distribute. If
+`android/key.properties` is missing, **CI fails**. Local `flutter run --release`
+may still debug-sign so developers can iterate. To ship a distributable build:
 
 ```bash
 keytool -genkey -v -keystore ~/polybius-release.jks \
@@ -98,36 +98,33 @@ of trust the app does not have.
 
 ### Implemented (real signature verification)
 
-Uses **Ed25519** detached signatures (`lib/core/crypto/signature_service.dart`).
-The embedded verification key (`kProjectSigningPublicKeyB64`) is the Ed25519
-public key of the developer's OpenPGP (curve 25519) key `0x24D2A8CD`. Only the
-**public** half is in the app/repo; the private key never ships.
+Uses **RSA PKCS#1 v1.5 + SHA-256** (`lib/core/crypto/signature_service.dart`)
+for invite *file-number* tokens and update payloads. The embedded verification
+key is the project's RSA-4096 **public** modulus. Only the public half is in
+the app/repo; the private key never ships.
 
-**Crypto-engine access is portal-only.** There is no cipher button on any
-screen. The engine opens only by logging in at the dev access portal (reached
-via the ritual: hold title 6s → difficulty 11 → Russian + hold SELECT 3s) with:
-`B1-66-3R` or `D1-66-3R` (developer) · `Tr1-66-3R` (user-only, no dev panel) ·
-or an invite token signed by the project key. To mint new signed user invite
-tokens you sign with the Ed25519 seed of your key (see `polybius_sign.dart` /
-the dev panel); the raw seed is NOT stored in the repo.
+**Messaging crypto is hybrid ML-KEM-768 (Kyber) + AES-256-GCM**
+(`lib/core/crypto/hybrid_kem.dart`). Each seal is a unique envelope. The Kyber
+private key is used only locally to decapsulate and never appears in QR,
+clipboard, or Hive.
+
+**Crypto-engine access is portal-only and router-enforced.** `/cipher` requires
+an unlocked session. `/devportal` requires `pathwayPrimed` (title-hold ritual)
+or an already-unlocked session. There are **no** compiled access codes. The
+operator sets a portal passphrase (12+) hashed on the account.
 
 - **Signature-verified invite tokens.** A `SignedToken` binds a game file
-  number + access tier + expiry, signed with the private key. The Load screen
-  and Dev Access Portal verify the token (and expiry) against the trusted
-  public key before honouring it. Forged codes are rejected because the private
-  key isn't in the app.
+  number + access tier + expiry. Load Game stores a verified token as a decoy
+  save file; it does **not** open the cipher. Account invites are minted in the
+  developer panel and consumed at register time.
 - **Signature-verified update payloads.** `SignatureService.verifyPayload`
-  checks a detached signature over a payload's SHA-256 before it would be
-  applied. (Transport/apply is out of scope; the verification primitive is
-  here.)
-- **Trusted-key override (per-SD/USB keyset).** A dev can paste a different
-  trusted public key in the developer panel; tokens are then verified against
-  it (stored via `setTrustedPublicKey`).
-- **Device-scoped data-at-rest.** The working AES key is derived
-  `HMAC-SHA256(masterSecret, perInstallDeviceId)`. On native platforms the
-  master lives in the OS keystore (`flutter_secure_storage`) so it is genuinely
-  device-scoped; on web / keystore-less Linux (R36) it degrades to obfuscation.
-  `EncryptionService.deviceBound` reports which.
+  checks a detached signature over a payload's SHA-256.
+- **Device-scoped data-at-rest.** Hive secrets are AES-256-GCM (`v3:`). The
+  working AES key is derived `HMAC-SHA256(masterSecret, perInstallDeviceId)`.
+  On native platforms the master lives in the OS keystore
+  (`flutter_secure_storage` with EncryptedSharedPreferences / Keychain). **Web
+  localStorage is a hard limit** — preview only. `EncryptionService.deviceBound`
+  reports which.
 
 ### Minting signed invites / signing updates (dev, offline)
 

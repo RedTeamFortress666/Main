@@ -27,9 +27,9 @@ git push origin v1.0.0-beta.1
 The workflow then creates a **draft Release** with all three downloads
 attached. (Requires GitHub Actions to be enabled for the repo.)
 
-> Android APKs from CI are **debug-signed** unless you add a release keystore —
-> see the Android section of `BUILD.md`. Debug-signed APKs side-load fine for
-> BETA but should be replaced with a properly signed build for distribution.
+> Android APKs from CI are **release-signed**. The workflow fails unless
+> `ANDROID_KEYSTORE_BASE64` and `ANDROID_KEY_PROPERTIES` secrets are set —
+> see the Android section of `BUILD.md`. Debug-signed APKs are not published.
 > iOS is not built in CI here because it needs an Apple signing identity; build
 > it on macOS with `flutter build ipa` (see `BUILD.md`).
 
