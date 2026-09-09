@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Downloads — PØLYBĪUS</title>
+  <style>
+    html, body { margin: 0; background: #0a0014; color: #e8f6ff; font-family: ui-monospace, monospace; }
+    main { max-width: 720px; margin: 0 auto; padding: 40px 24px 80px; }
+    h1 { text-align: center; font-size: 36px; letter-spacing: 4px; color: #ff00ff;
+      text-shadow: 0 0 18px #00ffff, 0 0 32px #ff00ff; margin: 0 0 8px; }
+    p.lead { text-align: center; color: #9ad; margin: 0 0 28px; }
+    a.btn { display: block; background: #120020; border: 1px solid #00ffff; color: #fff;
+      text-decoration: none; padding: 16px 18px; margin: 12px 0; }
+    a.btn strong { display: block; color: #00ffff; font-size: 18px; letter-spacing: 2px; }
+    a.btn span { display: block; color: #9ad; font-size: 13px; margin-top: 6px; word-break: break-all; }
+    .note { color: #889; font-size: 13px; line-height: 1.55; }
+    code { color: #39ff14; }
+    .warn { color: #ffcc00; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>PØLYBĪUS</h1>
+    <p class="lead">Sideload via <strong>t3mp</strong> (temp.sh). Not GitHub Releases. Not raw GitHub URLs.</p>
+
+    <a class="btn" href="__T3MP_WEB__">
+      <strong>WEB PORTABLE ZIP</strong>
+      <span>__T3MP_WEB__</span>
+    </a>
+    <a class="btn" href="__T3MP_APK__">
+      <strong>ANDROID APK (arm64)</strong>
+      <span>__T3MP_APK__</span>
+    </a>
+    <a class="btn" href="__T3MP_SUMS__">
+      <strong>SHA256SUMS</strong>
+      <span>__T3MP_SUMS__</span>
+    </a>
+
+    <p class="note">
+      Open the t3mp page, then <em>Click here to download</em>.
+      Direct fetch: <code>curl -X POST -O -J URL</code>.
+      Drops expire after 3 days. Mint a fresh one with
+      <code>polybius/tool/t3mp_upload.sh FILE</code>.
+    </p>
+    <p class="note warn">
+      Minted __T3MP_MINTED__. Expires ~__T3MP_EXPIRES__.
+    </p>
+  </main>
+</body>
+</html>

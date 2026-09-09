@@ -1,78 +1,76 @@
 # PØLYBĪUS — downloadable builds
 
-There are two ways to get an installable/downloadable build.
+Shareable downloads are **t3mp links** (`https://temp.sh/...`), not GitHub
+Releases and not raw GitHub URLs. temp.sh is anonymous, has no account, and
+deletes files after **3 days**.
 
-## 1. GitHub Actions (recommended — reproducible, no repo bloat)
+GitHub is source + CI only. Do not hand operators a
+`github.com/RedTeamFortress666/Main/raw/...` or Releases URL.
 
-A release workflow at `.github/workflows/release.yml` builds the downloads on
-GitHub's runners (which already have the Android SDK etc.).
+## Current drop
 
-**Get artifacts on demand**
+See [`downloads.html`](./downloads.html) (URLs filled when a drop is minted).
+If the links 404, they expired — mint a new drop.
 
-1. GitHub → **Actions** → **Build Polybius downloads** → **Run workflow**.
-2. When it finishes, download from the run's **Artifacts** section:
-   - `polybius-web` — zipped web build
-   - `polybius-android-apk` — `app-release.apk` (side-loadable)
-   - `polybius-linux-x64` — Linux desktop bundle (`.tar.gz`, x86-64)
-   - `polybius-linux-arm64` — **aarch64** Linux bundle for R36 S / R36 Ultra
-   - `polybius-ios-unsigned` — unsigned iOS `Runner.app` (needs signing to install)
-
-**Publish a Release** (attaches the files to a GitHub Release)
+Open the t3mp page, then **Click here to download**. Direct:
 
 ```bash
-git tag v1.0.0-beta.1
-git push origin v1.0.0-beta.1
+curl -X POST -O -J 'https://temp.sh/<id>/<filename>'
 ```
 
-The workflow then creates a **draft Release** with all three downloads
-attached. (Requires GitHub Actions to be enabled for the repo.)
-
-> Android APKs from CI are **debug-signed** unless you add a release keystore —
-> see the Android section of `BUILD.md`. Debug-signed APKs side-load fine for
-> BETA but should be replaced with a properly signed build for distribution.
-> iOS is not built in CI here because it needs an Apple signing identity; build
-> it on macOS with `flutter build ipa` (see `BUILD.md`).
-
-## 2. Build locally
+## Mint a drop (no GitHub)
 
 ```bash
 cd polybius
 flutter pub get
-
-# Web (serve the folder over HTTP — opening index.html via file:// won't work)
 flutter build web --release
-cd build/web && python3 -m http.server 8080   # then open http://localhost:8080
+(cd build/web && zip -r "$PWD/../../polybius-web-portable.zip" .)
 
-# Android APK (needs the Android SDK)
-flutter build apk --release
-# -> build/app/outputs/flutter-apk/app-release.apk
+# Android APK if the SDK is available:
+# flutter build apk --release
 
-# Linux desktop (needs ninja/cmake/gtk; ARM handhelds must build on ARM)
-flutter build linux --release
-# -> build/linux/<arch>/release/bundle/
+tool/t3mp_upload.sh \
+  polybius-web-portable.zip \
+  dist/polybius-1.0.0-beta.1-android-arm64.apk
+```
+
+Paste the printed URLs into `downloads.html`. CI does the same on
+`workflow_dispatch` / version tags and writes the URLs to the Actions job
+summary — still t3mp, never a GitHub Release.
+
+## Cipher / pool dead-drops
+
+ENCRYPT and SYNC have a **T3MP LINK** button. That mints a 3-day temp.sh URL
+for ciphertext or the pool-sync token (short QR). DECRYPT / IMPORT fetch a
+pasted `https://temp.sh/...` URL. Native builds only — Flutter web cannot
+reach temp.sh (no CORS); use the script above or a phone/desktop build.
+
+Do **not** use GitHub gists for this.
+
+## Playing on the R36 S / R36 Ultra / R36 Max/Pro
+
+These are **ARM (aarch64)** Linux handhelds. Use an aarch64 Linux bundle (CI
+`polybius-linux-arm64` artifact, then t3mp-drop it) — an x86-64 Linux build
+will not run on them.
+
+1. Download and extract the arm64 `.tar.gz`.
+2. Copy the folder to the frontend ports/apps directory on the SD card
+   (e.g. `/roms/ports/polybius/` on ArkOS/JELOS/MuOS).
+3. Launch from **Ports**. If the native build will not start, the **web zip**
+   is the fallback: serve it and open it in the device browser.
+
+> The aarch64 build is produced on a GitHub `ubuntu-24.04-arm` runner (build
+> only). Share it via t3mp after the run finishes.
+
+## Build locally
+
+```bash
+cd polybius
+flutter pub get
+flutter build web --release
+flutter build apk --release          # needs the Android SDK
+flutter build linux --release        # needs ninja/cmake/gtk
 ```
 
 See `BUILD.md` for prerequisites, the R36 ARM caveat, controls, and the
 security model.
-
-## Playing on the R36 S / R36 Ultra / R36 Max/Pro
-
-These are **ARM (aarch64) Linux** handhelds, so they need the **aarch64** build
-(`polybius-linux-arm64` from CI) — the x86-64 Linux artifact will not run on
-them. To install:
-
-1. Download and extract `polybius-linux-arm64.tar.gz`.
-2. Copy the whole extracted folder to your frontend's ports/apps directory on
-   the SD card (e.g. `/roms/ports/polybius/` on ArkOS/JELOS/MuOS).
-3. Launch it from the **Ports** menu (it runs `polybius.sh`, included in the
-   bundle). If your firmware needs a `.sh` in a specific ports folder, point it
-   at `polybius/polybius.sh`.
-
-Controls: touchscreen (R36 Ultra) via drag, plus d-pad/keys mapped by the
-firmware; hardware-gamepad mapping is best-effort (see `BUILD.md`). If the
-native build won't launch on your firmware, the **web build** is a fallback —
-serve `polybius-web` and open it in the device browser.
-
-> The aarch64 build is produced on a GitHub `ubuntu-24.04-arm` runner. If your
-> repo/plan lacks arm64 runners, build the aarch64 bundle on an arm64 Linux box
-> with the Flutter Linux toolchain installed.
