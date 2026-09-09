@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Hint file for USB host apps. Not a grant. The framework still
+     shows the permission dialog (config_disableUsbPermissionDialogs=false).
+     Keep this list tight: CDC-ACM (ESP32), common USB-UART, not all HID. -->
+<resources>
+    <!-- CDC ACM (ESP32-S3 native USB) -->
+    <usb-device class="2" subclass="2" />
+    <!-- FTDI, CP210x, CH340, Espressif (0x303A) -->
+    <usb-device vendor-id="1027" />
+    <usb-device vendor-id="4292" />
+    <usb-device vendor-id="6790" />
+    <usb-device vendor-id="12346" />
+</resources>

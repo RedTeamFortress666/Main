@@ -1,0 +1,50 @@
+# CRYPT3X /system/etc/hosts — telemetry and captive-portal sinks.
+# Do not block the open web (no wildcard google.com). Do not block
+# f-droid.org, proton.me, dns.quad9.net, pool.ntp.org, or github.com.
+#
+# 127.0.0.1 is used (not 0.0.0.0) so a lookup still resolves and fails
+# closed on the loopback rather than waiting on NXDOMAIN.
+
+127.0.0.1   localhost
+::1         localhost ip6-localhost ip6-loopback
+
+# Google connectivity / NTP / clients (AOSP defaults)
+127.0.0.1   connectivitycheck.gstatic.com
+127.0.0.1   connectivitycheck.android.com
+127.0.0.1   clients1.google.com
+127.0.0.1   clients2.google.com
+127.0.0.1   clients3.google.com
+127.0.0.1   clients4.google.com
+127.0.0.1   clients5.google.com
+127.0.0.1   clients6.google.com
+127.0.0.1   android.clients.google.com
+127.0.0.1   android.googleapis.com
+127.0.0.1   mtalk.google.com
+127.0.0.1   time.android.com
+127.0.0.1   time.google.com
+127.0.0.1   update.googleapis.com
+127.0.0.1   play.googleapis.com
+127.0.0.1   safebrowsing.googleapis.com
+127.0.0.1   safebrowsing.google.com
+
+# Analytics / crash / ads
+127.0.0.1   www.google-analytics.com
+127.0.0.1   google-analytics.com
+127.0.0.1   ssl.google-analytics.com
+127.0.0.1   app-measurement.com
+127.0.0.1   api.crashlytics.com
+127.0.0.1   e.crashlytics.com
+127.0.0.1   settings.crashlytics.com
+127.0.0.1   firebaseinstallations.googleapis.com
+127.0.0.1   firebaselogging.googleapis.com
+127.0.0.1   firebaseremoteconfig.googleapis.com
+127.0.0.1   pagead2.googlesyndication.com
+127.0.0.1   googleadservices.com
+127.0.0.1   www.googleadservices.com
+127.0.0.1   doubleclick.net
+127.0.0.1   googleads.g.doubleclick.net
+
+# LineageOS statistics
+127.0.0.1   stats.lineageos.org
+127.0.0.1   metrics.lineageos.org
+127.0.0.1   stats.lineageos.com

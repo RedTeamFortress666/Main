@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Privileged allowlist — privileged permissions ONLY.
+     Dangerous runtime permissions (CAMERA, LOCATION, INTERNET, BT) must
+     NOT appear here: on a priv-app they become auto-granted.
+
+     Polybius / HQ / Orbot / WireGuard are *not* privileged modules.
+     DoomsdayClock stays privileged solely for duress factory-reset. -->
+<permissions>
+    <privapp-permissions package="com.polybius.doomsday_clock">
+        <permission name="android.permission.MASTER_CLEAR"/>
+        <permission name="android.permission.FACTORY_RESET"/>
+        <permission name="android.permission.REBOOT"/>
+        <permission name="android.permission.CHANGE_COMPONENT_ENABLED_STATE"/>
+    </privapp-permissions>
+</permissions>

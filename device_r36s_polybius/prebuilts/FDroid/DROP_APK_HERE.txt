@@ -1,0 +1,10 @@
+F-Droid client lands here as FDroid.apk
+
+  applicationId: org.fdroid.fdroid
+  role: catalogue — how CRYPT3X stays adaptable
+  source: https://f-droid.org/repo/org.fdroid.fdroid_1023052.apk
+
+Add Brave's official repo inside F-Droid for browser updates:
+  https://brave-browser-apk-release.s3.brave.com/fdroid/repo
+
+./device_r36s_polybius/fetch-cover-apks.sh

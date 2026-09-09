@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Battery: do not keep the panel awake 24/7 (stock AndR36oid does). -->
+    <bool name="def_stay_on_while_plugged_in">false</bool>
+    <integer name="def_screen_off_timeout">120000</integer>
+    <integer name="def_sleep_timeout">300000</integer>
+    <bool name="def_dim_screen">true</bool>
+
+    <!-- Radios off at first boot. User enables Wi-Fi / BT when needed
+         (dongles, Daijisho netplay, mesh). Scan-always is a location leak. -->
+    <bool name="def_bluetooth_on">false</bool>
+    <bool name="def_wifi_on">false</bool>
+    <bool name="def_wifi_scan_always_available">false</bool>
+    <bool name="def_wifi_wakeup_enabled">false</bool>
+    <bool name="def_airplane_mode_on">false</bool>
+
+    <!-- Location / A-GPS off. No fused/network providers in the overlay. -->
+    <string name="def_location_providers_allowed" translatable="false"></string>
+    <bool name="def_assisted_gps_enabled">false</bool>
+
+    <!-- Privacy: lockscreen available; no backup transport; no Play verifier. -->
+    <bool name="def_lockscreen_disabled">false</bool>
+    <bool name="def_backup_enabled">false</bool>
+    <bool name="def_package_verifier_enable">false</bool>
+    <bool name="def_adb_enabled">false</bool>
+    <bool name="def_development_settings_enabled">false</bool>
+
+    <!-- F-Droid / sideload. No Play Protect. -->
+    <bool name="def_install_non_market_apps">true</bool>
+    <bool name="def_netstats_enabled">false</bool>
+
+    <!-- Skip Setup Wizard (would otherwise pull provisioning / GMS hooks). -->
+    <bool name="def_device_provisioned">true</bool>
+    <bool name="def_user_setup_complete">true</bool>
+</resources>
