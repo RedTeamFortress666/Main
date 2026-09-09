@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- USB: require an explicit grant. BadUSB / HID injection otherwise
+         auto-attaches. Wi-Fi dongles and ESP32 CDC still work after one tap. -->
+    <bool name="config_disableUsbPermissionDialogs">false</bool>
+
+    <!-- Mesh is opt-in (Bluetooth defaults off). Keep LE capable for when enabled. -->
+    <bool name="config_bluetooth_le_peripheral_mode_supported">true</bool>
+
+    <bool name="config_wifi_fast_bss_transition_supported">true</bool>
+    <bool name="config_wifi_connected_mac_randomization_supported">true</bool>
+    <bool name="config_wifi_p2p_mac_randomization_supported">true</bool>
+
+    <!-- No microG, no GMS fused location, no network-location overlay. -->
+    <bool name="config_enableNetworkLocationOverlay">false</bool>
+    <bool name="config_enableFusedLocationOverlay">false</bool>
+    <bool name="config_enableGeocoderOverlay">false</bool>
+    <bool name="config_enableActivityRecognitionHardwareOverlay">false</bool>
+    <string name="config_networkLocationProviderPackageName" translatable="false"></string>
+    <string name="config_fusedLocationProviderPackageName" translatable="false"></string>
+    <string name="config_persistentDataPackageName" translatable="false"></string>
+    <string name="config_defaultNetworkScorerPackageName" translatable="false"></string>
+    <string name="config_defaultAssistantAccessComponent" translatable="false"></string>
+    <string name="config_defaultSetupWizard" translatable="false"></string>
+    <string name="config_deviceProvisioningPackage" translatable="false"></string>
+
+    <!-- NTP: pool.ntp.org, never time.android.com / time.google.com. -->
+    <string name="config_ntpServer" translatable="false">2.android.pool.ntp.org</string>
+
+    <!-- Captive portal: do not probe Google (connectivitycheck.gstatic.com). -->
+    <string name="config_captive_portal_http_url" translatable="false"></string>
+    <string name="config_captive_portal_https_url" translatable="false"></string>
+    <string name="config_captive_portal_fallback_url" translatable="false"></string>
+    <string-array name="config_captive_portal_fallback_urls" translatable="false" />
+    <string-array name="config_captive_portal_other_fallback_urls" translatable="false" />
+    <string-array name="config_captive_portal_fallback_probe_specs" translatable="false" />
+
+    <!-- Handheld: no Wi-Fi Display sink (extra radio + pairing surface). -->
+    <bool name="config_enableWifiDisplay">false</bool>
+    <bool name="config_pdp_reject_dialog_enabled">false</bool>
+    <bool name="config_supportMicNearUltrasound">false</bool>
+</resources>

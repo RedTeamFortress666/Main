@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Optional removals. apply.sh copies this file only after confirming
+     each project exists in the synced manifest. Do not drop this in
+     blindly — repo sync fails on remove-project of a missing name. -->
+<manifest>
+  <remove-project name="LineageOS/android_packages_apps_Updater" />
+  <remove-project name="LineageOS/android_packages_apps_Jelly" />
+  <remove-project name="LineageOS/android_packages_apps_Eleven" />
+  <remove-project name="LineageOS/android_packages_apps_Recorder" />
+  <remove-project name="LineageOS/android_packages_apps_Snap" />
+  <remove-project name="LineageOS/android_packages_apps_Exchange" />
+</manifest>

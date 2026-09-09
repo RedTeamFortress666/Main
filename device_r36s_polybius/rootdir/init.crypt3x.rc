@@ -1,0 +1,9 @@
+service crypt3x_harden /system/etc/crypt3x/harden.sh
+    class late_start
+    user system
+    group system
+    disabled
+    oneshot
+
+on property:sys.boot_completed=1 && property:ro.crypt3x.harden=1
+    start crypt3x_harden

@@ -1,0 +1,28 @@
+# crypt3x_harden: oneshot settings writer after boot_completed.
+# Domain transition requires the service argv0 to be this labeled binary
+# (see init.crypt3x.rc — do not wrap with /system/bin/sh).
+
+type crypt3x_harden, domain;
+type crypt3x_harden_exec, exec_type, file_type, system_file_type;
+
+init_daemon_domain(crypt3x_harden)
+
+allow crypt3x_harden shell_exec:file rx_file_perms;
+allow crypt3x_harden system_file:file rx_file_perms;
+allow crypt3x_harden toolbox_exec:file rx_file_perms;
+
+binder_use(crypt3x_harden)
+allow crypt3x_harden system_server:binder { call transfer };
+allow crypt3x_harden activity_service:service_manager find;
+allow crypt3x_harden settings_service:service_manager find;
+
+# polybius_bridge (optional, disabled by default).
+type polybius_bridge, domain;
+type polybius_bridge_exec, exec_type, file_type, system_file_type;
+init_daemon_domain(polybius_bridge)
+allow polybius_bridge tty_device:chr_file rw_file_perms;
+allow polybius_bridge self:tcp_socket { create bind listen accept write read getattr setattr };
+allow polybius_bridge node_type:tcp_socket node_bind;
+
+# Do not add allow untrusted_app tty_device. CDC nodes stay system-owned.
+# A neverallow is omitted so AndR36oid's existing gadget rules still compile.

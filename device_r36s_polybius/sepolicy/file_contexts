@@ -1,0 +1,4 @@
+/system/etc/crypt3x/harden.sh  u:object_r:crypt3x_harden_exec:s0
+/system/bin/polybius_bridge     u:object_r:polybius_bridge_exec:s0
+/dev/ttyACM[0-9]*               u:object_r:tty_device:s0
+/dev/ttyUSB[0-9]*               u:object_r:tty_device:s0

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Battery / data exemptions: VPN keepalives only.
+     Browsers, mail, F-Droid, and Cherry must not run unconstrained in
+     Doze — that is how background telemetry survives a "privacy" ROM. -->
+<config>
+    <allow-in-power-save package="org.torproject.android" />
+    <allow-in-power-save package="com.wireguard.android" />
+    <allow-in-data-usage-save package="org.torproject.android" />
+    <allow-in-data-usage-save package="com.wireguard.android" />
+</config>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- CRYPT3X roomservice overlay.
+     Copy to $ANDROID_ROOT/.repo/local_manifests/crypt3x.xml (apply.sh).
+
+     Allowlist: AndR36oid hardware trees only. Do NOT add:
+       - OpenGApps / MindTheGapps / NikGapps / FlameGapps
+       - microG / GmsCore / Phonesky
+       - TheMuppets google vendor dumps
+       - Firebase, Sentry, Crashlytics, or any analytics project
+       - LineageOS Updater (phones home to Lineage CDN)
+
+     Unknown <remove-project> names abort `repo sync`, so Removals that
+     AndR36oid may already have dropped are listed in untrack.xml and
+     applied only when the project is present (see apply.sh). -->
+<manifest>
+  <remote name="andr36oid"
+          fetch="https://github.com/andr36oid/"
+          review="https://github.com/andr36oid/" />
+</manifest>

@@ -1,0 +1,30 @@
+# Polybius product extras. USB ACM nodes + optional local WebSocket bridge.
+# Serial nodes are 0660 system system — never world-writable, never hidraw 0666.
+
+on boot
+    mkdir /data/polybius 0770 system system
+    mkdir /data/polybius/bridge 0770 system system
+    mkdir /data/crypt3x 0770 system system
+
+    chmod 0660 /dev/ttyACM0
+    chmod 0660 /dev/ttyUSB0
+    chown system system /dev/ttyACM0
+    chown system system /dev/ttyUSB0
+
+# Hotplug nodes are 0660 system system via ueventd (ttyACM* / ttyUSB*).
+# Do not use device-added-/dev/... triggers — Android 11 host_init_verifier
+# rejects '/' in those action names.
+
+# Starts only if you install a native binary at /system/bin/polybius_bridge
+# (recommended) or wrap scripts/polybius_bridge.py with Termux / a python
+# prebuilt. Disabled by default so boot does not fail.
+# The binary MUST bind 127.0.0.1 only — never 0.0.0.0.
+service polybius_bridge /system/bin/polybius_bridge
+    class late_start
+    user system
+    group system inet wifi usb
+    disabled
+    oneshot
+
+on property:ro.polybius.bridge=1
+    start polybius_bridge

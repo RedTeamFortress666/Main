@@ -1,0 +1,6 @@
+Brave is an **opt-in** override of Cromite (Google Safe Browsing + usage pings).
+
+  applicationId: com.brave.browser
+  default: NOT installed
+  source (only if you insist):
+    BRAVE_APK_URL=... ./device_r36s_polybius/fetch-cover-apks.sh

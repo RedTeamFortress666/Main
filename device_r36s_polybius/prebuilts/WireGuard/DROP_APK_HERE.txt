@@ -1,0 +1,4 @@
+Optional. Copy the official WireGuard Android APK here as WireGuard.apk
+
+  https://download.wireguard.com/android-client/
+  https://f-droid.org/packages/com.wireguard.android/
