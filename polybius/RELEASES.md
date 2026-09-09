@@ -9,8 +9,14 @@ GitHub is source + CI only. Do not hand operators a
 
 ## Current drop
 
-See [`downloads.html`](./downloads.html) (URLs filled when a drop is minted).
-If the links 404, they expired — mint a new drop.
+Minted **2026-09-09**, expires ~**2026-09-12**. Also listed in
+[`downloads.html`](./downloads.html). If the links 404, mint a new drop.
+
+| Artifact | t3mp |
+| --- | --- |
+| Web portable zip | https://temp.sh/Qinwa/polybius-web-portable.zip |
+| Android APK (arm64, debug-signed) | https://temp.sh/JhGlF/polybius-1.0.0-beta.1-android-arm64.apk |
+| SHA256SUMS | https://temp.sh/hYqKc/SHA256SUMS |
 
 Open the t3mp page, then **Click here to download**. Direct:
 
