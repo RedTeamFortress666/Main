@@ -41,3 +41,8 @@ device_r36s_polybius/prebuilts/**/*.apk.idsig
 # Generated CRYPT3X boot animation (rebuild with media/render_bootanim.py)
 device_r36s_polybius/media/build/
 device_r36s_polybius/media/bootanimation.zip
+
+# Python test bytecode
+device_r36s_polybius/tests/__pycache__/
+__pycache__/
+*.pyc
