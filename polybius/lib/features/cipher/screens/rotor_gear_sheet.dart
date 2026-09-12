@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 import 'package:polybius/features/cipher/engine/rotor.dart';
+import 'package:polybius/features/cipher/screens/sixth_rotor_plate.dart';
 
 /// Live view of the three Enigma rotors — step counts and engine status.
 class RotorGearSheet extends ConsumerWidget {
@@ -34,6 +35,7 @@ class RotorGearSheet extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
           ...rotors.map((r) => _RotorCard(rotor: r)),
+          const SixthRotorPlate(),
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(12),

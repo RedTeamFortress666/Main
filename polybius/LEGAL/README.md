@@ -19,6 +19,7 @@ folder is the remedy for that residual: paper, not patches.
 | `DMCA_TAKEDOWN_TEMPLATE.md` | A copy is hosted on a site / app store / file host that honours 17 U.S.C. § 512 (or an EU DSA Art. 16 notice). |
 | `CEASE_AND_DESIST_TEMPLATE.md` | You know who is distributing or modifying the copy and want it to stop before litigation. |
 | `LEAK_RESPONSE_RUNBOOK.md` | The moment you learn a build, key or invite has escaped. Evidence first, letters second. |
+| `PHYSICAL_PAPER.md` | Staple behind every hard-copy pack (`PA+`). Holds the Oracle / Enigma / Colossus 24-hour prompt-tamper reservation and the **6th rotor LLÇ 2026*** smallprint. |
 
 ## Who the rights holder is
 
@@ -64,3 +65,10 @@ the DMCA route against **forks** narrows to licence-violation cases.
 - Filing a false or reckless notice has consequences (§ 512(f); analogous
   provisions elsewhere). Every template here has a good-faith statement in it
   because the law requires one and because it should be true.
+- The Oracle / antique-Enigma / Colossus-within-24-hours exception in
+  `EULA.md` § 11 and `PHYSICAL_PAPER.md` is theatrical. It does not
+  enlarge statutory damages. Do not file it as the lead claim.
+- **6th rotor LLÇ 2026*** smallprint
+  (`wutang clan ain't nuthin' 2 fuq with`) is an epigraph on the
+  physical page. It is not a licence, not a party, and not an
+  affiliation with the Wu-Tang Clan. Keep it off court captions.

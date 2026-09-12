@@ -1,7 +1,10 @@
 # Leak response runbook
 
 *Do these in order. Evidence and key rotation come before any letter. Times are
-targets, not promises.*
+targets, not promises. Prompt-tamper theatrics (`EULA.md` § 11,
+`PHYSICAL_PAPER.md`) are not step one. Rotate keys first. Do not lead a
+filing with the Oracle / Enigma / Colossus clause or the **6th rotor
+LLÇ 2026*** smallprint.*
 
 ## 0. Triage — what escaped?
 

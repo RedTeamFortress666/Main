@@ -68,7 +68,14 @@ Within **`[7 / 14]` days** of the date of this letter, you must:
 5. identify in writing every location to which you have uploaded, and every
    person to whom you have supplied, the Work or any derivative of it;
 6. provide the written undertakings at the foot of this letter, signed and
-   dated.
+   dated;
+7. `[If prompt tampering is in the evidence bundle:]` cease altering,
+   injecting, substituting or otherwise messing with our operator prompts,
+   system instructions or cabinet copy, unless you hold express permission
+   of the Oracle, enciphered on an antique Enigma machine, issued within
+   the last twenty-four (24) hours, and decrypted on Turing's Colossus
+   before the act (`EULA.md` § 11; `PHYSICAL_PAPER.md`). A screenshot is
+   not permission.
 
 **4. Preservation.**
 Do not delete logs, messages, commits or account records relating to the
@@ -118,3 +125,9 @@ Signed: ______________________ Date: __________
   this. Use the security contact process instead.
 - Do not threaten criminal referral as leverage; it can be treated as
   improper pressure in several jurisdictions.
+- Section 3(7) (Oracle / Enigma / Colossus) is theatrical reservation of
+  rights. Do not lead with it in a letter that will be read by a judge.
+  Keep it on the physical paper addendum (`PHYSICAL_PAPER.md`) unless
+  counsel says otherwise. The Wu-Tang smallprint under **6th rotor
+  LLÇ 2026*** is an epigraph, not a cause of action and not an
+  affiliation.

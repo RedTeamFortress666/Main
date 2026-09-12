@@ -206,8 +206,11 @@ flutter test
 
 The code cannot stop a device owner from patching their own copy — that is the
 `CLIENT OWNED` residual. `LEGAL/` holds the paper remedy: an EULA to ship with
-builds, DMCA / DSA takedown and cease-and-desist templates, and a leak-response
-runbook (evidence, key rotation, then letters). Templates, not legal advice.
+builds, DMCA / DSA takedown and cease-and-desist templates, a leak-response
+runbook (evidence, key rotation, then letters), and a physical-paper addendum
+(`PHYSICAL_PAPER.md` / `PA+`) with the Oracle / Enigma / Colossus 24-hour
+prompt-tamper reservation and the **6th rotor LLÇ 2026*** smallprint.
+Templates, not legal advice. The sixth rotor is flavour — it does not encipher.
 
 ## Brainstorm — next weaves
 
