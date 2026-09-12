@@ -153,6 +153,13 @@ flutter test
 - V2 session tickets are HMAC-bound to the device key; they are not a password proof, and they age out after 14 days
 - The patch ledger is MAC-chained under the device key; a broken chain is an OPEN leak finding, not a silent reset
 
+## Legal
+
+The code cannot stop a device owner from patching their own copy — that is the
+`CLIENT OWNED` residual. `LEGAL/` holds the paper remedy: an EULA to ship with
+builds, DMCA / DSA takedown and cease-and-desist templates, and a leak-response
+runbook (evidence, key rotation, then letters). Templates, not legal advice.
+
 ## Brainstorm — next weaves
 
 Ideas that fit the honest-crypto rule. None are implemented; each names the surface it would close and what it would still leave open.
