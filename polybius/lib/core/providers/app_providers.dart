@@ -465,7 +465,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  Future<bool> login(String username, String password) async {
+  UserAccount? _pendingCommit;
+
+  /// Runs the V2 handshake. With [deferCommit] the account is held back so
+  /// the CRT can print the six lines before the router sees `user != null`
+  /// and redirects; the caller then runs [commitLogin].
+  Future<bool> login(
+    String username,
+    String password, {
+    bool deferCommit = false,
+  }) async {
     final lines = <V2HandshakeLine>[];
     void step(String code, String label, String status) {
       lines.add(V2HandshakeLine(code: code, label: label, status: status));
@@ -534,12 +543,33 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await _storage.logAudit('LOGIN_OK', username, 'V2 ${V2LoginProtocol.name}');
 
     step('06', 'CABINET', updated.requiresPin ? 'PIN GATE' : 'READY');
+    if (deferCommit) {
+      _pendingCommit = updated;
+      state = AuthState(
+        isLoading: true,
+        handshake: log(ok: true, finished: true),
+      );
+      return true;
+    }
     state = AuthState(
       user: updated,
       needsPin: updated.requiresPin,
       handshake: log(ok: true, finished: true),
     );
     return true;
+  }
+
+  /// Second half of a deferred [login]: publish the account so the router
+  /// moves on. No-op when nothing is pending.
+  void commitLogin() {
+    final user = _pendingCommit;
+    if (user == null) return;
+    _pendingCommit = null;
+    state = AuthState(
+      user: user,
+      needsPin: user.requiresPin,
+      handshake: state.handshake,
+    );
   }
 
   /// Creates a new user-tier account. Returns null on success, or an error

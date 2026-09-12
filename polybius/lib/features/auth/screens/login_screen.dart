@@ -36,6 +36,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final ok = await ref.read(authProvider.notifier).login(
           _usernameController.text.trim(),
           _passwordController.text,
+          deferCommit: true,
         );
     if (!mounted) return;
     final handshake = ref.read(authProvider).handshake;
@@ -46,6 +47,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
     if (!mounted) return;
     if (ok) {
+      // Hold the finished console for a beat, then publish the account.
+      await Future<void>.delayed(const Duration(milliseconds: 900));
+      if (!mounted) return;
+      ref.read(authProvider.notifier).commitLogin();
       final auth = ref.read(authProvider);
       if (auth.needsPin) {
         context.go('/pin');

@@ -154,6 +154,21 @@ void main() {
     expect(audit.any((e) => e.action == 'TICKET_EXPIRED'), isTrue);
   });
 
+  test('deferred login holds the account until commitLogin', () async {
+    final ok = await auth.login('DEVELOPER', 'developer', deferCommit: true);
+    expect(ok, isTrue);
+    expect(auth.state.user, isNull, reason: 'router must not redirect yet');
+    expect(auth.state.isLoading, isTrue);
+    expect(auth.state.handshake.finished, isTrue);
+    expect(auth.state.handshake.lines.length, 6);
+    auth.commitLogin();
+    expect(auth.state.user?.username, 'DEVELOPER');
+    expect(auth.state.isLoading, isFalse);
+    expect(auth.state.handshake.lines.length, 6, reason: 'console survives');
+    auth.commitLogin();
+    expect(auth.state.user?.username, 'DEVELOPER', reason: 'idempotent');
+  });
+
   test('wrong password is ACCESS DENIED and does not issue a ticket', () async {
     final ok = await auth.login('DEVELOPER', 'wrong');
     expect(ok, isFalse);
