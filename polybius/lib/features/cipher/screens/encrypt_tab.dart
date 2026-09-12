@@ -134,6 +134,7 @@ class _EncryptTabState extends ConsumerState<EncryptTab> {
           CherryBanner(
             lampOn: lamp,
             report: ref.watch(leakReportProvider),
+            ledger: ref.watch(autoPatcherProvider).latest,
           ),
           const SizedBox(height: 6),
           RedlightKeyboard(

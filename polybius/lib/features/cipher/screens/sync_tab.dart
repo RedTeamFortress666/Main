@@ -56,6 +56,9 @@ class _SyncTabState extends ConsumerState<SyncTab> {
       _ok = true;
       _message = 'POOL ALIGNED — ${token.poolId}';
     });
+    // A new pool is a new cabinet state: re-run the weave so the chrome and
+    // decrypt policy are re-asserted against the imported seed.
+    ref.read(autoPatcherProvider.notifier).weave('SYNC');
   }
 
   Future<void> _scan() async {

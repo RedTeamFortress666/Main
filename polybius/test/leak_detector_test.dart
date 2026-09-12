@@ -27,7 +27,23 @@ void main() {
     expect(report.byId('glyphs.tofu')!.severity, LeakSeverity.open);
     expect(report.byId('cabinet.hive')!.severity, LeakSeverity.residual);
     expect(report.byId('client.owned')!.severity, LeakSeverity.residual);
-    expect(report.openCount, greaterThan(0));
+    expect(report.byId('ledger.chain')!.severity, LeakSeverity.patched);
+    expect(report.openCount, 7);
+  });
+
+  test('a broken patch ledger is an open finding', () {
+    final report = LeakDetector.scan(
+      const LeakSnapshot(
+        policy: CabinetPolicy.woven,
+        mixer: 'n0t-a-username-mixer',
+        sessionIsV2: true,
+        masterJunk: 0,
+        ledgerIntact: false,
+        ledgerEntries: 2,
+      ),
+    );
+    expect(report.byId('ledger.chain')!.severity, LeakSeverity.open);
+    expect(report.openCount, 1);
   });
 
   test('interwoven auto-patcher closes the remediable leaks', () {
@@ -51,6 +67,7 @@ void main() {
     expect(report.byId('glyphs.tofu')!.severity, LeakSeverity.patched);
     expect(report.byId('cabinet.hive')!.severity, LeakSeverity.residual);
     expect(report.byId('client.owned')!.severity, LeakSeverity.residual);
+    expect(report.byId('ledger.chain')!.severity, LeakSeverity.patched);
     expect(report.openCount, 0);
   });
 

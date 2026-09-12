@@ -49,4 +49,44 @@ class CabinetPolicy {
 
   /// Pre-patch cabinet (used by the detector to name what got fixed).
   static const legacy = CabinetPolicy();
+
+  CabinetPolicy copyWith({
+    bool? v1Stego,
+    bool? autoDensity,
+    bool? chromeUsesRealSeed,
+    bool? phosphorUsesMixer,
+    bool? persistCoverPinGate,
+    bool? v2Session,
+    bool? filterTofu,
+  }) =>
+      CabinetPolicy(
+        v1Stego: v1Stego ?? this.v1Stego,
+        autoDensity: autoDensity ?? this.autoDensity,
+        chromeUsesRealSeed: chromeUsesRealSeed ?? this.chromeUsesRealSeed,
+        phosphorUsesMixer: phosphorUsesMixer ?? this.phosphorUsesMixer,
+        persistCoverPinGate: persistCoverPinGate ?? this.persistCoverPinGate,
+        v2Session: v2Session ?? this.v2Session,
+        filterTofu: filterTofu ?? this.filterTofu,
+      );
+
+  /// Stable wire form. Goes into the patch-ledger MAC so a Hive edit that
+  /// flips a flag after the fact breaks the chain.
+  String get canonical => [
+        'stego=${v1Stego ? 1 : 0}',
+        'density=${autoDensity ? 1 : 0}',
+        'chrome=${chromeUsesRealSeed ? 1 : 0}',
+        'mixer=${phosphorUsesMixer ? 1 : 0}',
+        'pingate=${persistCoverPinGate ? 1 : 0}',
+        'v2=${v2Session ? 1 : 0}',
+        'tofu=${filterTofu ? 1 : 0}',
+      ].join(';');
+
+  bool get isWoven => canonical == woven.canonical;
+
+  @override
+  bool operator ==(Object other) =>
+      other is CabinetPolicy && other.canonical == canonical;
+
+  @override
+  int get hashCode => canonical.hashCode;
 }

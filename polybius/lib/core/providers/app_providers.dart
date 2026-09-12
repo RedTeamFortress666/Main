@@ -15,6 +15,7 @@ import 'package:polybius/features/duress/duress_session.dart';
 import 'package:polybius/features/redlight/auto_patcher.dart';
 import 'package:polybius/features/redlight/cabinet_policy.dart';
 import 'package:polybius/features/redlight/leak_detector.dart';
+import 'package:polybius/features/redlight/patch_ledger.dart';
 import 'package:polybius/features/transport/transport_hub.dart';
 import 'dart:convert';
 import 'dart:math';
@@ -65,14 +66,22 @@ class PoolSeedNotifier extends StateNotifier<String> {
 
 final cabinetLampProvider = StateProvider<bool>((_) => false);
 
+/// Runs one weave of the interwoven auto-patcher. Returns the chained
+/// ledger entry, or null when the patcher is not wired (tests).
+typedef Weaver = Future<PatchLedgerEntry?> Function(
+  String trigger, {
+  String? username,
+});
+
 /// Darth Cherry: the only switch that opens the glyph keyboard.
 /// Off (default) keeps ENCRYPT as advanced-V1 plaintext.
 class DarthCherryNotifier extends StateNotifier<bool> {
-  DarthCherryNotifier(this._storage) : super(false) {
+  DarthCherryNotifier(this._storage, {this._weaver}) : super(false) {
     _load();
   }
 
   final StorageService _storage;
+  final Weaver? _weaver;
 
   Future<void> _load() async {
     state = await _storage.getDarthCherry();
@@ -81,14 +90,17 @@ class DarthCherryNotifier extends StateNotifier<bool> {
   Future<void> setEnabled(bool enabled) async {
     state = enabled;
     await _storage.setDarthCherry(enabled);
-    if (enabled) {
-      await _storage.ensureCherryMixer();
-    }
     await _storage.logAudit(
       'CHERRY',
       'SYSTEM',
       enabled ? 'DARTH CHERRY ARMED' : 'DARTH CHERRY DARK',
     );
+    if (enabled) {
+      // Arming Cherry is a weave trigger: the mixer, ticket and policy are
+      // re-asserted and the ledger gets a CHERRY line.
+      final woven = await _weaver?.call('CHERRY');
+      if (woven == null) await _storage.ensureCherryMixer();
+    }
   }
 }
 
@@ -117,9 +129,14 @@ final cherryMixerProvider =
 });
 
 class CabinetPolicyNotifier extends StateNotifier<CabinetPolicy> {
+  /// Boots woven so no engine ever runs the legacy path, even for a frame.
+  /// The first ledgered weave still detects against [CabinetPolicy.legacy]
+  /// so the record shows what the compiled default would have leaked.
   CabinetPolicyNotifier() : super(AutoPatcher.weave());
 
   void weave() => state = AutoPatcher.weave();
+
+  void set(CabinetPolicy policy) => state = policy;
 }
 
 final cabinetPolicyProvider =
@@ -131,10 +148,14 @@ class LeakSurface {
   const LeakSurface({
     this.sessionIsV2 = false,
     this.cabinetRecordExists = false,
+    this.ledgerIntact = true,
+    this.ledgerEntries = 0,
   });
 
   final bool sessionIsV2;
   final bool cabinetRecordExists;
+  final bool ledgerIntact;
+  final int ledgerEntries;
 }
 
 class LeakSurfaceNotifier extends StateNotifier<LeakSurface> {
@@ -150,7 +171,13 @@ class LeakSurfaceNotifier extends StateNotifier<LeakSurface> {
     if (username != null) {
       cabinet = await _storage.getCabinet(username) != null;
     }
-    state = LeakSurface(sessionIsV2: ticket, cabinetRecordExists: cabinet);
+    final ledger = await _storage.getPatchLedger();
+    state = LeakSurface(
+      sessionIsV2: ticket,
+      cabinetRecordExists: cabinet,
+      ledgerIntact: ledger.intact,
+      ledgerEntries: ledger.entries.length,
+    );
   }
 }
 
@@ -170,13 +197,135 @@ final leakReportProvider = Provider<LeakReport>((ref) {
       cabinetRecordExists: surface.cabinetRecordExists,
       masterJunk: MasterGlyphs.junkCount,
       derangeSecret: ref.watch(cherryMixerProvider),
+      ledgerIntact: surface.ledgerIntact,
+      ledgerEntries: surface.ledgerEntries,
     ),
   );
 });
 
+/// Storage-backed side effects for the patcher.
+class _StoragePatchHooks extends PatchHooks {
+  const _StoragePatchHooks(this._storage, this._username);
+
+  final StorageService _storage;
+  final String? _username;
+
+  @override
+  Future<bool> ensureTicket() async {
+    if (await _storage.hasV2Ticket()) return true;
+    final user = _username ?? await _storage.getSessionUser();
+    if (user == null || user.isEmpty) return false;
+    await _storage.setV2Session(user);
+    return _storage.hasV2Ticket();
+  }
+
+  @override
+  Future<String> ensureMixer() => _storage.ensureCherryMixer();
+}
+
+/// Owns the patch ledger and drives every weave in the app.
+///
+/// One entry point — [weave] — so LOGIN, RESTORE, CHERRY, SYNC and MANUAL
+/// all run the same DETECT → APPLY → VERIFY → LEDGER pipeline and land in
+/// the same MAC-chained record.
+class AutoPatcherNotifier extends StateNotifier<PatchLedger> {
+  AutoPatcherNotifier(this._ref, this._storage) : super(PatchLedger.empty) {
+    _load();
+  }
+
+  final Ref _ref;
+  final StorageService _storage;
+  Future<PatchLedgerEntry?>? _inFlight;
+
+  Future<void> _load() async {
+    state = await _storage.getPatchLedger();
+  }
+
+  Future<PatchLedgerEntry?> weave(String trigger, {String? username}) {
+    // Serialise: two triggers landing together (login + listener) must not
+    // both read seq N and write N+1.
+    final previous = _inFlight ?? Future.value(null);
+    final next = previous.then((_) => _weaveNow(trigger, username: username));
+    _inFlight = next;
+    return next;
+  }
+
+  Future<PatchLedgerEntry?> _weaveNow(
+    String trigger, {
+    String? username,
+  }) async {
+    final ledger = await _storage.getPatchLedger();
+    final user = username ?? _ref.read(authProvider).user?.username;
+    final cabinet = user == null ? false : await _storage.getCabinet(user) != null;
+    final mixer = await _storage.getCherryMixer() ?? '';
+    final snapshot = LeakSnapshot(
+      policy: ledger.isEmpty
+          ? CabinetPolicy.legacy
+          : _ref.read(cabinetPolicyProvider),
+      mixer: mixer,
+      operatorUsername: user,
+      sessionIsV2: await _storage.hasV2Ticket(),
+      cabinetRecordExists: cabinet,
+      masterJunk: MasterGlyphs.junkCount,
+      derangeSecret: mixer,
+      ledgerIntact: ledger.intact,
+      ledgerEntries: ledger.entries.length,
+    );
+
+    final result = await AutoPatcher.run(
+      snapshot: snapshot,
+      trigger: ledger.isEmpty ? 'BASELINE·$trigger' : trigger,
+      seq: ledger.nextSeq,
+      hooks: _StoragePatchHooks(_storage, user),
+    );
+
+    if (!ledger.intact) {
+      await _storage.logAudit(
+        AutoPatcher.tamperAction,
+        user ?? 'SYSTEM',
+        'Ledger chain failed verification before $trigger',
+      );
+    }
+    final chained = await _storage.appendPatchLedger(result.entry);
+
+    _ref.read(cabinetPolicyProvider.notifier).set(result.policy);
+    if (result.snapshot.mixer.isNotEmpty) {
+      _ref.read(cherryMixerProvider.notifier).ensure();
+    }
+    await _ref.read(leakSurfaceProvider.notifier).refresh(username: user);
+    await _storage.logAudit(
+      AutoPatcher.auditAction,
+      user ?? 'SYSTEM',
+      '${chained.readout} ·${chained.appliedCount} WOVEN ·${chained.heldCount} HELD',
+    );
+    state = await _storage.getPatchLedger();
+    return chained;
+  }
+
+  /// Developer reset. Leaves an audit line — wiping the ledger is itself an
+  /// event worth seeing.
+  Future<void> reset(String actor) async {
+    await _storage.clearPatchLedger();
+    await _storage.logAudit('LEDGER_RESET', actor);
+    state = PatchLedger.empty;
+    await _ref.read(leakSurfaceProvider.notifier).refresh(
+          username: _ref.read(authProvider).user?.username,
+        );
+  }
+}
+
+final autoPatcherProvider =
+    StateNotifierProvider<AutoPatcherNotifier, PatchLedger>((ref) {
+  return AutoPatcherNotifier(ref, ref.read(storageServiceProvider));
+});
+
 final darthCherryProvider =
     StateNotifierProvider<DarthCherryNotifier, bool>((ref) {
-  return DarthCherryNotifier(ref.read(storageServiceProvider));
+  return DarthCherryNotifier(
+    ref.read(storageServiceProvider),
+    weaver: (trigger, {username}) =>
+        ref.read(autoPatcherProvider.notifier).weave(trigger, username: username),
+  );
 });
 
 final glyphDensityProvider =
@@ -270,11 +419,12 @@ class AuthState {
 }
 
 class AuthNotifier extends StateNotifier<AuthState> {
-  AuthNotifier(this._storage) : super(const AuthState()) {
+  AuthNotifier(this._storage, {this._weaver}) : super(const AuthState()) {
     _restoreSession();
   }
 
   final StorageService _storage;
+  final Weaver? _weaver;
 
   Future<void> _restoreSession() async {
     state = const AuthState(isRestoring: true);
@@ -293,6 +443,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
       user: account,
       needsPin: account.requiresPin,
     );
+    // A restored session skipped the handshake, so the weave runs here:
+    // the ledger chain is verified and the policy re-asserted before any
+    // cipher tab can render.
+    await _weaver?.call('RESTORE', username: account.username);
   }
 
   static const _maxAttemptsBeforeLockout = 5;
@@ -360,11 +514,24 @@ class AuthNotifier extends StateNotifier<AuthState> {
     final ticketOk = await _storage.hasV2Ticket();
     step('03', 'TICKET', ticketOk ? 'ISSUED' : 'FAIL');
 
-    await _storage.ensureCherryMixer();
-    step('04', 'LEAK SWEEP', 'LIVE');
-    step('05', 'AUTOPATCH', AutoPatcher.auditAction);
+    // Steps 04 + 05 are the patcher pipeline: DETECT is the sweep, then
+    // APPLY → VERIFY → LEDGER is the weave. The CRT shows real counts.
+    final woven = await _weaver?.call('LOGIN', username: updated.username);
+    if (woven == null) {
+      await _storage.ensureCherryMixer();
+      step('04', 'LEAK SWEEP', 'LIVE');
+      step('05', 'AUTOPATCH', AutoPatcher.auditAction);
+    } else {
+      step('04', 'LEAK SWEEP', '${woven.openBefore} OPEN');
+      step(
+        '05',
+        'AUTOPATCH',
+        woven.openAfter == 0
+            ? '${woven.appliedCount} WOVEN #${woven.seq}'
+            : '${woven.openAfter} PENDING #${woven.seq}',
+      );
+    }
     await _storage.logAudit('LOGIN_OK', username, 'V2 ${V2LoginProtocol.name}');
-    await _storage.logAudit(AutoPatcher.auditAction, updated.username, 'WOVEN');
 
     step('06', 'CABINET', updated.requiresPin ? 'PIN GATE' : 'READY');
     state = AuthState(
@@ -518,7 +685,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
 }
 
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  return AuthNotifier(ref.read(storageServiceProvider));
+  return AuthNotifier(
+    ref.read(storageServiceProvider),
+    weaver: (trigger, {username}) =>
+        ref.read(autoPatcherProvider.notifier).weave(trigger, username: username),
+  );
 });
 
 class UnlockStateData {

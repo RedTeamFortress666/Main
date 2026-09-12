@@ -47,6 +47,8 @@ class LeakSnapshot {
     this.cabinetRecordExists = false,
     this.masterJunk,
     this.derangeSecret,
+    this.ledgerIntact = true,
+    this.ledgerEntries = 0,
   });
 
   final CabinetPolicy policy;
@@ -58,6 +60,33 @@ class LeakSnapshot {
 
   /// Secret actually passed into [GlyphDerangement]. Empty = unused.
   final String? derangeSecret;
+
+  /// Patch-ledger MAC chain still verifies under the device key.
+  final bool ledgerIntact;
+  final int ledgerEntries;
+
+  LeakSnapshot copyWith({
+    CabinetPolicy? policy,
+    String? mixer,
+    String? operatorUsername,
+    bool? sessionIsV2,
+    bool? cabinetRecordExists,
+    int? masterJunk,
+    String? derangeSecret,
+    bool? ledgerIntact,
+    int? ledgerEntries,
+  }) =>
+      LeakSnapshot(
+        policy: policy ?? this.policy,
+        mixer: mixer ?? this.mixer,
+        operatorUsername: operatorUsername ?? this.operatorUsername,
+        sessionIsV2: sessionIsV2 ?? this.sessionIsV2,
+        cabinetRecordExists: cabinetRecordExists ?? this.cabinetRecordExists,
+        masterJunk: masterJunk ?? this.masterJunk,
+        derangeSecret: derangeSecret ?? this.derangeSecret,
+        ledgerIntact: ledgerIntact ?? this.ledgerIntact,
+        ledgerEntries: ledgerEntries ?? this.ledgerEntries,
+      );
 }
 
 /// Darth Cherry leak detector.
@@ -154,6 +183,16 @@ class LeakDetector {
         severity: snap.cabinetRecordExists
             ? LeakSeverity.residual
             : LeakSeverity.patched,
+      ),
+      LeakFinding(
+        id: 'ledger.chain',
+        title: 'PATCH LEDGER',
+        detail: !snap.ledgerIntact
+            ? 'Ledger MAC chain broken — a weave record was edited or removed'
+            : snap.ledgerEntries == 0
+                ? 'No weave recorded yet on this device'
+                : '${snap.ledgerEntries} weave(s) chained under the device key',
+        severity: snap.ledgerIntact ? LeakSeverity.patched : LeakSeverity.open,
       ),
       LeakFinding(
         id: 'client.owned',

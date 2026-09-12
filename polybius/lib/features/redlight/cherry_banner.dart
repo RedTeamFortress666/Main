@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 import 'package:polybius/features/redlight/leak_detector.dart';
 import 'package:polybius/features/redlight/leak_strip.dart';
+import 'package:polybius/features/redlight/patch_ledger.dart';
 
 /// Darth Cherry lockup + leak sweep. House lights vs phosphor lamp.
 class CherryBanner extends StatelessWidget {
@@ -9,10 +10,14 @@ class CherryBanner extends StatelessWidget {
     super.key,
     required this.lampOn,
     required this.report,
+    this.ledger,
   });
 
   final bool lampOn;
   final LeakReport report;
+
+  /// Latest weave, when the patcher has recorded one.
+  final PatchLedgerEntry? ledger;
 
   @override
   Widget build(BuildContext context) {
@@ -64,6 +69,19 @@ class CherryBanner extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           LeakStrip(report: report),
+          if (ledger != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              'WEAVE ${ledger!.readout} · ${ledger!.appliedCount} APPLIED · ${ledger!.heldCount} HELD',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 9,
+                letterSpacing: 1,
+                color: NeonTheme.neonCyan,
+              ),
+            ),
+          ],
         ],
       ),
     );

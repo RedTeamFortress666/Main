@@ -46,12 +46,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
     if (!mounted) return;
     if (ok) {
-      ref.read(cabinetPolicyProvider.notifier).weave();
-      await ref.read(cherryMixerProvider.notifier).ensure();
-      await ref.read(leakSurfaceProvider.notifier).refresh(
-            username: ref.read(authProvider).user?.username,
-          );
-      if (!mounted) return;
       final auth = ref.read(authProvider);
       if (auth.needsPin) {
         context.go('/pin');

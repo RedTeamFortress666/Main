@@ -16,6 +16,11 @@ class V2LoginProtocol {
   static const int version = 2;
   static const String name = 'PØLYBĪUS V2';
   static const String wirePrefix = 'v2';
+
+  /// A ticket older than this is dropped on restore and the operator logs
+  /// in again. The MAC still verifies — age is a separate check, so a
+  /// copied session box does not stay valid forever.
+  static const Duration ticketMaxAge = Duration(days: 14);
 }
 
 class V2HandshakeLine {
@@ -125,6 +130,21 @@ class V2SessionTicket {
       return false;
     }
     return _macEqual(expected, actual);
+  }
+
+  DateTime get issuedAt =>
+      DateTime.fromMillisecondsSinceEpoch(issuedMs, isUtc: true);
+
+  Duration age({DateTime? now}) => (now ?? DateTime.now()).toUtc().difference(issuedAt);
+
+  /// Tickets from the future count as expired — a clock rolled back to
+  /// stretch a ticket is the same failure as one that ran out.
+  bool isExpired({
+    DateTime? now,
+    Duration maxAge = V2LoginProtocol.ticketMaxAge,
+  }) {
+    final a = age(now: now);
+    return a.isNegative || a > maxAge;
   }
 
   /// SHA-256 of the wire form — display only, not a security boundary.

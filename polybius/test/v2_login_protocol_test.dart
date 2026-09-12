@@ -32,4 +32,22 @@ void main() {
     expect(V2SessionTicket.parse('DEVELOPER'), isNull);
     expect(V2SessionTicket.parse('v2:only:three'), isNull);
   });
+
+  test('a ticket ages out at ticketMaxAge even with a valid MAC', () {
+    final issued = DateTime.utc(2026, 9, 1);
+    final ticket = V2SessionTicket.issue(
+      username: 'AGENT',
+      mac: mac,
+      issuedMs: issued.millisecondsSinceEpoch,
+    );
+    expect(ticket.verify(mac), isTrue);
+    expect(ticket.isExpired(now: issued.add(const Duration(days: 13))), isFalse);
+    expect(ticket.isExpired(now: issued.add(const Duration(days: 15))), isTrue);
+    expect(
+      ticket.isExpired(now: issued.subtract(const Duration(minutes: 1))),
+      isTrue,
+      reason: 'a rolled-back clock does not stretch a ticket',
+    );
+    expect(V2LoginProtocol.ticketMaxAge, const Duration(days: 14));
+  });
 }

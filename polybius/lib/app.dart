@@ -103,11 +103,9 @@ class _PolybiusAppState extends ConsumerState<PolybiusApp> {
     });
     ref.listen(authProvider.select((s) => s.user?.username), (prev, next) {
       if (next == null) ref.read(duressProvider.notifier).disarm();
+      // LOGIN / RESTORE already ran the weave inside AuthNotifier; here we
+      // only re-read the surface so the detector tracks the operator change.
       ref.read(leakSurfaceProvider.notifier).refresh(username: next);
-      if (next != null) {
-        ref.read(cabinetPolicyProvider.notifier).weave();
-        ref.read(cherryMixerProvider.notifier).ensure();
-      }
     });
 
     final router = ref.watch(routerProvider);

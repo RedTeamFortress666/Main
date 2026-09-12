@@ -7,6 +7,9 @@ import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/storage/polybius_secret_store.dart';
 import 'package:polybius/core/storage/storage_service.dart';
 import 'package:polybius/features/auth/v2_login_protocol.dart';
+import 'package:polybius/features/redlight/auto_patcher.dart';
+import 'package:polybius/features/redlight/cabinet_policy.dart';
+import 'package:polybius/features/redlight/leak_detector.dart';
 
 class _MemorySecretStore implements PolybiusSecretStore {
   final _data = <String, String>{};
@@ -20,18 +23,60 @@ class _MemorySecretStore implements PolybiusSecretStore {
   }
 }
 
+class _StorageHooks extends PatchHooks {
+  const _StorageHooks(this.storage, this.username);
+
+  final StorageService storage;
+  final String? username;
+
+  @override
+  Future<bool> ensureTicket() async {
+    if (await storage.hasV2Ticket()) return true;
+    if (username == null) return false;
+    await storage.setV2Session(username!);
+    return storage.hasV2Ticket();
+  }
+
+  @override
+  Future<String> ensureMixer() => storage.ensureCherryMixer();
+}
+
 void main() {
   late Directory tempDir;
   late StorageService storage;
   late AuthNotifier auth;
+  late EncryptionService encryption;
 
   setUp(() async {
     tempDir = await Directory.systemTemp.createTemp('polybius_v2_auth');
-    final encryption = EncryptionService(_MemorySecretStore());
+    encryption = EncryptionService(_MemorySecretStore());
     await encryption.init();
     storage = StorageService(encryption);
     await storage.init(hivePath: tempDir.path);
-    auth = AuthNotifier(storage);
+    auth = AuthNotifier(
+      storage,
+      weaver: (trigger, {username}) async {
+        // Test weaver: the real one lives in autoPatcherProvider. Here we run
+        // the pipeline straight against storage so the handshake gets real
+        // counts and the ledger really chains.
+        final ledger = await storage.getPatchLedger();
+        final result = await AutoPatcher.run(
+          snapshot: LeakSnapshot(
+            policy: ledger.isEmpty ? CabinetPolicy.legacy : CabinetPolicy.woven,
+            mixer: await storage.getCherryMixer() ?? '',
+            operatorUsername: username,
+            sessionIsV2: await storage.hasV2Ticket(),
+            masterJunk: 0,
+            ledgerIntact: ledger.intact,
+            ledgerEntries: ledger.entries.length,
+          ),
+          trigger: trigger,
+          seq: ledger.nextSeq,
+          hooks: _StorageHooks(storage, username),
+        );
+        return storage.appendPatchLedger(result.entry);
+      },
+    );
     await Future<void>.delayed(const Duration(milliseconds: 50));
   });
 
@@ -55,6 +100,58 @@ void main() {
     expect(await storage.hasV2Ticket(), isTrue);
     expect(await storage.getSessionUser(), 'DEVELOPER');
     expect(V2LoginProtocol.version, 2);
+
+    // Steps 04/05 carry the pipeline's real counts, chained into the ledger.
+    final byLabel = {
+      for (final l in auth.state.handshake.lines) l.label: l.status,
+    };
+    expect(byLabel['LEAK SWEEP'], '7 OPEN',
+        reason: 'the compiled legacy policy does not trust the step-03 '
+            'ticket until v2Session is woven, so all seven flags read open');
+    expect(byLabel['AUTOPATCH'], '7 WOVEN #1');
+    final ledger = await storage.getPatchLedger();
+    expect(ledger.intact, isTrue);
+    expect(ledger.entries.single.trigger, 'LOGIN');
+    expect(ledger.entries.single.appliedCount, 7);
+    expect(ledger.entries.single.heldCount, 2);
+    expect(ledger.entries.single.residualCount, 1);
+  });
+
+  test('second login holds the weave and chains entry #2', () async {
+    expect(await auth.login('DEVELOPER', 'developer'), isTrue);
+    await auth.logout();
+    expect(await auth.login('DEVELOPER', 'developer'), isTrue);
+    final byLabel = {
+      for (final l in auth.state.handshake.lines) l.label: l.status,
+    };
+    expect(byLabel['LEAK SWEEP'], '0 OPEN');
+    expect(byLabel['AUTOPATCH'], '0 WOVEN #2');
+    final ledger = await storage.getPatchLedger();
+    expect(ledger.entries.length, 2);
+    expect(ledger.entries.last.prevMac, ledger.entries.first.mac);
+    expect(ledger.intact, isTrue);
+  });
+
+  test('an expired ticket does not restore a session', () async {
+    expect(await auth.login('DEVELOPER', 'developer'), isTrue);
+    final box = Hive.box(StorageService.sessionBox);
+    final wire = box.get('ticket') as String;
+    final ticket = V2SessionTicket.parse(wire)!;
+    final stale = V2SessionTicket.issue(
+      username: ticket.username,
+      mac: encryption.mac,
+      issuedMs: DateTime.now()
+          .toUtc()
+          .subtract(V2LoginProtocol.ticketMaxAge + const Duration(hours: 1))
+          .millisecondsSinceEpoch,
+    );
+    await box.put('ticket', stale.wire);
+    expect(stale.verify(encryption.mac), isTrue, reason: 'MAC is still good');
+    expect(await storage.hasV2Ticket(), isFalse);
+    expect(await storage.getSessionUser(), isNull);
+    expect(box.get('user'), isNull, reason: 'bare username must not survive');
+    final audit = await storage.getAuditLogs();
+    expect(audit.any((e) => e.action == 'TICKET_EXPIRED'), isTrue);
   });
 
   test('wrong password is ACCESS DENIED and does not issue a ticket', () async {

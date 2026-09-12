@@ -5,9 +5,9 @@ import 'package:polybius/core/constants/app_constants.dart';
 import 'package:polybius/core/models/models.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
-import 'package:polybius/features/redlight/auto_patcher.dart';
 import 'package:polybius/features/redlight/leak_detector.dart';
 import 'package:polybius/features/redlight/leak_strip.dart';
+import 'package:polybius/features/redlight/patch_ledger.dart';
 
 /// DEVELOPER-only red team sandbox with invite management and pool forcing.
 class DeveloperPanel extends ConsumerStatefulWidget {
@@ -28,6 +28,7 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
   List<AuditLogEntry> _logs = [];
   List<InviteCode> _invites = [];
   String? _loadError;
+  bool _weaving = false;
 
   @override
   void initState() {
@@ -102,24 +103,82 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
             LeakStrip(report: ref.watch(leakReportProvider)),
             const SizedBox(height: 8),
             ...ref.watch(leakReportProvider).findings.map(_findingRow),
+          ]),
+          _section('INTERWOVEN AUTOPATCH', [
+            const Text(
+              'DETECT → APPLY → VERIFY → LEDGER. Every trigger (LOGIN, RESTORE, '
+              'CHERRY, SYNC, MANUAL) runs the same pipeline and chains one '
+              'entry under the device key. Policy patches, not binary patches.',
+              style: TextStyle(color: Colors.white54, fontSize: 11),
+            ),
             const SizedBox(height: 8),
-            ElevatedButton(
-              onPressed: () async {
-                ref.read(cabinetPolicyProvider.notifier).weave();
-                await ref.read(cherryMixerProvider.notifier).ensure();
-                await ref.read(leakSurfaceProvider.notifier).refresh(
-                      username: ref.read(authProvider).user?.username,
-                    );
-                await ref.read(storageServiceProvider).logAudit(
-                      AutoPatcher.auditAction,
-                      AppConstants.developerUsername,
-                      'WOVEN',
-                    );
-                if (!mounted) return;
-                setState(() {});
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: NeonTheme.dangerRed),
-              child: const Text('INTERWOVEN AUTOPATCH'),
+            _ledgerHeader(ref.watch(autoPatcherProvider)),
+            const SizedBox(height: 6),
+            ...ref
+                .watch(autoPatcherProvider)
+                .entries
+                .reversed
+                .take(6)
+                .map(_ledgerRow),
+            if (ref.watch(autoPatcherProvider).latest != null) ...[
+              const SizedBox(height: 8),
+              const Text(
+                'LAST WEAVE — STEP OUTCOMES',
+                style: TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 10,
+                  color: NeonTheme.neonCyan,
+                  letterSpacing: 1,
+                ),
+              ),
+              const SizedBox(height: 4),
+              ...ref
+                  .watch(autoPatcherProvider)
+                  .latest!
+                  .results
+                  .map(_patchResultRow),
+            ],
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _weaving
+                        ? null
+                        : () async {
+                            setState(() => _weaving = true);
+                            final entry = await ref
+                                .read(autoPatcherProvider.notifier)
+                                .weave('MANUAL');
+                            await _load();
+                            if (!mounted) return;
+                            setState(() => _weaving = false);
+                            if (entry == null || !context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'WOVEN ${entry.readout} · ${entry.appliedCount} APPLIED · ${entry.heldCount} HELD',
+                                ),
+                              ),
+                            );
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: NeonTheme.dangerRed,
+                    ),
+                    child: Text(_weaving ? 'WEAVING…' : 'RUN WEAVE'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton(
+                  onPressed: () async {
+                    await ref
+                        .read(autoPatcherProvider.notifier)
+                        .reset(AppConstants.developerUsername);
+                    await _load();
+                  },
+                  child: const Text('RESET LEDGER'),
+                ),
+              ],
             ),
           ]),
           _section('INVITE MANAGEMENT', [
@@ -177,7 +236,7 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
             const Text(
               'Default ENCRYPT is advanced V1 (plaintext field, 2-glyph engine). '
               'Arming Cherry opens the glyph keyboard, runs the leak detector, '
-              'and weaves the auto-patcher. LOAD GAME: DARTH-CHERRY or CH3-RRY.',
+              'and triggers a CHERRY weave in the ledger. LOAD GAME: DARTH-CHERRY or CH3-RRY.',
               style: TextStyle(color: Colors.white54, fontSize: 11),
             ),
             SwitchListTile(
@@ -363,6 +422,79 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
           ),
           const SizedBox(height: 12),
           ...children,
+        ],
+      ),
+    );
+  }
+
+  Widget _ledgerHeader(PatchLedger ledger) {
+    final color = ledger.intact ? NeonTheme.neonGreen : NeonTheme.dangerRed;
+    final latest = ledger.latest;
+    return Text(
+      ledger.isEmpty
+          ? 'LEDGER EMPTY — first weave records the compiled baseline'
+          : 'CHAIN ${ledger.intact ? 'INTACT' : 'BROKEN'} · ${ledger.entries.length} ENTRIES · LAST ${latest!.readout} · MAC ${latest.mac.length >= 8 ? latest.mac.substring(0, 8) : latest.mac}',
+      style: TextStyle(
+        fontFamily: 'monospace',
+        fontSize: 10,
+        color: color,
+        shadows: [Shadow(color: color.withValues(alpha: 0.6), blurRadius: 6)],
+      ),
+    );
+  }
+
+  Widget _ledgerRow(PatchLedgerEntry entry) {
+    final stamp = entry.at.toIso8601String().substring(11, 19);
+    final color =
+        entry.openAfter == 0 ? NeonTheme.neonCyan : NeonTheme.neonYellow;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              entry.readout,
+              style: TextStyle(fontFamily: 'monospace', fontSize: 11, color: color),
+            ),
+          ),
+          Text(
+            '${entry.appliedCount}A ${entry.heldCount}H ${entry.pendingCount}P ${entry.residualCount}R',
+            style: const TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 10,
+              color: Colors.white54,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '${stamp}Z',
+            style: const TextStyle(fontSize: 10, color: Colors.white38),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _patchResultRow(PatchResult result) {
+    final color = switch (result.outcome) {
+      PatchOutcome.applied => NeonTheme.neonGreen,
+      PatchOutcome.held => NeonTheme.neonCyan,
+      PatchOutcome.pending => NeonTheme.dangerRed,
+      PatchOutcome.residual => NeonTheme.neonYellow,
+    };
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${result.outcome.name.toUpperCase().padRight(8)} ${result.title}  ${result.before.name}→${result.after.name}',
+            style: TextStyle(fontFamily: 'monospace', fontSize: 10, color: color),
+          ),
+          Text(
+            result.action,
+            style: const TextStyle(color: Colors.white38, fontSize: 9),
+          ),
         ],
       ),
     );
