@@ -13,6 +13,10 @@ import 'package:polybius/features/redlight/redlight_sealed_panel.dart';
 import 'package:polybius/features/redlight/redlight_vault.dart';
 import 'package:polybius/features/redlight/vanishing_buffer.dart';
 import 'package:polybius/features/redlight/vanishing_field.dart';
+import 'package:polybius/features/roundtable/round_table.dart';
+import 'package:polybius/features/roundtable/traffic_sketch.dart';
+import 'package:polybius/features/stego/stego_receipt.dart';
+import 'package:polybius/features/stego/stego_vet.dart';
 
 /// Open cipher ENCRYPT.
 ///
@@ -30,6 +34,8 @@ class _EncryptTabState extends ConsumerState<EncryptTab> {
   final _inputController = TextEditingController();
   final _buffer = VanishingBuffer();
   String _output = '';
+  StegoReceipt? _receipt;
+  PatternReport? _report;
 
   @override
   void dispose() {
@@ -46,18 +52,44 @@ class _EncryptTabState extends ConsumerState<EncryptTab> {
     return text;
   }
 
-  void _encrypt({required bool cherry}) {
+  Future<void> _encrypt({required bool cherry}) async {
+    final gaps = List<int>.from(_buffer.gapsMs);
     final plaintext = _plaintext(cherry: cherry);
     final policy = ref.read(cabinetPolicyProvider);
+    final useStego = cherry ? true : policy.v1Stego;
     final engine = CipherEngine(
       seed: ref.read(cipherEngineProvider).seed,
       density: cherry
           ? ref.read(glyphDensityProvider)
           : GlyphDensity.compact,
-      stego: cherry ? true : policy.v1Stego,
+      stego: useStego,
     );
+    final cipher = engine.encrypt(plaintext);
+    StegoReceipt? receipt;
+    PatternReport? report;
+    if (policy.stegoVet || policy.roundTable) {
+      final fp = StegoFingerprint.of(engine, cipher);
+      final sketch = TrafficSketch(
+        gapsMs: gaps,
+        decoyCount: fp.decoyCount,
+        fingerprintPrefix: fp.prefix,
+        atMs: DateTime.now().toUtc().millisecondsSinceEpoch,
+      );
+      final out = await ref.read(storageServiceProvider).vetStego(
+            fingerprint: fp,
+            sketch: sketch,
+          );
+      receipt = out.receipt;
+      report = out.report;
+      await ref.read(leakSurfaceProvider.notifier).refresh(
+            username: ref.read(authProvider).user?.username,
+          );
+    }
+    if (!mounted) return;
     setState(() {
-      _output = engine.encrypt(plaintext);
+      _output = cipher;
+      _receipt = receipt;
+      _report = report;
     });
     ref.read(storageServiceProvider).logAudit(
           'ENCRYPT',
@@ -95,10 +127,11 @@ class _EncryptTabState extends ConsumerState<EncryptTab> {
           ),
           const SizedBox(height: 4),
           ElevatedButton(
-            onPressed: () => _encrypt(cherry: false),
+            onPressed: () { _encrypt(cherry: false); },
             child: const Text('ENCRYPT'),
           ),
           const SizedBox(height: 12),
+          if (_receipt != null || _report != null) _vetStrip(),
           Expanded(child: _cipherOut()),
           ClipboardRow(
             color: NeonTheme.neonCyan,
@@ -177,10 +210,11 @@ class _EncryptTabState extends ConsumerState<EncryptTab> {
           ),
           const SizedBox(height: 4),
           ElevatedButton(
-            onPressed: access.granted ? () => _encrypt(cherry: true) : null,
+            onPressed: access.granted ? () { _encrypt(cherry: true); } : null,
             child: const Text('ENCRYPT'),
           ),
           const SizedBox(height: 8),
+          if (_receipt != null || _report != null) _vetStrip(),
           Expanded(child: _cipherOut()),
           ClipboardRow(
             color: NeonTheme.neonCyan,
@@ -189,6 +223,43 @@ class _EncryptTabState extends ConsumerState<EncryptTab> {
           ),
         ],
       ),
+      ),
+    );
+  }
+
+  Widget _vetStrip() {
+    final receipt = _receipt;
+    final report = _report;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        children: [
+          if (receipt != null)
+            Text(
+              'VET ${receipt.readout} · ${receipt.origin.toUpperCase()}',
+              key: const ValueKey<String>('stego-vet-receipt'),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 10,
+                letterSpacing: 1,
+                color: NeonTheme.neonYellow,
+              ),
+            ),
+          if (report != null)
+            Text(
+              'TABLE ${report.readout} · ${report.boil}',
+              key: const ValueKey<String>('roundtable-report'),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 9,
+                color: report.verdict == CadenceVerdict.hostile
+                    ? NeonTheme.dangerRed
+                    : NeonTheme.neonGreen,
+              ),
+            ),
+        ],
       ),
     );
   }

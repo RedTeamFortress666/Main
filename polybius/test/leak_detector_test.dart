@@ -26,10 +26,14 @@ void main() {
     expect(report.byId('cover.pin_gate')!.severity, LeakSeverity.open);
     expect(report.byId('glyphs.tofu')!.severity, LeakSeverity.open);
     expect(report.byId('redlight.vault')!.severity, LeakSeverity.open);
+    expect(report.byId('envelope.pq')!.severity, LeakSeverity.open);
+    expect(report.byId('stego.vet')!.severity, LeakSeverity.open);
+    expect(report.byId('roundtable.watch')!.severity, LeakSeverity.open);
+    expect(report.byId('glasses.hud')!.severity, LeakSeverity.open);
     expect(report.byId('cabinet.hive')!.severity, LeakSeverity.residual);
     expect(report.byId('client.owned')!.severity, LeakSeverity.residual);
     expect(report.byId('ledger.chain')!.severity, LeakSeverity.patched);
-    expect(report.openCount, 8);
+    expect(report.openCount, 12);
   });
 
   test('a sealed policy without a minted vault still reads open', () {
@@ -40,6 +44,10 @@ void main() {
         sessionIsV2: true,
         masterJunk: 0,
         redlightSealed: false,
+        hybridPqLive: true,
+        stegoVetBound: true,
+        roundTableArmed: true,
+        glassesPaired: true,
       ),
     );
     expect(report.byId('redlight.vault')!.severity, LeakSeverity.open);
@@ -53,6 +61,10 @@ void main() {
         mixer: 'n0t-a-username-mixer',
         sessionIsV2: true,
         redlightSealed: true,
+        hybridPqLive: true,
+        stegoVetBound: true,
+        roundTableArmed: true,
+        glassesPaired: true,
         masterJunk: 0,
         ledgerIntact: false,
         ledgerEntries: 2,
@@ -73,10 +85,18 @@ void main() {
         masterJunk: 0,
         derangeSecret: 'n0t-a-username-mixer',
         redlightSealed: true,
+        hybridPqLive: true,
+        stegoVetBound: true,
+        roundTableArmed: true,
+        glassesPaired: true,
       ),
     );
     expect(report.byId('session.legacy')!.severity, LeakSeverity.patched);
     expect(report.byId('redlight.vault')!.severity, LeakSeverity.patched);
+    expect(report.byId('envelope.pq')!.severity, LeakSeverity.patched);
+    expect(report.byId('stego.vet')!.severity, LeakSeverity.patched);
+    expect(report.byId('roundtable.watch')!.severity, LeakSeverity.patched);
+    expect(report.byId('glasses.hud')!.severity, LeakSeverity.patched);
     expect(report.byId('phosphor.username')!.severity, LeakSeverity.patched);
     expect(report.byId('cover.chrome')!.severity, LeakSeverity.patched);
     expect(report.byId('v1.stego')!.severity, LeakSeverity.patched);

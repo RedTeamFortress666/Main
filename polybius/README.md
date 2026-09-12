@@ -48,13 +48,15 @@ lib/
 | Transport | Padded frames, RNS/Matrix/QR | Plaintext |
 
 Honest limits: AES-256-GCM is the payload cipher (there is no AES-512).
-X25519 is live. ML-KEM is a format slot, not an audited Kyber. Reticulum
-is a loopback sidecar, not an embedded Python stack. Cover PIN sessions
-look identical in the arcade; a Hive dump still shows that a cover record
-exists. The leak detector names that residual. The auto-patcher weaves
-cabinet policy (V2 ticket, phosphor mixer, real-seed chrome, V1 without
-decoys, dual-density decrypt, cover PIN gate, tofu filter, red-light seal).
-It does **not** patch the binary or hide a Hive dump.
+X25519 is live. ML-KEM-768 is a real FIPS 203 encapsulation via `pqcrypto`
+(KAT-backed, **not** a CMVP/FIPS 140 module). Reticulum is a loopback
+sidecar, not an embedded Python stack. Cover PIN sessions look identical
+in the arcade; a Hive dump still shows that a cover record exists. The
+leak detector names that residual. The auto-patcher weaves cabinet policy
+(V2 ticket, phosphor mixer, real-seed chrome, V1 without decoys,
+dual-density decrypt, cover PIN gate, tofu filter, red-light seal,
+ML-KEM hybrid, stego vet, round table, glasses HUD). It does **not**
+patch the binary or hide a Hive dump.
 
 ## Three Layers
 
@@ -67,8 +69,8 @@ OPERATOR ID + ACCESS KEY. The CRT then runs six steps:
 | 01 | CHALLENGE | Random nonce for this handshake |
 | 02 | VERIFY | PBKDF2 on the access key. Same `ACCESS DENIED` for unknown operator or bad key |
 | 03 | TICKET | Device-bound session `v2:USER:issued:nonce:mac` |
-| 04 | LEAK SWEEP | Patcher DETECT phase — the CRT prints the real count, e.g. `8 OPEN` |
-| 05 | AUTOPATCH | APPLY → VERIFY → LEDGER — e.g. `8 WOVEN #1` (or `n PENDING` if something could not close) |
+| 04 | LEAK SWEEP | Patcher DETECT phase — the CRT prints the real count, e.g. `12 OPEN` |
+| 05 | AUTOPATCH | APPLY → VERIFY → LEDGER — e.g. `12 WOVEN #1` (or `n PENDING` if something could not close) |
 | 06 | CABINET | Ready, or PIN gate |
 
 The ticket is HMAC’d with the working AES key. Swapping the operator name in the session box fails the MAC. It is **not** a password proof after the fact. A ticket older than **14 days** is dropped on restore (`TICKET_EXPIRED` audit) and the operator logs in again; a rolled-back clock counts as expired. First install still creates `DEVELOPER`.
@@ -79,7 +81,7 @@ One pipeline, five triggers, one ledger.
 
 ```
 DETECT  LeakDetector.scan(snapshot)          → N OPEN
-APPLY   8 PatchSteps fold CabinetPolicy      + 3 storage hooks (ticket, mixer, red-light vault)
+APPLY   12 PatchSteps fold CabinetPolicy     + 7 storage hooks (ticket, mixer, vault, PQ, vet, table, glasses)
 VERIFY  LeakDetector.scan(snapshot')         → M OPEN
 LEDGER  PatchLedgerEntry{seq, trigger, N→M, per-step outcome, policy}
         mac = HMAC(device key, prevMac | canonical)
@@ -126,8 +128,21 @@ so a decrypted vault on another device still yields a different phosphor map. Th
 | Verified, unexpired V2 ticket in the session box | `NO DEVICE TICKET — V2 LOGIN REQUIRED` |
 | Ticket operator == live operator | `TICKET OPERATOR MISMATCH` |
 | Vault decrypts under this key **and** is owned by that operator | `VAULT LOCKED — NOT MINTED ON THIS DEVICE` |
+| Glasses HUD policy + paired session + this face is the HUD | `NO HUD PAIR — ATTRACT MODE FOR THIS FACE` |
 
-Anything short of all six shows `REDLIGHT SEALED` instead of the keyboard, the lamp toggle is disabled, and the ENCRYPT button is inert. The `REDLIGHT SEAL` patch step mints the vault for the live operator during the weave (reusing an existing strong cherry mixer so the layout does not jump); the `REDLIGHT VAULT` leak finding reads `OPEN` until the vault exists. One vault per device — it follows the operator who last wove, and a different operator logging in re-mints it. Honest limit: on web the device key is obfuscation, not a keystore (BUILD.md), so "device-bound" there means "bound to this browser profile."
+Anything short of the full gate shows `REDLIGHT SEALED` instead of the keyboard, the lamp toggle is disabled, and the ENCRYPT button is inert. The `REDLIGHT SEAL` patch step mints the vault for the live operator during the weave (reusing an existing strong cherry mixer so the layout does not jump); the `REDLIGHT VAULT` leak finding reads `OPEN` until the vault exists. One vault per device — it follows the operator who last wove, and a different operator logging in re-mints it. Honest limit: on web the device key is obfuscation, not a keystore (BUILD.md), so "device-bound" there means "bound to this browser profile."
+
+### Cabinet mesh — Kyber, stego vet, round table, glasses
+
+Four more weaves sit on top of the vault.
+
+**ML-KEM-768 hybrid.** `MlKem768` fills `PqKem`. Courier envelopes that pass a peer PQ public key seal as `HKDF(X25519_ss || MLKEM_ss)` → AES-256-GCM. Sizes are the FIPS 203 ones (pk 1184, sk 2400, ct 1088). The keypair is AES-sealed in Hive. Without the Kyber secret the envelope will not open, even with the X25519 key. `pqcrypto` is not a CMVP module.
+
+**Stego vet (Tailscale / Proxmox).** Unused-master decoys are hashed into a fingerprint — not the plaintext, not the active-pool ciphertext. A vet authority (in-process stand-in labeled `local`, or `dart run tool/stego_vet_sidecar.dart --host <tailnet-ip> --port 3743` on a Proxmox LXC) returns a MAC'd receipt. Analyst notes stay in the sidecar process and never land in Hive. The developer panel can see `PASS · id · fp` and nothing else. A cabinet cannot mint a PASS for a key it does not hold. Honest residual: whoever runs the sidecar can dump its notes; a device owner can still patch the client check out (`CLIENT OWNED`).
+
+**Round table.** Five seats — CADENCE, BURST, CHANNEL, RECEIPT, PAUSE — see only a `TrafficSketch` (inter-keypress gaps, padded size, channel name, receipt bit, fingerprint prefix). They boil hostile-AI doublespeak (metronome gaps, no human pauses, `agent` channel) into `HUMAN / MIXED / HOSTILE`. A HUMAN verdict is `H2H CADENCE — NO INTERFERENCE`. The table **never** delays or drops a human-to-human frame (`interfered` is always false).
+
+**Glasses HUD + attract mode.** A `v1:GLASSES:owner:issued:nonce:mac` session is device-bound like a V2 ticket. The intended viewer is the paired HUD (loopback = this device *is* the glasses). The cabinet face shows a false 1981 attract-mode screensaver (`INSERT COIN`, CRT snow, fake high scores). CONNECT: `I AM THE HUD` / `ATTRACT MODE`. A tap on attract by an authenticated operator wakes the HUD on this face. The HUD frame carries lamp jitter only — never the mixer or derangement secret.
 
 ### Layer 2 — Decoy Arcade
 Psychedelic neon CRT main menu with playable space shooter. MKUltra-themed level names, subliminal glitch text, ship upgrades MK-I → MK-V.
@@ -154,7 +169,7 @@ plaintext index.
 - **🔓 DECRYPT** — emoji → plaintext
 - **🎲 POOL** — active 560-glyph window + slot
 - **🔗 SYNC** — QR / padded courier token
-- **📡 CONNECT** — QR / RNS / Matrix status, logout
+- **📡 CONNECT** — QR / RNS / Matrix status, cabinet mesh (ML-KEM / vet / table / glasses), HUD vs attract toggle, logout
 - **⚙ Rotor Gear** — odometer positions (notch is flavour only). **GEAR CAL** re-opens the PIN gate so a cover PIN can be entered while logged in.
 
 ## Build
@@ -183,6 +198,9 @@ flutter test
 - V2 session tickets are HMAC-bound to the device key; they are not a password proof, and they age out after 14 days
 - The patch ledger is MAC-chained under the device key; a broken chain is an OPEN leak finding, not a silent reset
 - Lamp filter + keypress derangement live in one AES-sealed, operator-bound vault; the derangement secret is an HMAC under the device key and is never written to disk; the keyboard renders only for an authenticated operator holding a live ticket on the minting device
+- Courier envelopes can be X25519 + ML-KEM-768; `pqcrypto` tracks FIPS 203 and is not a CMVP module
+- Stego decoys leave as a one-way fingerprint + receipt; sidecar notes never enter Hive; the round table watches cadence only and does not read or drop H2H messages
+- Glasses pairing is a device-bound MAC session; the non-intended cabinet face is attract-mode, not the phosphor keyboard
 
 ## Legal
 

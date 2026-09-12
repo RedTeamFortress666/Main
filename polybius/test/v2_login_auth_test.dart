@@ -46,6 +46,31 @@ class _StorageHooks extends PatchHooks {
     await storage.ensureRedlightVault(username!);
     return await storage.getRedlightVault(username!) != null;
   }
+
+  @override
+  Future<bool> ensurePqKem() async {
+    await storage.ensurePqKem();
+    return storage.hasPqKem();
+  }
+
+  @override
+  Future<bool> ensureStegoVet() async {
+    await storage.bindStegoVet();
+    return storage.isStegoVetBound();
+  }
+
+  @override
+  Future<bool> ensureRoundTable() async {
+    await storage.armRoundTable();
+    return await storage.getLastPatternReport() != null;
+  }
+
+  @override
+  Future<bool> ensureGlassesLink() async {
+    if (username == null) return false;
+    await storage.ensureGlassesLink(username!);
+    return await storage.getGlassesSession(username!) != null;
+  }
 }
 
 void main() {
@@ -75,6 +100,11 @@ void main() {
             sessionIsV2: await storage.hasV2Ticket(),
             redlightSealed: username != null &&
                 await storage.getRedlightVault(username) != null,
+            hybridPqLive: await storage.hasPqKem(),
+            stegoVetBound: await storage.isStegoVetBound(),
+            roundTableArmed: await storage.getLastPatternReport() != null,
+            glassesPaired: username != null &&
+                await storage.getGlassesSession(username) != null,
             masterJunk: 0,
             ledgerIntact: ledger.intact,
             ledgerEntries: ledger.entries.length,
@@ -114,14 +144,14 @@ void main() {
     final byLabel = {
       for (final l in auth.state.handshake.lines) l.label: l.status,
     };
-    expect(byLabel['LEAK SWEEP'], '8 OPEN',
+    expect(byLabel['LEAK SWEEP'], '12 OPEN',
         reason: 'the compiled legacy policy does not trust the step-03 '
-            'ticket until v2Session is woven, so all eight flags read open');
-    expect(byLabel['AUTOPATCH'], '8 WOVEN #1');
+            'ticket until v2Session is woven, so all twelve flags read open');
+    expect(byLabel['AUTOPATCH'], '12 WOVEN #1');
     final ledger = await storage.getPatchLedger();
     expect(ledger.intact, isTrue);
     expect(ledger.entries.single.trigger, 'LOGIN');
-    expect(ledger.entries.single.appliedCount, 8);
+    expect(ledger.entries.single.appliedCount, 12);
     expect(ledger.entries.single.heldCount, 2);
     expect(ledger.entries.single.residualCount, 1);
 
@@ -130,6 +160,10 @@ void main() {
     expect(await storage.hasRedlightVault(), isTrue);
     expect(await storage.getRedlightVault('DEVELOPER'), isNotNull);
     expect(await storage.getRedlightVault('SOMEONE_ELSE'), isNull);
+    expect(await storage.hasPqKem(), isTrue);
+    expect(await storage.isStegoVetBound(), isTrue);
+    expect(await storage.getLastPatternReport(), isNotNull);
+    expect(await storage.getGlassesSession('DEVELOPER'), isNotNull);
   });
 
   test('second login holds the weave and chains entry #2', () async {

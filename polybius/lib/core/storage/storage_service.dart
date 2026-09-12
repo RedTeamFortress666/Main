@@ -10,7 +10,13 @@ import 'package:polybius/features/auth/v2_login_protocol.dart';
 import 'package:polybius/features/duress/cabinet_identity.dart';
 import 'package:polybius/features/redlight/auto_patcher.dart';
 import 'package:polybius/features/redlight/patch_ledger.dart';
+import 'package:polybius/core/crypto/ml_kem_768.dart';
+import 'package:polybius/features/glasses/glasses_link.dart';
 import 'package:polybius/features/redlight/redlight_vault.dart';
+import 'package:polybius/features/roundtable/round_table.dart';
+import 'package:polybius/features/roundtable/traffic_sketch.dart';
+import 'package:polybius/features/stego/stego_receipt.dart';
+import 'package:polybius/features/stego/stego_vet.dart';
 
 class StorageService {
   StorageService(this._encryption);
@@ -355,6 +361,159 @@ class StorageService {
   /// Device-key HMAC, exposed for derivations that must not be recomputable
   /// off-device (red-light derangement secret).
   List<int> deviceMac(List<int> data) => _encryption.mac(data);
+
+  StegoVetAuthority localVetAuthority() =>
+      StegoVetAuthority.local(_encryption.mac);
+
+  // ---------------------------------------------------------------------
+  // ML-KEM-768 hybrid keypair (AES-sealed under the device key)
+  // ---------------------------------------------------------------------
+
+  static const _pqPkKey = 'mlkem768.pk';
+  static const _pqSkKey = 'mlkem768.sk';
+
+  Future<bool> hasPqKem() async {
+    final raw = Hive.box(settingsBox).get(_pqPkKey);
+    return raw is String && raw.startsWith('v2:');
+  }
+
+  Future<({List<int> publicKey, List<int> secretKey})?> getPqKem() async {
+    final pkRaw = Hive.box(settingsBox).get(_pqPkKey);
+    final skRaw = Hive.box(settingsBox).get(_pqSkKey);
+    if (pkRaw is! String || skRaw is! String) return null;
+    try {
+      final pk = base64Url.decode(_encryption.decrypt(pkRaw));
+      final sk = base64Url.decode(_encryption.decrypt(skRaw));
+      if (pk.length != MlKem768.publicKeyBytes) return null;
+      if (sk.length != MlKem768.secretKeyBytes) return null;
+      return (publicKey: pk, secretKey: sk);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<({List<int> publicKey, List<int> secretKey})> ensurePqKem() async {
+    final existing = await getPqKem();
+    if (existing != null) return existing;
+    final pair = const MlKem768().generateKeyPair();
+    await Hive.box(settingsBox).put(
+      _pqPkKey,
+      _encryption.encrypt(base64Url.encode(pair.$1)),
+    );
+    await Hive.box(settingsBox).put(
+      _pqSkKey,
+      _encryption.encrypt(base64Url.encode(pair.$2)),
+    );
+    return (publicKey: pair.$1, secretKey: pair.$2);
+  }
+
+  // ---------------------------------------------------------------------
+  // Stego vet receipts + boiled pattern reports (no notes, no payload)
+  // ---------------------------------------------------------------------
+
+  static const _receiptKey = 'stegoReceipt';
+  static const _reportKey = 'patternReport';
+  static const _vetBoundKey = 'stegoVetBound';
+
+  Future<bool> isStegoVetBound() async {
+    return Hive.box(settingsBox).get(_vetBoundKey) == true;
+  }
+
+  Future<void> bindStegoVet() async {
+    await Hive.box(settingsBox).put(_vetBoundKey, true);
+  }
+
+  Future<StegoReceipt?> getLastReceipt() async {
+    return StegoReceipt.tryParse(Hive.box(settingsBox).get(_receiptKey));
+  }
+
+  Future<void> putReceipt(StegoReceipt receipt) async {
+    if (!localVetAuthority().verify(receipt) && receipt.origin == 'local') {
+      return;
+    }
+    await Hive.box(settingsBox).put(_receiptKey, jsonEncode(receipt.toJson()));
+  }
+
+  Future<PatternReport?> getLastPatternReport() async {
+    final raw = Hive.box(settingsBox).get(_reportKey);
+    if (raw is! String || raw.isEmpty) return null;
+    try {
+      return PatternReport.fromJson(
+        jsonDecode(raw) as Map<String, dynamic>,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> putPatternReport(PatternReport report) async {
+    await Hive.box(settingsBox).put(_reportKey, jsonEncode(report.toJson()));
+  }
+
+  Future<({StegoReceipt receipt, PatternReport report})> vetStego({
+    required StegoFingerprint fingerprint,
+    TrafficSketch? sketch,
+  }) async {
+    await bindStegoVet();
+    final out = localVetAuthority().vet(
+      fingerprint: fingerprint,
+      sketch: sketch,
+    );
+    await putReceipt(out.receipt);
+    await putPatternReport(out.report);
+    return out;
+  }
+
+  Future<PatternReport> armRoundTable() async {
+    await bindStegoVet();
+    final existing = await getLastPatternReport();
+    if (existing != null) return existing;
+    const table = RoundTable();
+    final report = table.convene(
+      const TrafficSketch(gapsMs: [240, 180, 410, 160, 520]),
+      nowMs: DateTime.now().toUtc().millisecondsSinceEpoch,
+    );
+    await putPatternReport(report);
+    return report;
+  }
+
+  // ---------------------------------------------------------------------
+  // Glasses HUD session
+  // ---------------------------------------------------------------------
+
+  static const _glassesKey = 'glassesSession';
+
+  Future<GlassesSession?> getGlassesSession(String owner) async {
+    final raw = Hive.box(settingsBox).get(_glassesKey);
+    if (raw is! String || raw.isEmpty) return null;
+    final session = GlassesSession.parse(raw);
+    if (session == null) return null;
+    if (!session.verify(_encryption.mac)) return null;
+    if (session.owner != owner.trim().toUpperCase()) return null;
+    return session;
+  }
+
+  Future<bool> hasGlassesSession() async {
+    final raw = Hive.box(settingsBox).get(_glassesKey);
+    if (raw is! String) return false;
+    final session = GlassesSession.parse(raw);
+    return session != null && session.verify(_encryption.mac);
+  }
+
+  Future<GlassesSession> ensureGlassesLink(String owner) async {
+    final existing = await getGlassesSession(owner);
+    if (existing != null) return existing;
+    final session = GlassesSession.issue(
+      owner: owner,
+      deviceMac: _encryption.mac,
+    );
+    await Hive.box(settingsBox).put(_glassesKey, session.wire);
+    return session;
+  }
+
+  Future<void> clearGlassesLink() async {
+    await Hive.box(settingsBox).delete(_glassesKey);
+  }
 
   Future<void> setOperatorInitials(String initials) async {
     await Hive.box(settingsBox).put(

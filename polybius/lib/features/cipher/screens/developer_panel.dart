@@ -29,6 +29,8 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
   List<InviteCode> _invites = [];
   String? _loadError;
   bool _weaving = false;
+  String _vetLine = 'NO RECEIPT';
+  String _tableLine = 'NO REPORT';
 
   @override
   void initState() {
@@ -61,11 +63,19 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
       final storage = ref.read(storageServiceProvider);
       final logs = await storage.getAuditLogs();
       final invites = await storage.getAllInvites();
+      final receipt = await storage.getLastReceipt();
+      final report = await storage.getLastPatternReport();
       if (!mounted) return;
       setState(() {
         _logs = logs;
         _invites = invites;
         _loadError = null;
+        _vetLine = receipt == null
+            ? 'NO RECEIPT — notes never land in Hive'
+            : '${receipt.readout} · ${receipt.origin} · fp ${receipt.fingerprintPrefix}';
+        _tableLine = report == null
+            ? 'NO REPORT'
+            : '${report.readout} · ${report.boil} · interfered=${report.interfered}';
       });
     } catch (_) {
       if (!mounted) return;
@@ -179,6 +189,32 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
                   child: const Text('RESET LEDGER'),
                 ),
               ],
+            ),
+          ]),
+          _section('CABINET MESH', [
+            const Text(
+              'ML-KEM-768 hybrid, stego vet, round table, glasses HUD. '
+              'The developer panel sees receipts and boiled cadence reports — '
+              'not plaintext, not decoy runes, not sidecar analyst notes. '
+              'The table does not drop human-to-human frames.',
+              style: TextStyle(color: Colors.white54, fontSize: 11),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'VET  $_vetLine',
+              style: const TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 10,
+                color: NeonTheme.neonYellow,
+              ),
+            ),
+            Text(
+              'TABLE  $_tableLine',
+              style: const TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 10,
+                color: NeonTheme.neonGreen,
+              ),
             ),
           ]),
           _section('INVITE MANAGEMENT', [

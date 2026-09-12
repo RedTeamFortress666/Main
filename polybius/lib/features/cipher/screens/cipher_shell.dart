@@ -11,6 +11,8 @@ import 'package:polybius/features/cipher/screens/encrypt_tab.dart';
 import 'package:polybius/features/cipher/screens/pool_tab.dart';
 import 'package:polybius/features/cipher/screens/rotor_gear_sheet.dart';
 import 'package:polybius/features/cipher/screens/sync_tab.dart';
+import 'package:polybius/features/glasses/cover_screensaver.dart';
+import 'package:polybius/features/glasses/glasses_link.dart';
 import 'package:polybius/features/redlight/cabinet_lamp.dart';
 
 /// Layer 3 hidden cipher tool — accessible only after unlock rituals.
@@ -55,6 +57,9 @@ class _CipherShellState extends ConsumerState<CipherShell>
     // The lamp is a vault property: no open vault, no filter — and the
     // matrix itself comes out of the sealed profile, not a compiled constant.
     final lamp = cherry && vaultOpen && ref.watch(cabinetLampProvider);
+    final policy = ref.watch(cabinetPolicyProvider);
+    final viewer = ref.watch(glassesViewerProvider);
+    final attract = policy.glassesHud && viewer != GlassesViewer.hud;
 
     return Scaffold(
       appBar: AppBar(
@@ -130,14 +135,27 @@ class _CipherShellState extends ConsumerState<CipherShell>
       body: CabinetLamp.wrap(
         on: lamp,
         filter: access?.profile?.lampFilter,
-        child: TabBarView(
-          controller: _tabController,
-          children: const [
-            EncryptTab(),
-            DecryptTab(),
-            PoolTab(),
-            SyncTab(),
-            ConnectTab(),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            TabBarView(
+              controller: _tabController,
+              children: const [
+                EncryptTab(),
+                DecryptTab(),
+                PoolTab(),
+                SyncTab(),
+                ConnectTab(),
+              ],
+            ),
+            if (attract)
+              CoverScreensaver(
+                canWake: ref.watch(authProvider).isAuthenticated,
+                onOperatorWake: () {
+                  ref.read(glassesViewerProvider.notifier).state =
+                      GlassesViewer.hud;
+                },
+              ),
           ],
         ),
       ),

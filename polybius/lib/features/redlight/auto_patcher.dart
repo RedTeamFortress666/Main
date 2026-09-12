@@ -17,6 +17,18 @@ abstract class PatchHooks {
   /// Returns whether a sealed vault now exists for them.
   Future<bool> ensureRedlightVault();
 
+  /// Mint an ML-KEM-768 keypair under the device key.
+  Future<bool> ensurePqKem();
+
+  /// Bind a vet authority (sidecar if reachable, else local stand-in).
+  Future<bool> ensureStegoVet();
+
+  /// Convene an empty-warm round table so the watch is armed.
+  Future<bool> ensureRoundTable();
+
+  /// Pair a loopback glasses session for the live operator.
+  Future<bool> ensureGlassesLink();
+
   const PatchHooks();
 }
 
@@ -31,6 +43,18 @@ class NoopPatchHooks extends PatchHooks {
 
   @override
   Future<bool> ensureRedlightVault() async => false;
+
+  @override
+  Future<bool> ensurePqKem() async => false;
+
+  @override
+  Future<bool> ensureStegoVet() async => false;
+
+  @override
+  Future<bool> ensureRoundTable() async => false;
+
+  @override
+  Future<bool> ensureGlassesLink() async => false;
 }
 
 /// One remediation the patcher knows how to weave.
@@ -81,9 +105,9 @@ class WeaveResult {
 ///
 /// DETECT → APPLY → VERIFY → LEDGER. Runs inside the V2 handshake (step 05),
 /// on session restore, when Darth Cherry arms, when a pool token syncs, and
-/// from the Developer panel. It weaves [CabinetPolicy] and takes the three
-/// storage actions a policy flag alone cannot (ticket, mixer, red-light
-/// vault). It does not
+/// from the Developer panel. It weaves [CabinetPolicy] and takes the storage
+/// actions a policy flag alone cannot (ticket, mixer, red-light vault,
+/// ML-KEM keypair, vet authority, round table, glasses pair). It does not
 /// fetch or apply signed binaries — [SignatureService.verifyPayload] still
 /// has no install path (BUILD.md) — and it does not hide a Hive dump.
 class AutoPatcher {
@@ -162,6 +186,49 @@ class AutoPatcher {
       sideEffect: (snap, hooks) async {
         final sealed = snap.redlightSealed || await hooks.ensureRedlightVault();
         return snap.copyWith(redlightSealed: sealed);
+      },
+    ),
+    PatchStep(
+      leakId: 'envelope.pq',
+      title: 'ML-KEM HYBRID',
+      action: 'mint ML-KEM-768 and seal courier envelopes as X25519 + Kyber',
+      apply: (p) => p.copyWith(hybridPq: true),
+      sideEffect: (snap, hooks) async {
+        final live = snap.hybridPqLive || await hooks.ensurePqKem();
+        return snap.copyWith(hybridPqLive: live);
+      },
+    ),
+    PatchStep(
+      leakId: 'stego.vet',
+      title: 'STEGO VET',
+      action:
+          'bind a vet authority; decoy fingerprints get a receipt, notes stay off Hive',
+      apply: (p) => p.copyWith(stegoVet: true),
+      sideEffect: (snap, hooks) async {
+        final bound = snap.stegoVetBound || await hooks.ensureStegoVet();
+        return snap.copyWith(stegoVetBound: bound);
+      },
+    ),
+    PatchStep(
+      leakId: 'roundtable.watch',
+      title: 'ROUND TABLE',
+      action:
+          'arm five cadence seats; they watch sketches and never drop H2H frames',
+      apply: (p) => p.copyWith(roundTable: true),
+      sideEffect: (snap, hooks) async {
+        final armed = snap.roundTableArmed || await hooks.ensureRoundTable();
+        return snap.copyWith(roundTableArmed: armed);
+      },
+    ),
+    PatchStep(
+      leakId: 'glasses.hud',
+      title: 'GLASSES HUD',
+      action:
+          'pair a device-bound HUD session; cabinet face becomes attract-mode',
+      apply: (p) => p.copyWith(glassesHud: true),
+      sideEffect: (snap, hooks) async {
+        final paired = snap.glassesPaired || await hooks.ensureGlassesLink();
+        return snap.copyWith(glassesPaired: paired);
       },
     ),
   ]);

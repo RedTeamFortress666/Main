@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
+import 'package:polybius/features/glasses/glasses_link.dart';
 
 class ConnectTab extends ConsumerStatefulWidget {
   const ConnectTab({super.key});
@@ -18,6 +19,9 @@ class _ConnectTabState extends ConsumerState<ConnectTab> {
     final auth = ref.watch(authProvider);
     final nameplate = ref.watch(displayPoolIdProvider);
     final hub = ref.watch(transportHubProvider);
+    final policy = ref.watch(cabinetPolicyProvider);
+    final surface = ref.watch(leakSurfaceProvider);
+    final viewer = ref.watch(glassesViewerProvider);
 
     return Padding(
       padding: const EdgeInsets.all(24),
@@ -70,8 +74,67 @@ class _ConnectTabState extends ConsumerState<ConnectTab> {
           const SizedBox(height: 8),
           const Text(
             'Reticulum sidecar default 127.0.0.1:3742 — QR remains the air-gap. '
+            'Stego vet default 127.0.0.1:3743 (Tailscale/Proxmox). '
             'Matrix is optional and leaks room metadata. Frames are padded to 2048 bytes.',
             style: TextStyle(color: Colors.white38, fontSize: 11),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'CABINET MESH',
+            style: TextStyle(
+              fontFamily: 'monospace',
+              color: NeonTheme.neonPink,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 8),
+          _InfoRow(
+            'ML-KEM-768',
+            surface.hybridPqLive && policy.hybridPq
+                ? 'LIVE · X25519 + KYBER'
+                : 'SLOT EMPTY',
+          ),
+          _InfoRow(
+            'STEGO VET',
+            surface.stegoVetBound
+                ? 'BOUND · RECEIPTS ONLY'
+                : 'UNBOUND',
+          ),
+          _InfoRow(
+            'ROUND TABLE',
+            surface.roundTableArmed
+                ? 'ARMED · CADENCE ONLY · NO H2H INTERFERENCE'
+                : 'DARK',
+          ),
+          _InfoRow(
+            'GLASSES',
+            surface.glassesPaired
+                ? (viewer == GlassesViewer.hud
+                    ? 'HUD PAIR · THIS FACE IS THE GLASSES'
+                    : 'PAIRED · ATTRACT MODE ON THIS FACE')
+                : 'UNPAIRED',
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => ref
+                      .read(glassesViewerProvider.notifier)
+                      .state = GlassesViewer.hud,
+                  child: const Text('I AM THE HUD', style: TextStyle(fontSize: 11)),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => ref
+                      .read(glassesViewerProvider.notifier)
+                      .state = GlassesViewer.public,
+                  child: const Text('ATTRACT MODE', style: TextStyle(fontSize: 11)),
+                ),
+              ),
+            ],
           ),
           const Spacer(),
           SizedBox(

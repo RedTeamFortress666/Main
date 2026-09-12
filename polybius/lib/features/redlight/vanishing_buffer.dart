@@ -11,6 +11,8 @@ class VanishingBuffer {
   final StringBuffer _secret = StringBuffer();
   String _flash = '';
   int _generation = 0;
+  int? _lastAppendMs;
+  final List<int> _gapsMs = [];
 
   String get plaintext => _secret.toString();
   String get flash => _flash;
@@ -18,8 +20,16 @@ class VanishingBuffer {
   int get length => _secret.length;
   bool get isEmpty => _secret.isEmpty;
 
+  /// Inter-keypress gaps only. Never the glyphs.
+  List<int> get gapsMs => List<int>.unmodifiable(_gapsMs);
+
   void append(String ch) {
     if (ch.isEmpty) return;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (_lastAppendMs != null) {
+      _gapsMs.add(now - _lastAppendMs!);
+    }
+    _lastAppendMs = now;
     _secret.write(ch);
     _flash = ch;
     _generation++;
@@ -48,6 +58,8 @@ class VanishingBuffer {
   void wipe() {
     _secret.clear();
     _flash = '';
+    _lastAppendMs = null;
+    _gapsMs.clear();
     _generation++;
   }
 }

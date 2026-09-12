@@ -12,11 +12,10 @@ import 'package:polybius/core/crypto/hkdf.dart';
 ///   * AES-256-GCM for the payload (NIST AES; there is no AES-512)
 ///
 /// Post-quantum slot:
-///   [PqKem] is an interface. This build does **not** ship an audited ML-KEM
-///   (Kyber) implementation in Dart. When [pqKem] is null the PQ field is
-///   empty and the key is HKDF(X25519). When a real ML-KEM is wired later,
-///   the combiner is HKDF(X25519_ss || MLKEM_ss) — a standard hybrid, not
-///   "uncrackable", and still bounded by implementation quality.
+///   [PqKem] is filled by [MlKem768] (FIPS 203 ML-KEM-768 via `pqcrypto`).
+///   The combiner is HKDF(X25519_ss || MLKEM_ss). When [pqKem] is null the
+///   PQ field is empty and the key is HKDF(X25519) only. This is a standard
+///   hybrid, not "uncrackable", and `pqcrypto` is not a CMVP module.
 ///
 /// AES-256 vs "experimental larger variants": AES is defined for 128/192/256
 /// bit keys. 256-bit Rijndael-with-bigger-blocks is not AES and has far less

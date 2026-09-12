@@ -13,6 +13,10 @@ class _RecordingHooks extends PatchHooks {
   int ticketCalls = 0;
   int mixerCalls = 0;
   int vaultCalls = 0;
+  int pqCalls = 0;
+  int vetCalls = 0;
+  int tableCalls = 0;
+  int glassesCalls = 0;
 
   @override
   Future<bool> ensureTicket() async {
@@ -31,6 +35,30 @@ class _RecordingHooks extends PatchHooks {
     vaultCalls++;
     return vault;
   }
+
+  @override
+  Future<bool> ensurePqKem() async {
+    pqCalls++;
+    return true;
+  }
+
+  @override
+  Future<bool> ensureStegoVet() async {
+    vetCalls++;
+    return true;
+  }
+
+  @override
+  Future<bool> ensureRoundTable() async {
+    tableCalls++;
+    return true;
+  }
+
+  @override
+  Future<bool> ensureGlassesLink() async {
+    glassesCalls++;
+    return true;
+  }
 }
 
 void main() {
@@ -44,7 +72,7 @@ void main() {
     derangeSecret: 'DEVELOPER',
   );
 
-  test('baseline weave: detect 8 open, apply, verify 0 open, ledger names each step',
+  test('baseline weave: detect 12 open, apply, verify 0 open, ledger names each step',
       () async {
     final hooks = _RecordingHooks();
     final result = await AutoPatcher.run(
@@ -55,21 +83,26 @@ void main() {
       now: DateTime.utc(2026, 9, 12, 12),
     );
 
-    expect(result.before.openCount, 8);
+    expect(result.before.openCount, 12);
     expect(result.after.openCount, 0);
     expect(result.policy, CabinetPolicy.woven);
     expect(result.policy.isWoven, isTrue);
     expect(hooks.ticketCalls, 1);
     expect(hooks.mixerCalls, 1, reason: 'mixer equal to username is weak');
     expect(hooks.vaultCalls, 1, reason: 'legacy cabinet has no sealed vault');
+    expect(hooks.pqCalls, 1);
+    expect(hooks.vetCalls, 1);
+    expect(hooks.tableCalls, 1);
+    expect(hooks.glassesCalls, 1);
     expect(result.snapshot.redlightSealed, isTrue);
+    expect(result.snapshot.hybridPqLive, isTrue);
 
     final entry = result.entry;
     expect(entry.seq, 1);
     expect(entry.trigger, 'BASELINE');
-    expect(entry.openBefore, 8);
+    expect(entry.openBefore, 12);
     expect(entry.openAfter, 0);
-    expect(entry.appliedCount, 8);
+    expect(entry.appliedCount, 12);
     expect(entry.residualCount, 2);
     expect(entry.pendingCount, 0);
     expect(entry.policyCanonical, CabinetPolicy.woven.canonical);
@@ -80,6 +113,10 @@ void main() {
     expect(byId['phosphor.username']!.outcome, PatchOutcome.applied);
     expect(byId['redlight.vault']!.outcome, PatchOutcome.applied);
     expect(byId['redlight.vault']!.title, 'REDLIGHT SEAL');
+    expect(byId['envelope.pq']!.outcome, PatchOutcome.applied);
+    expect(byId['stego.vet']!.outcome, PatchOutcome.applied);
+    expect(byId['roundtable.watch']!.outcome, PatchOutcome.applied);
+    expect(byId['glasses.hud']!.outcome, PatchOutcome.applied);
     expect(byId['cabinet.hive']!.outcome, PatchOutcome.residual);
     expect(byId['client.owned']!.outcome, PatchOutcome.residual);
     expect(byId['ledger.chain']!.outcome, PatchOutcome.held);
@@ -103,7 +140,7 @@ void main() {
     );
     expect(second.before.openCount, 0);
     expect(second.entry.appliedCount, 0);
-    expect(second.entry.heldCount, 9);
+    expect(second.entry.heldCount, 13);
     expect(second.entry.residualCount, 2);
     expect(hooks.ticketCalls, 1, reason: 'a present ticket is not re-issued');
     expect(hooks.vaultCalls, 1, reason: 'a sealed vault is not re-minted');
@@ -160,7 +197,7 @@ void main() {
   test('policy canonical form is stable and copyWith is honest', () {
     expect(
       CabinetPolicy.woven.canonical,
-      'stego=0;density=1;chrome=1;mixer=1;pingate=1;v2=1;tofu=1;redlight=1',
+      'stego=0;density=1;chrome=1;mixer=1;pingate=1;v2=1;tofu=1;redlight=1;pq=1;vet=1;table=1;glasses=1',
     );
     expect(CabinetPolicy.legacy.isWoven, isFalse);
     expect(CabinetPolicy.woven.copyWith(v1Stego: true).isWoven, isFalse);

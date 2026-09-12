@@ -16,6 +16,7 @@ import 'package:polybius/features/redlight/auto_patcher.dart';
 import 'package:polybius/features/redlight/cabinet_policy.dart';
 import 'package:polybius/features/redlight/leak_detector.dart';
 import 'package:polybius/features/redlight/patch_ledger.dart';
+import 'package:polybius/features/glasses/glasses_link.dart';
 import 'package:polybius/features/redlight/redlight_vault.dart';
 import 'package:polybius/features/transport/transport_hub.dart';
 import 'dart:convert';
@@ -152,6 +153,10 @@ class LeakSurface {
     this.ledgerIntact = true,
     this.ledgerEntries = 0,
     this.redlightSealed = false,
+    this.hybridPqLive = false,
+    this.stegoVetBound = false,
+    this.roundTableArmed = false,
+    this.glassesPaired = false,
   });
 
   final bool sessionIsV2;
@@ -159,6 +164,10 @@ class LeakSurface {
   final bool ledgerIntact;
   final int ledgerEntries;
   final bool redlightSealed;
+  final bool hybridPqLive;
+  final bool stegoVetBound;
+  final bool roundTableArmed;
+  final bool glassesPaired;
 }
 
 class LeakSurfaceNotifier extends StateNotifier<LeakSurface> {
@@ -172,9 +181,11 @@ class LeakSurfaceNotifier extends StateNotifier<LeakSurface> {
     final ticket = await _storage.hasV2Ticket();
     var cabinet = false;
     var sealed = false;
+    var glasses = false;
     if (username != null) {
       cabinet = await _storage.getCabinet(username) != null;
       sealed = await _storage.getRedlightVault(username) != null;
+      glasses = await _storage.getGlassesSession(username) != null;
     }
     final ledger = await _storage.getPatchLedger();
     state = LeakSurface(
@@ -183,6 +194,10 @@ class LeakSurfaceNotifier extends StateNotifier<LeakSurface> {
       ledgerIntact: ledger.intact,
       ledgerEntries: ledger.entries.length,
       redlightSealed: sealed,
+      hybridPqLive: await _storage.hasPqKem(),
+      stegoVetBound: await _storage.isStegoVetBound(),
+      roundTableArmed: await _storage.getLastPatternReport() != null,
+      glassesPaired: glasses,
     );
   }
 }
@@ -206,6 +221,10 @@ final leakReportProvider = Provider<LeakReport>((ref) {
       ledgerIntact: surface.ledgerIntact,
       ledgerEntries: surface.ledgerEntries,
       redlightSealed: surface.redlightSealed,
+      hybridPqLive: surface.hybridPqLive,
+      stegoVetBound: surface.stegoVetBound,
+      roundTableArmed: surface.roundTableArmed,
+      glassesPaired: surface.glassesPaired,
     ),
   );
 });
@@ -243,10 +262,24 @@ final redlightAccessProvider = FutureProvider<RedlightAccess>((ref) async {
   if (profile == null) {
     return const RedlightAccess.sealed(RedlightSeal.vaultLocked);
   }
+  if (policy.glassesHud) {
+    final glasses = await storage.getGlassesSession(user.username);
+    if (glasses == null) {
+      return const RedlightAccess.sealed(RedlightSeal.noGlasses);
+    }
+    final viewer = ref.watch(glassesViewerProvider);
+    if (viewer != GlassesViewer.hud) {
+      return const RedlightAccess.sealed(RedlightSeal.noGlasses);
+    }
+  }
   return RedlightAccess.open(
     profile: profile,
     derangeSecret: profile.derangeSecret(storage.deviceMac),
   );
+});
+
+final glassesViewerProvider = StateProvider<GlassesViewer>((ref) {
+  return GlassesViewer.hud;
 });
 
 /// Storage-backed side effects for the patcher.
@@ -274,6 +307,32 @@ class _StoragePatchHooks extends PatchHooks {
     if (user == null || user.isEmpty) return false;
     await _storage.ensureRedlightVault(user);
     return await _storage.getRedlightVault(user) != null;
+  }
+
+  @override
+  Future<bool> ensurePqKem() async {
+    await _storage.ensurePqKem();
+    return _storage.hasPqKem();
+  }
+
+  @override
+  Future<bool> ensureStegoVet() async {
+    await _storage.bindStegoVet();
+    return _storage.isStegoVetBound();
+  }
+
+  @override
+  Future<bool> ensureRoundTable() async {
+    await _storage.armRoundTable();
+    return await _storage.getLastPatternReport() != null;
+  }
+
+  @override
+  Future<bool> ensureGlassesLink() async {
+    final user = _username ?? await _storage.getSessionUser();
+    if (user == null || user.isEmpty) return false;
+    await _storage.ensureGlassesLink(user);
+    return await _storage.getGlassesSession(user) != null;
   }
 }
 
@@ -313,6 +372,8 @@ class AutoPatcherNotifier extends StateNotifier<PatchLedger> {
     final cabinet = user == null ? false : await _storage.getCabinet(user) != null;
     final sealed =
         user == null ? false : await _storage.getRedlightVault(user) != null;
+    final glasses =
+        user == null ? false : await _storage.getGlassesSession(user) != null;
     final mixer = await _storage.getCherryMixer() ?? '';
     final snapshot = LeakSnapshot(
       policy: ledger.isEmpty
@@ -327,6 +388,10 @@ class AutoPatcherNotifier extends StateNotifier<PatchLedger> {
       ledgerIntact: ledger.intact,
       ledgerEntries: ledger.entries.length,
       redlightSealed: sealed,
+      hybridPqLive: await _storage.hasPqKem(),
+      stegoVetBound: await _storage.isStegoVetBound(),
+      roundTableArmed: await _storage.getLastPatternReport() != null,
+      glassesPaired: glasses,
     );
 
     final result = await AutoPatcher.run(

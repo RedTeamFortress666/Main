@@ -14,6 +14,10 @@ class CabinetPolicy {
     this.v2Session = false,
     this.filterTofu = false,
     this.sealRedlight = false,
+    this.hybridPq = false,
+    this.stegoVet = false,
+    this.roundTable = false,
+    this.glassesHud = false,
   });
 
   /// Old V1 path stuffed unused-master decoys into ciphertext.
@@ -41,6 +45,18 @@ class CabinetPolicy {
   /// bound vault and render only behind a valid device ticket.
   final bool sealRedlight;
 
+  /// Courier envelopes carry X25519 + ML-KEM-768.
+  final bool hybridPq;
+
+  /// Unused-master decoys must carry a sidecar/local vet receipt.
+  final bool stegoVet;
+
+  /// Round table watches cadence sketches; never reads H2H plaintext.
+  final bool roundTable;
+
+  /// Red-light HUD is glasses-paired; cabinet face is attract-mode.
+  final bool glassesHud;
+
   /// Interwoven default — the patcher is the boot path, not a later click.
   static const woven = CabinetPolicy(
     v1Stego: false,
@@ -51,6 +67,10 @@ class CabinetPolicy {
     v2Session: true,
     filterTofu: true,
     sealRedlight: true,
+    hybridPq: true,
+    stegoVet: true,
+    roundTable: true,
+    glassesHud: true,
   );
 
   /// Pre-patch cabinet (used by the detector to name what got fixed).
@@ -65,6 +85,10 @@ class CabinetPolicy {
     bool? v2Session,
     bool? filterTofu,
     bool? sealRedlight,
+    bool? hybridPq,
+    bool? stegoVet,
+    bool? roundTable,
+    bool? glassesHud,
   }) =>
       CabinetPolicy(
         v1Stego: v1Stego ?? this.v1Stego,
@@ -75,6 +99,10 @@ class CabinetPolicy {
         v2Session: v2Session ?? this.v2Session,
         filterTofu: filterTofu ?? this.filterTofu,
         sealRedlight: sealRedlight ?? this.sealRedlight,
+        hybridPq: hybridPq ?? this.hybridPq,
+        stegoVet: stegoVet ?? this.stegoVet,
+        roundTable: roundTable ?? this.roundTable,
+        glassesHud: glassesHud ?? this.glassesHud,
       );
 
   /// Stable wire form. Goes into the patch-ledger MAC so a Hive edit that
@@ -88,6 +116,10 @@ class CabinetPolicy {
         'v2=${v2Session ? 1 : 0}',
         'tofu=${filterTofu ? 1 : 0}',
         'redlight=${sealRedlight ? 1 : 0}',
+        'pq=${hybridPq ? 1 : 0}',
+        'vet=${stegoVet ? 1 : 0}',
+        'table=${roundTable ? 1 : 0}',
+        'glasses=${glassesHud ? 1 : 0}',
       ].join(';');
 
   bool get isWoven => canonical == woven.canonical;

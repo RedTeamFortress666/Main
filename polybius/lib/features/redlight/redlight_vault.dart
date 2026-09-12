@@ -129,6 +129,9 @@ enum RedlightSeal {
 
   /// Blob present but will not decrypt / parse / is owned by someone else.
   vaultLocked,
+
+  /// Glasses HUD policy is on and this device has no paired session.
+  noGlasses,
 }
 
 class RedlightAccess {
@@ -156,5 +159,6 @@ class RedlightAccess {
         RedlightSeal.operatorMismatch => 'TICKET OPERATOR MISMATCH',
         RedlightSeal.policyUnsealed => 'CABINET POLICY UNSEALED — RUN WEAVE',
         RedlightSeal.vaultLocked => 'VAULT LOCKED — NOT MINTED ON THIS DEVICE',
+        RedlightSeal.noGlasses => 'NO HUD PAIR — ATTRACT MODE FOR THIS FACE',
       };
 }

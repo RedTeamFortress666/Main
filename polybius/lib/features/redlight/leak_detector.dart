@@ -50,6 +50,10 @@ class LeakSnapshot {
     this.ledgerIntact = true,
     this.ledgerEntries = 0,
     this.redlightSealed = false,
+    this.hybridPqLive = false,
+    this.stegoVetBound = false,
+    this.roundTableArmed = false,
+    this.glassesPaired = false,
   });
 
   final CabinetPolicy policy;
@@ -69,6 +73,18 @@ class LeakSnapshot {
   /// An AES-sealed red-light vault exists for the live operator.
   final bool redlightSealed;
 
+  /// ML-KEM-768 keypair is minted on this device.
+  final bool hybridPqLive;
+
+  /// A vet authority (local stand-in or sidecar) will issue receipts.
+  final bool stegoVetBound;
+
+  /// At least one pattern report has been convened.
+  final bool roundTableArmed;
+
+  /// Glasses session verifies under this device key for the operator.
+  final bool glassesPaired;
+
   LeakSnapshot copyWith({
     CabinetPolicy? policy,
     String? mixer,
@@ -80,6 +96,10 @@ class LeakSnapshot {
     bool? ledgerIntact,
     int? ledgerEntries,
     bool? redlightSealed,
+    bool? hybridPqLive,
+    bool? stegoVetBound,
+    bool? roundTableArmed,
+    bool? glassesPaired,
   }) =>
       LeakSnapshot(
         policy: policy ?? this.policy,
@@ -92,6 +112,10 @@ class LeakSnapshot {
         ledgerIntact: ledgerIntact ?? this.ledgerIntact,
         ledgerEntries: ledgerEntries ?? this.ledgerEntries,
         redlightSealed: redlightSealed ?? this.redlightSealed,
+        hybridPqLive: hybridPqLive ?? this.hybridPqLive,
+        stegoVetBound: stegoVetBound ?? this.stegoVetBound,
+        roundTableArmed: roundTableArmed ?? this.roundTableArmed,
+        glassesPaired: glassesPaired ?? this.glassesPaired,
       );
 }
 
@@ -197,6 +221,46 @@ class LeakDetector {
             ? 'Lamp filter + key map AES-sealed to this device and operator; render needs a live ticket'
             : 'Lamp constants compiled in; key map keyed by a loose Hive value; rendered without a ticket',
         severity: snap.policy.sealRedlight && snap.redlightSealed
+            ? LeakSeverity.patched
+            : LeakSeverity.open,
+      ),
+      LeakFinding(
+        id: 'envelope.pq',
+        title: 'ML-KEM HYBRID',
+        detail: snap.policy.hybridPq && snap.hybridPqLive
+            ? 'X25519 + ML-KEM-768 envelopes; HKDF(ss_x || ss_kyber)'
+            : 'Courier envelopes were X25519-only; PQ slot empty',
+        severity: snap.policy.hybridPq && snap.hybridPqLive
+            ? LeakSeverity.patched
+            : LeakSeverity.open,
+      ),
+      LeakFinding(
+        id: 'stego.vet',
+        title: 'STEGO VET',
+        detail: snap.policy.stegoVet && snap.stegoVetBound
+            ? 'Decoy fingerprints receipted by a vet authority; notes stay off-device'
+            : 'Unused-master decoys left the cabinet without a sidecar receipt',
+        severity: snap.policy.stegoVet && snap.stegoVetBound
+            ? LeakSeverity.patched
+            : LeakSeverity.open,
+      ),
+      LeakFinding(
+        id: 'roundtable.watch',
+        title: 'ROUND TABLE',
+        detail: snap.policy.roundTable && snap.roundTableArmed
+            ? 'Five seats watch cadence only; H2H is never delayed or dropped'
+            : 'No communication-pattern watch; machine cadence would pass silent',
+        severity: snap.policy.roundTable && snap.roundTableArmed
+            ? LeakSeverity.patched
+            : LeakSeverity.open,
+      ),
+      LeakFinding(
+        id: 'glasses.hud',
+        title: 'GLASSES HUD',
+        detail: snap.policy.glassesHud && snap.glassesPaired
+            ? 'Phosphor on the paired HUD; cabinet face is attract-mode'
+            : 'Red-light keyboard painted on the cabinet for any shoulder',
+        severity: snap.policy.glassesHud && snap.glassesPaired
             ? LeakSeverity.patched
             : LeakSeverity.open,
       ),

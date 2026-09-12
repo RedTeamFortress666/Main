@@ -13,6 +13,11 @@ void main() {
         operatorUsername: 'DEVELOPER',
         sessionIsV2: true,
         derangeSecret: 'mixer-secret',
+        redlightSealed: true,
+        hybridPqLive: true,
+        stegoVetBound: true,
+        roundTableArmed: true,
+        glassesPaired: true,
       ),
     );
     await tester.pumpWidget(
