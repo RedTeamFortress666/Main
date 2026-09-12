@@ -10,6 +10,7 @@ import 'package:polybius/features/auth/v2_login_protocol.dart';
 import 'package:polybius/features/duress/cabinet_identity.dart';
 import 'package:polybius/features/redlight/auto_patcher.dart';
 import 'package:polybius/features/redlight/patch_ledger.dart';
+import 'package:polybius/features/redlight/redlight_vault.dart';
 
 class StorageService {
   StorageService(this._encryption);
@@ -290,6 +291,70 @@ class StorageService {
     await setCherryMixer(mixer);
     return mixer;
   }
+
+  // ---------------------------------------------------------------------
+  // Red-light vault — filter + keypress obfuscation, sealed per operator
+  // ---------------------------------------------------------------------
+
+  static const _redlightKey = 'redlightVault';
+
+  /// Opens the vault for [owner]. Null when absent, undecryptable under this
+  /// device key, unparsable, or minted for a different operator.
+  Future<RedlightProfile?> getRedlightVault(String owner) async {
+    final raw = Hive.box(settingsBox).get(_redlightKey);
+    if (raw is! String || raw.isEmpty) return null;
+    String plain;
+    try {
+      plain = _encryption.decrypt(raw);
+    } catch (_) {
+      return null;
+    }
+    final profile = RedlightProfile.tryParse(plain);
+    if (profile == null) return null;
+    if (profile.owner != owner.trim().toUpperCase()) return null;
+    return profile;
+  }
+
+  Future<bool> hasRedlightVault() async {
+    final raw = Hive.box(settingsBox).get(_redlightKey);
+    return raw is String && raw.startsWith('v2:');
+  }
+
+  /// Mints the vault for [owner] if it is missing or belongs to someone else.
+  /// Reuses an existing cherry mixer so the phosphor map does not jump on
+  /// the first sealed run. Returns the open profile.
+  Future<RedlightProfile> ensureRedlightVault(String owner) async {
+    final existing = await getRedlightVault(owner);
+    if (existing != null) return existing;
+    final mixer = await ensureCherryMixer();
+    final profile = RedlightProfile.mint(
+      owner: owner,
+      mixer: mixer.length >= 16 ? mixer : null,
+    );
+    await Hive.box(settingsBox).put(
+      _redlightKey,
+      _encryption.encrypt(jsonEncode(profile.toJson())),
+    );
+    return profile;
+  }
+
+  Future<void> clearRedlightVault() async {
+    await Hive.box(settingsBox).delete(_redlightKey);
+  }
+
+  /// Verified, unexpired ticket currently in the session box, or null.
+  Future<V2SessionTicket?> currentTicket() async {
+    final raw = Hive.box(sessionBox).get('ticket');
+    if (raw is! String || raw.isEmpty) return null;
+    final ticket = V2SessionTicket.parse(raw);
+    if (ticket == null) return null;
+    if (!ticket.verify(_encryption.mac) || ticket.isExpired()) return null;
+    return ticket;
+  }
+
+  /// Device-key HMAC, exposed for derivations that must not be recomputable
+  /// off-device (red-light derangement secret).
+  List<int> deviceMac(List<int> data) => _encryption.mac(data);
 
   Future<void> setOperatorInitials(String initials) async {
     await Hive.box(settingsBox).put(

@@ -50,7 +50,11 @@ class _CipherShellState extends ConsumerState<CipherShell>
     final unlock = ref.watch(unlockProvider);
     final isDev = unlock.state == UnlockState.developer;
     final cherry = ref.watch(darthCherryProvider);
-    final lamp = cherry && ref.watch(cabinetLampProvider);
+    final access = ref.watch(redlightAccessProvider).valueOrNull;
+    final vaultOpen = access?.granted ?? false;
+    // The lamp is a vault property: no open vault, no filter — and the
+    // matrix itself comes out of the sealed profile, not a compiled constant.
+    final lamp = cherry && vaultOpen && ref.watch(cabinetLampProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -75,11 +79,20 @@ class _CipherShellState extends ConsumerState<CipherShell>
             IconButton(
               icon: Icon(
                 lamp ? Icons.lightbulb : Icons.lightbulb_outline,
-                color: lamp ? NeonTheme.dangerRed : NeonTheme.neonYellow,
+                color: !vaultOpen
+                    ? Colors.white24
+                    : lamp
+                        ? NeonTheme.dangerRed
+                        : NeonTheme.neonYellow,
               ),
-              tooltip: lamp ? 'Cabinet lamp' : 'House lights',
-              onPressed: () =>
-                  ref.read(cabinetLampProvider.notifier).state = !lamp,
+              tooltip: !vaultOpen
+                  ? 'Redlight sealed — ${access?.reason ?? 'opening vault'}'
+                  : lamp
+                      ? 'Cabinet lamp'
+                      : 'House lights',
+              onPressed: !vaultOpen
+                  ? null
+                  : () => ref.read(cabinetLampProvider.notifier).state = !lamp,
             ),
           IconButton(
             icon: const Icon(Icons.settings, color: NeonTheme.neonPink),
@@ -116,6 +129,7 @@ class _CipherShellState extends ConsumerState<CipherShell>
       ),
       body: CabinetLamp.wrap(
         on: lamp,
+        filter: access?.profile?.lampFilter,
         child: TabBarView(
           controller: _tabController,
           children: const [

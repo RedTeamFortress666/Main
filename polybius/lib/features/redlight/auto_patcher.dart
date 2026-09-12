@@ -13,6 +13,10 @@ abstract class PatchHooks {
   /// Make sure a phosphor mixer exists. Returns it.
   Future<String> ensureMixer();
 
+  /// Make sure the red-light vault is minted for the live operator.
+  /// Returns whether a sealed vault now exists for them.
+  Future<bool> ensureRedlightVault();
+
   const PatchHooks();
 }
 
@@ -24,6 +28,9 @@ class NoopPatchHooks extends PatchHooks {
 
   @override
   Future<String> ensureMixer() async => '';
+
+  @override
+  Future<bool> ensureRedlightVault() async => false;
 }
 
 /// One remediation the patcher knows how to weave.
@@ -74,8 +81,9 @@ class WeaveResult {
 ///
 /// DETECT → APPLY → VERIFY → LEDGER. Runs inside the V2 handshake (step 05),
 /// on session restore, when Darth Cherry arms, when a pool token syncs, and
-/// from the Developer panel. It weaves [CabinetPolicy] and takes the two
-/// storage actions a policy flag alone cannot (ticket, mixer). It does not
+/// from the Developer panel. It weaves [CabinetPolicy] and takes the three
+/// storage actions a policy flag alone cannot (ticket, mixer, red-light
+/// vault). It does not
 /// fetch or apply signed binaries — [SignatureService.verifyPayload] still
 /// has no install path (BUILD.md) — and it does not hide a Hive dump.
 class AutoPatcher {
@@ -144,6 +152,17 @@ class AutoPatcher {
       title: 'TOFU FILTER',
       action: 'drop control / modifier / unassigned runes from the master',
       apply: (p) => p.copyWith(filterTofu: true),
+    ),
+    PatchStep(
+      leakId: 'redlight.vault',
+      title: 'REDLIGHT SEAL',
+      action:
+          'seal lamp filter + key map in one AES vault bound to device and operator; gate render on a live ticket',
+      apply: (p) => p.copyWith(sealRedlight: true),
+      sideEffect: (snap, hooks) async {
+        final sealed = snap.redlightSealed || await hooks.ensureRedlightVault();
+        return snap.copyWith(redlightSealed: sealed);
+      },
     ),
   ]);
 

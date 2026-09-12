@@ -49,6 +49,7 @@ class LeakSnapshot {
     this.derangeSecret,
     this.ledgerIntact = true,
     this.ledgerEntries = 0,
+    this.redlightSealed = false,
   });
 
   final CabinetPolicy policy;
@@ -65,6 +66,9 @@ class LeakSnapshot {
   final bool ledgerIntact;
   final int ledgerEntries;
 
+  /// An AES-sealed red-light vault exists for the live operator.
+  final bool redlightSealed;
+
   LeakSnapshot copyWith({
     CabinetPolicy? policy,
     String? mixer,
@@ -75,6 +79,7 @@ class LeakSnapshot {
     String? derangeSecret,
     bool? ledgerIntact,
     int? ledgerEntries,
+    bool? redlightSealed,
   }) =>
       LeakSnapshot(
         policy: policy ?? this.policy,
@@ -86,6 +91,7 @@ class LeakSnapshot {
         derangeSecret: derangeSecret ?? this.derangeSecret,
         ledgerIntact: ledgerIntact ?? this.ledgerIntact,
         ledgerEntries: ledgerEntries ?? this.ledgerEntries,
+        redlightSealed: redlightSealed ?? this.redlightSealed,
       );
 }
 
@@ -183,6 +189,16 @@ class LeakDetector {
         severity: snap.cabinetRecordExists
             ? LeakSeverity.residual
             : LeakSeverity.patched,
+      ),
+      LeakFinding(
+        id: 'redlight.vault',
+        title: 'REDLIGHT VAULT',
+        detail: snap.policy.sealRedlight && snap.redlightSealed
+            ? 'Lamp filter + key map AES-sealed to this device and operator; render needs a live ticket'
+            : 'Lamp constants compiled in; key map keyed by a loose Hive value; rendered without a ticket',
+        severity: snap.policy.sealRedlight && snap.redlightSealed
+            ? LeakSeverity.patched
+            : LeakSeverity.open,
       ),
       LeakFinding(
         id: 'ledger.chain',

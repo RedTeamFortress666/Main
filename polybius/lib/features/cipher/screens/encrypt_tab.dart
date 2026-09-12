@@ -9,6 +9,8 @@ import 'package:polybius/core/widgets/cabinet_atmosphere.dart';
 import 'package:polybius/features/redlight/cherry_banner.dart';
 import 'package:polybius/features/redlight/glyph_derangement.dart';
 import 'package:polybius/features/redlight/redlight_keyboard.dart';
+import 'package:polybius/features/redlight/redlight_sealed_panel.dart';
+import 'package:polybius/features/redlight/redlight_vault.dart';
 import 'package:polybius/features/redlight/vanishing_buffer.dart';
 import 'package:polybius/features/redlight/vanishing_field.dart';
 
@@ -109,18 +111,10 @@ class _EncryptTabState extends ConsumerState<EncryptTab> {
   }
 
   Widget _cherryBody() {
-    final lamp = ref.watch(cabinetLampProvider);
+    final access = ref.watch(redlightAccessProvider).valueOrNull ??
+        const RedlightAccess.sealed(RedlightSeal.noTicket);
+    final lamp = access.granted && ref.watch(cabinetLampProvider);
     final sound = ref.watch(gameSettingsProvider).soundEnabled;
-    final policy = ref.watch(cabinetPolicyProvider);
-    final mixer = ref.watch(cherryMixerProvider);
-    final derangeSecret = policy.phosphorUsesMixer && mixer.isNotEmpty
-        ? mixer
-        : 'CABINET-MIXER';
-    final derange = GlyphDerangement(
-      poolId: ref.watch(displayPoolIdProvider),
-      slot: PoolManager.slotOf(DateTime.now()),
-      pin: derangeSecret,
-    );
 
     return CabinetAtmosphere(
       cherry: true,
@@ -129,22 +123,33 @@ class _EncryptTabState extends ConsumerState<EncryptTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          VanishingField(buffer: _buffer),
-          const SizedBox(height: 6),
           CherryBanner(
             lampOn: lamp,
             report: ref.watch(leakReportProvider),
             ledger: ref.watch(autoPatcherProvider).latest,
           ),
           const SizedBox(height: 6),
-          RedlightKeyboard(
-            derangement: derange,
-            buffer: _buffer,
-            lampOn: lamp,
-            audio: sound,
-            onChanged: () => setState(() {}),
-          ),
-          const SizedBox(height: 6),
+          if (!access.granted) ...[
+            RedlightSealedPanel(access: access),
+            const SizedBox(height: 6),
+          ] else ...[
+            VanishingField(buffer: _buffer),
+            const SizedBox(height: 6),
+            RedlightKeyboard(
+              // Secret is HMAC(device key, owner‖mixer): never stored, never
+              // the username, not recomputable from a copied Hive box.
+              derangement: GlyphDerangement(
+                poolId: ref.watch(displayPoolIdProvider),
+                slot: PoolManager.slotOf(DateTime.now()),
+                pin: access.derangeSecret,
+              ),
+              buffer: _buffer,
+              lampOn: lamp,
+              audio: sound,
+              onChanged: () => setState(() {}),
+            ),
+            const SizedBox(height: 6),
+          ],
           Row(
             children: [
               Expanded(
@@ -172,7 +177,7 @@ class _EncryptTabState extends ConsumerState<EncryptTab> {
           ),
           const SizedBox(height: 4),
           ElevatedButton(
-            onPressed: () => _encrypt(cherry: true),
+            onPressed: access.granted ? () => _encrypt(cherry: true) : null,
             child: const Text('ENCRYPT'),
           ),
           const SizedBox(height: 8),

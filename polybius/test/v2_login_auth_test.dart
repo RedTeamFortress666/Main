@@ -39,6 +39,13 @@ class _StorageHooks extends PatchHooks {
 
   @override
   Future<String> ensureMixer() => storage.ensureCherryMixer();
+
+  @override
+  Future<bool> ensureRedlightVault() async {
+    if (username == null) return false;
+    await storage.ensureRedlightVault(username!);
+    return await storage.getRedlightVault(username!) != null;
+  }
 }
 
 void main() {
@@ -66,6 +73,8 @@ void main() {
             mixer: await storage.getCherryMixer() ?? '',
             operatorUsername: username,
             sessionIsV2: await storage.hasV2Ticket(),
+            redlightSealed: username != null &&
+                await storage.getRedlightVault(username) != null,
             masterJunk: 0,
             ledgerIntact: ledger.intact,
             ledgerEntries: ledger.entries.length,
@@ -105,16 +114,22 @@ void main() {
     final byLabel = {
       for (final l in auth.state.handshake.lines) l.label: l.status,
     };
-    expect(byLabel['LEAK SWEEP'], '7 OPEN',
+    expect(byLabel['LEAK SWEEP'], '8 OPEN',
         reason: 'the compiled legacy policy does not trust the step-03 '
-            'ticket until v2Session is woven, so all seven flags read open');
-    expect(byLabel['AUTOPATCH'], '7 WOVEN #1');
+            'ticket until v2Session is woven, so all eight flags read open');
+    expect(byLabel['AUTOPATCH'], '8 WOVEN #1');
     final ledger = await storage.getPatchLedger();
     expect(ledger.intact, isTrue);
     expect(ledger.entries.single.trigger, 'LOGIN');
-    expect(ledger.entries.single.appliedCount, 7);
+    expect(ledger.entries.single.appliedCount, 8);
     expect(ledger.entries.single.heldCount, 2);
     expect(ledger.entries.single.residualCount, 1);
+
+    // The weave minted the red-light vault for the live operator, sealed
+    // under the device key and bound to DEVELOPER only.
+    expect(await storage.hasRedlightVault(), isTrue);
+    expect(await storage.getRedlightVault('DEVELOPER'), isNotNull);
+    expect(await storage.getRedlightVault('SOMEONE_ELSE'), isNull);
   });
 
   test('second login holds the weave and chains entry #2', () async {

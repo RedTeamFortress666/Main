@@ -25,10 +25,25 @@ void main() {
     expect(report.byId('decrypt.density')!.severity, LeakSeverity.open);
     expect(report.byId('cover.pin_gate')!.severity, LeakSeverity.open);
     expect(report.byId('glyphs.tofu')!.severity, LeakSeverity.open);
+    expect(report.byId('redlight.vault')!.severity, LeakSeverity.open);
     expect(report.byId('cabinet.hive')!.severity, LeakSeverity.residual);
     expect(report.byId('client.owned')!.severity, LeakSeverity.residual);
     expect(report.byId('ledger.chain')!.severity, LeakSeverity.patched);
-    expect(report.openCount, 7);
+    expect(report.openCount, 8);
+  });
+
+  test('a sealed policy without a minted vault still reads open', () {
+    final report = LeakDetector.scan(
+      const LeakSnapshot(
+        policy: CabinetPolicy.woven,
+        mixer: 'n0t-a-username-mixer',
+        sessionIsV2: true,
+        masterJunk: 0,
+        redlightSealed: false,
+      ),
+    );
+    expect(report.byId('redlight.vault')!.severity, LeakSeverity.open);
+    expect(report.openCount, 1);
   });
 
   test('a broken patch ledger is an open finding', () {
@@ -37,6 +52,7 @@ void main() {
         policy: CabinetPolicy.woven,
         mixer: 'n0t-a-username-mixer',
         sessionIsV2: true,
+        redlightSealed: true,
         masterJunk: 0,
         ledgerIntact: false,
         ledgerEntries: 2,
@@ -56,9 +72,11 @@ void main() {
         cabinetRecordExists: true,
         masterJunk: 0,
         derangeSecret: 'n0t-a-username-mixer',
+        redlightSealed: true,
       ),
     );
     expect(report.byId('session.legacy')!.severity, LeakSeverity.patched);
+    expect(report.byId('redlight.vault')!.severity, LeakSeverity.patched);
     expect(report.byId('phosphor.username')!.severity, LeakSeverity.patched);
     expect(report.byId('cover.chrome')!.severity, LeakSeverity.patched);
     expect(report.byId('v1.stego')!.severity, LeakSeverity.patched);

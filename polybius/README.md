@@ -53,8 +53,8 @@ is a loopback sidecar, not an embedded Python stack. Cover PIN sessions
 look identical in the arcade; a Hive dump still shows that a cover record
 exists. The leak detector names that residual. The auto-patcher weaves
 cabinet policy (V2 ticket, phosphor mixer, real-seed chrome, V1 without
-decoys, dual-density decrypt, cover PIN gate, tofu filter). It does **not**
-patch the binary or hide a Hive dump.
+decoys, dual-density decrypt, cover PIN gate, tofu filter, red-light seal).
+It does **not** patch the binary or hide a Hive dump.
 
 ## Three Layers
 
@@ -67,8 +67,8 @@ OPERATOR ID + ACCESS KEY. The CRT then runs six steps:
 | 01 | CHALLENGE | Random nonce for this handshake |
 | 02 | VERIFY | PBKDF2 on the access key. Same `ACCESS DENIED` for unknown operator or bad key |
 | 03 | TICKET | Device-bound session `v2:USER:issued:nonce:mac` |
-| 04 | LEAK SWEEP | Patcher DETECT phase — the CRT prints the real count, e.g. `7 OPEN` |
-| 05 | AUTOPATCH | APPLY → VERIFY → LEDGER — e.g. `7 WOVEN #1` (or `n PENDING` if something could not close) |
+| 04 | LEAK SWEEP | Patcher DETECT phase — the CRT prints the real count, e.g. `8 OPEN` |
+| 05 | AUTOPATCH | APPLY → VERIFY → LEDGER — e.g. `8 WOVEN #1` (or `n PENDING` if something could not close) |
 | 06 | CABINET | Ready, or PIN gate |
 
 The ticket is HMAC’d with the working AES key. Swapping the operator name in the session box fails the MAC. It is **not** a password proof after the fact. A ticket older than **14 days** is dropped on restore (`TICKET_EXPIRED` audit) and the operator logs in again; a rolled-back clock counts as expired. First install still creates `DEVELOPER`.
@@ -79,7 +79,7 @@ One pipeline, five triggers, one ledger.
 
 ```
 DETECT  LeakDetector.scan(snapshot)          → N OPEN
-APPLY   7 PatchSteps fold CabinetPolicy      + 2 storage hooks (ticket, mixer)
+APPLY   8 PatchSteps fold CabinetPolicy      + 3 storage hooks (ticket, mixer, red-light vault)
 VERIFY  LeakDetector.scan(snapshot')         → M OPEN
 LEDGER  PatchLedgerEntry{seq, trigger, N→M, per-step outcome, policy}
         mac = HMAC(device key, prevMac | canonical)
@@ -98,6 +98,36 @@ The first weave on a device is tagged `BASELINE·<trigger>` and detects against 
 Per-step outcomes: `APPLIED` (open→patched), `HELD` (already patched), `PENDING` (still open — e.g. no session to bind a ticket to), `RESIDUAL` (named, not remediable in-app). The ledger is MAC-chained under the device key: editing an old entry, deleting a middle one, or copying the settings box to another device breaks the chain, which the detector reports as an OPEN `PATCH LEDGER` finding and audits as `LEDGER_TAMPER`. The ledger is capped at 64 entries; the surviving tail still verifies.
 
 What it is not: a binary updater, a network fetch, or a way to hide the cover record. `SignatureService.verifyPayload` still has no install path (BUILD.md).
+
+### Red-light vault
+
+The cabinet lamp filter and the keypress obfuscation are not compiled constants and not loose Hive keys. They live in one record, `RedlightProfile`, stored at `settings/redlightVault` as a single AES-256-CBC `v2:` blob under the device key:
+
+```
+{ v, owner, mixer, gain, lift, crush }
+  owner  operator (uppercase) the vault was minted for
+  mixer  24 random bytes — never the username
+  gain / lift / crush   per-vault lamp matrix jitter (deep red on every device)
+```
+
+The keypress-obfuscation secret is **never stored**. It is derived on open:
+
+```
+derangeSecret = base64url( HMAC(device key, "REDLIGHT-DERANGE::" + owner + "::" + mixer) )
+```
+
+so a decrypted vault on another device still yields a different phosphor map. The ENCRYPT tab renders the glyph keyboard and the lamp only when every gate passes, in this order:
+
+| Gate | Sealed reason on the CRT |
+|---|---|
+| Darth Cherry armed | `DARTH CHERRY DARK` |
+| Policy has `redlight=1` | `CABINET POLICY UNSEALED — RUN WEAVE` |
+| Authenticated operator in memory | `NO OPERATOR — LOG IN ON THIS DEVICE` |
+| Verified, unexpired V2 ticket in the session box | `NO DEVICE TICKET — V2 LOGIN REQUIRED` |
+| Ticket operator == live operator | `TICKET OPERATOR MISMATCH` |
+| Vault decrypts under this key **and** is owned by that operator | `VAULT LOCKED — NOT MINTED ON THIS DEVICE` |
+
+Anything short of all six shows `REDLIGHT SEALED` instead of the keyboard, the lamp toggle is disabled, and the ENCRYPT button is inert. The `REDLIGHT SEAL` patch step mints the vault for the live operator during the weave (reusing an existing strong cherry mixer so the layout does not jump); the `REDLIGHT VAULT` leak finding reads `OPEN` until the vault exists. One vault per device — it follows the operator who last wove, and a different operator logging in re-mints it. Honest limit: on web the device key is obfuscation, not a keystore (BUILD.md), so "device-bound" there means "bound to this browser profile."
 
 ### Layer 2 — Decoy Arcade
 Psychedelic neon CRT main menu with playable space shooter. MKUltra-themed level names, subliminal glitch text, ship upgrades MK-I → MK-V.
@@ -120,7 +150,7 @@ plaintext index.
 
 ## Cipher Tabs
 
-- **🔒 ENCRYPT** — advanced V1 plaintext field → emoji ciphertext (2 glyphs/char, no decoys). Glyph keyboard only after **Darth Cherry** is armed. Cherry shows the leak sweep.
+- **🔒 ENCRYPT** — advanced V1 plaintext field → emoji ciphertext (2 glyphs/char, no decoys). Glyph keyboard only after **Darth Cherry** is armed *and* the red-light vault opens for the ticketed operator; otherwise `REDLIGHT SEALED`. Cherry shows the leak sweep.
 - **🔓 DECRYPT** — emoji → plaintext
 - **🎲 POOL** — active 560-glyph window + slot
 - **🔗 SYNC** — QR / padded courier token
@@ -152,6 +182,7 @@ flutter test
 - Pool forcing logs out all users (including DEVELOPER) and requires PIN re-auth
 - V2 session tickets are HMAC-bound to the device key; they are not a password proof, and they age out after 14 days
 - The patch ledger is MAC-chained under the device key; a broken chain is an OPEN leak finding, not a silent reset
+- Lamp filter + keypress derangement live in one AES-sealed, operator-bound vault; the derangement secret is an HMAC under the device key and is never written to disk; the keyboard renders only for an authenticated operator holding a live ticket on the minting device
 
 ## Legal
 
@@ -167,7 +198,8 @@ Ideas that fit the honest-crypto rule. None are implemented; each names the surf
 - **Signed policy manifest.** Ship `CabinetPolicy.canonical` + a version inside a `SignedToken` (RSA-4096, offline key, same path as invites). The patcher would refuse a policy that is not signed and newer than the embedded baseline. Closes: a Hive edit flipping a flag between weaves. Leaves open: the device owner can still patch the verifier.
 - **Ledger anchor in the courier token.** Put the latest ledger MAC (8 chars) into the SYNC QR so the peer's cabinet records which weave the pool was aligned under. Closes: "which policy was live when this pool was cut" ambiguity. Leaves open: nothing new; it is display-only unless both ends compare.
 - **Ticket rotation on sensitive actions.** GEAR CAL, cover-identity arm and pool force each re-issue the ticket (new nonce, new MAC) and chain a weave. Closes: a copied session box staying valid for the full 14 days after a checkpoint. Leaves open: copies made before the rotation are only killed by the age limit.
-- **Slot-bound mixer.** Derive the phosphor mixer per 2-hour slot from the stored mixer + slot index, so a shoulder-surfed keyboard layout is stale after the remap. Closes: layout recall across slots. Leaves open: within-slot recall.
+- **Slot-bound mixer.** Derive the phosphor mixer per 2-hour slot from the vault mixer + slot index, so a shoulder-surfed keyboard layout is stale after the remap. Closes: layout recall across slots. Leaves open: within-slot recall. (The derangement already takes the pool slot; this would rotate the secret too.)
+- **Per-operator vaults.** Today one red-light vault per device follows the last operator who wove. Keying the Hive entry by owner would let two operators share a device without re-minting each other's lamp jitter. Closes: layout churn on shared cabinets. Leaves open: nothing new; each vault is still sealed to the same device key.
 - **Pending-outcome nudge.** When a weave ends with `PENDING`, the Cherry banner shows the step title instead of a green bar (e.g. `PENDING · V2 TICKET`). Closes: a false all-clear on the encrypt screen. Leaves open: nothing; UX only.
 - **Duress-aware weave.** A weave triggered during a cover session must not write the cover username into the ledger. Today the entry records `operatorUsername` only in the audit actor, never in the ledger — keep it that way, and add a test that greps the ledger JSON for the cover initials.
 - **Ledger export as padded frame.** Let the Developer panel export the ledger over the same padded transport frame as ciphertext so an operator can carry a weave history to a second device without a screenshot. Closes: out-of-band review. Leaves open: the export is only as trustworthy as the device key that signed it.

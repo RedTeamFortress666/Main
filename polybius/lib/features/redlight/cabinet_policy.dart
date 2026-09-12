@@ -13,6 +13,7 @@ class CabinetPolicy {
     this.persistCoverPinGate = false,
     this.v2Session = false,
     this.filterTofu = false,
+    this.sealRedlight = false,
   });
 
   /// Old V1 path stuffed unused-master decoys into ciphertext.
@@ -36,6 +37,10 @@ class CabinetPolicy {
   /// Master glyph cabinet skips unassigned / modifier / control runes.
   final bool filterTofu;
 
+  /// Lamp filter + keypress derangement live in one AES-sealed, operator-
+  /// bound vault and render only behind a valid device ticket.
+  final bool sealRedlight;
+
   /// Interwoven default — the patcher is the boot path, not a later click.
   static const woven = CabinetPolicy(
     v1Stego: false,
@@ -45,6 +50,7 @@ class CabinetPolicy {
     persistCoverPinGate: true,
     v2Session: true,
     filterTofu: true,
+    sealRedlight: true,
   );
 
   /// Pre-patch cabinet (used by the detector to name what got fixed).
@@ -58,6 +64,7 @@ class CabinetPolicy {
     bool? persistCoverPinGate,
     bool? v2Session,
     bool? filterTofu,
+    bool? sealRedlight,
   }) =>
       CabinetPolicy(
         v1Stego: v1Stego ?? this.v1Stego,
@@ -67,6 +74,7 @@ class CabinetPolicy {
         persistCoverPinGate: persistCoverPinGate ?? this.persistCoverPinGate,
         v2Session: v2Session ?? this.v2Session,
         filterTofu: filterTofu ?? this.filterTofu,
+        sealRedlight: sealRedlight ?? this.sealRedlight,
       );
 
   /// Stable wire form. Goes into the patch-ledger MAC so a Hive edit that
@@ -79,6 +87,7 @@ class CabinetPolicy {
         'pingate=${persistCoverPinGate ? 1 : 0}',
         'v2=${v2Session ? 1 : 0}',
         'tofu=${filterTofu ? 1 : 0}',
+        'redlight=${sealRedlight ? 1 : 0}',
       ].join(';');
 
   bool get isWoven => canonical == woven.canonical;

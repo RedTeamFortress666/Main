@@ -16,6 +16,7 @@ import 'package:polybius/features/redlight/auto_patcher.dart';
 import 'package:polybius/features/redlight/cabinet_policy.dart';
 import 'package:polybius/features/redlight/leak_detector.dart';
 import 'package:polybius/features/redlight/patch_ledger.dart';
+import 'package:polybius/features/redlight/redlight_vault.dart';
 import 'package:polybius/features/transport/transport_hub.dart';
 import 'dart:convert';
 import 'dart:math';
@@ -150,12 +151,14 @@ class LeakSurface {
     this.cabinetRecordExists = false,
     this.ledgerIntact = true,
     this.ledgerEntries = 0,
+    this.redlightSealed = false,
   });
 
   final bool sessionIsV2;
   final bool cabinetRecordExists;
   final bool ledgerIntact;
   final int ledgerEntries;
+  final bool redlightSealed;
 }
 
 class LeakSurfaceNotifier extends StateNotifier<LeakSurface> {
@@ -168,8 +171,10 @@ class LeakSurfaceNotifier extends StateNotifier<LeakSurface> {
   Future<void> refresh({String? username}) async {
     final ticket = await _storage.hasV2Ticket();
     var cabinet = false;
+    var sealed = false;
     if (username != null) {
       cabinet = await _storage.getCabinet(username) != null;
+      sealed = await _storage.getRedlightVault(username) != null;
     }
     final ledger = await _storage.getPatchLedger();
     state = LeakSurface(
@@ -177,6 +182,7 @@ class LeakSurfaceNotifier extends StateNotifier<LeakSurface> {
       cabinetRecordExists: cabinet,
       ledgerIntact: ledger.intact,
       ledgerEntries: ledger.entries.length,
+      redlightSealed: sealed,
     );
   }
 }
@@ -199,7 +205,47 @@ final leakReportProvider = Provider<LeakReport>((ref) {
       derangeSecret: ref.watch(cherryMixerProvider),
       ledgerIntact: surface.ledgerIntact,
       ledgerEntries: surface.ledgerEntries,
+      redlightSealed: surface.redlightSealed,
     ),
+  );
+});
+
+/// The red-light gate.
+///
+/// Lamp filter and keypress derangement render only when all of these hold:
+/// Darth Cherry armed, policy sealed, an authenticated operator, a verified
+/// unexpired V2 ticket on this device whose operator matches, and a vault
+/// that decrypts under this device key for that operator. Anything else is a
+/// sealed panel with the reason printed on it.
+final redlightAccessProvider = FutureProvider<RedlightAccess>((ref) async {
+  final cherry = ref.watch(darthCherryProvider);
+  final policy = ref.watch(cabinetPolicyProvider);
+  final auth = ref.watch(authProvider);
+  // Re-evaluate when the session box or vault changes.
+  ref.watch(leakSurfaceProvider);
+  ref.watch(autoPatcherProvider);
+
+  if (!cherry) return const RedlightAccess.sealed(RedlightSeal.cherryDark);
+  if (!policy.sealRedlight) {
+    return const RedlightAccess.sealed(RedlightSeal.policyUnsealed);
+  }
+  final user = auth.user;
+  if (user == null || !auth.isAuthenticated) {
+    return const RedlightAccess.sealed(RedlightSeal.noOperator);
+  }
+  final storage = ref.read(storageServiceProvider);
+  final ticket = await storage.currentTicket();
+  if (ticket == null) return const RedlightAccess.sealed(RedlightSeal.noTicket);
+  if (ticket.username != user.username.toUpperCase()) {
+    return const RedlightAccess.sealed(RedlightSeal.operatorMismatch);
+  }
+  final profile = await storage.getRedlightVault(user.username);
+  if (profile == null) {
+    return const RedlightAccess.sealed(RedlightSeal.vaultLocked);
+  }
+  return RedlightAccess.open(
+    profile: profile,
+    derangeSecret: profile.derangeSecret(storage.deviceMac),
   );
 });
 
@@ -221,6 +267,14 @@ class _StoragePatchHooks extends PatchHooks {
 
   @override
   Future<String> ensureMixer() => _storage.ensureCherryMixer();
+
+  @override
+  Future<bool> ensureRedlightVault() async {
+    final user = _username ?? await _storage.getSessionUser();
+    if (user == null || user.isEmpty) return false;
+    await _storage.ensureRedlightVault(user);
+    return await _storage.getRedlightVault(user) != null;
+  }
 }
 
 /// Owns the patch ledger and drives every weave in the app.
@@ -257,6 +311,8 @@ class AutoPatcherNotifier extends StateNotifier<PatchLedger> {
     final ledger = await _storage.getPatchLedger();
     final user = username ?? _ref.read(authProvider).user?.username;
     final cabinet = user == null ? false : await _storage.getCabinet(user) != null;
+    final sealed =
+        user == null ? false : await _storage.getRedlightVault(user) != null;
     final mixer = await _storage.getCherryMixer() ?? '';
     final snapshot = LeakSnapshot(
       policy: ledger.isEmpty
@@ -270,6 +326,7 @@ class AutoPatcherNotifier extends StateNotifier<PatchLedger> {
       derangeSecret: mixer,
       ledgerIntact: ledger.intact,
       ledgerEntries: ledger.entries.length,
+      redlightSealed: sealed,
     );
 
     final result = await AutoPatcher.run(
