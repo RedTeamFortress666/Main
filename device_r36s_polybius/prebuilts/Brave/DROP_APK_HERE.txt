@@ -1,0 +1,9 @@
+Brave lands here as Brave.apk
+
+  applicationId: com.brave.browser
+  role: default browser (desk + ROLE_BROWSER)
+  source: official Brave F-Droid repo
+    https://brave-browser-apk-release.s3.brave.com/fdroid/repo
+
+./device_r36s_polybius/fetch-cover-apks.sh
+# or: BRAVE_APK_URL=... ./device_r36s_polybius/fetch-cover-apks.sh

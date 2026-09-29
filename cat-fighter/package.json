@@ -1,0 +1,9 @@
+{
+  "name": "yokos-tuna-brawl",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "start": "python3 -m http.server 4173"
+  }
+}
