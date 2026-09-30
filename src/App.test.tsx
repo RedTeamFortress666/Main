@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import App from './App'
@@ -43,4 +43,23 @@ describe('App', () => {
 
     expect(screen.queryByText('Temporary')).not.toBeInTheDocument()
   })
+
+  it('opens the QR transfer panel and round-trips a sample bundle', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: /qr transfer/i }))
+    expect(await screen.findByRole('heading', { name: /qr transfer/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /load sample pqc bundle/i })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /load sample pqc bundle/i }))
+    await waitFor(() => {
+      expect(screen.getByTestId('qr-total-label')).toHaveTextContent('9')
+    })
+    expect(screen.getByText(/4493 bytes ready/i)).toBeInTheDocument()
+
+    await user.click(screen.getByTestId('scan-all-frames'))
+    await waitFor(() => {
+      expect(screen.getByTestId('scan-result')).toHaveTextContent(/hash verified/i)
+    })
+  }, 15_000)
 })

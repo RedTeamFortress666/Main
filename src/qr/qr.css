@@ -1,0 +1,270 @@
+.qr-encoder,
+.qr-scanner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.qr-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: #ffffff;
+  border: 1px solid #eef1f6;
+  border-radius: 16px;
+}
+
+.qr-canvas,
+.qr-svg svg {
+  width: 280px;
+  height: 280px;
+  image-rendering: pixelated;
+  background: #ffffff;
+}
+
+.qr-canvas--hidden {
+  position: absolute;
+  width: 280px;
+  height: 280px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.qr-stage__status {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.qr-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.65rem 1rem;
+  margin: 0;
+}
+
+.qr-meta dt {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+}
+
+.qr-meta dd {
+  margin: 0.15rem 0 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  word-break: break-all;
+}
+
+.qr-meta__hash dd {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.82rem;
+}
+
+.qr-controls,
+.qr-scanner__actions,
+.transfer__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.qr-controls button,
+.qr-scanner__actions button,
+.qr-paste button,
+.transfer__row button,
+.qr-file {
+  padding: 0.45rem 0.85rem;
+  border: none;
+  border-radius: 10px;
+  background: #6366f1;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.qr-controls button:disabled,
+.transfer__row button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.qr-controls button:hover:not(:disabled),
+.qr-scanner__actions button:hover,
+.qr-paste button:hover,
+.transfer__row button:hover,
+.qr-file:hover {
+  background: #4f46e5;
+}
+
+.qr-file {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.qr-file input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.qr-scanner__viewport {
+  min-height: 220px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #0f172a;
+}
+
+.qr-scanner__error {
+  margin: 0;
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  font-size: 0.85rem;
+}
+
+.qr-paste {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.qr-paste input,
+.transfer__hex {
+  flex: 1;
+  width: 100%;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid #d7dee8;
+  border-radius: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.82rem;
+}
+
+.transfer {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.transfer__grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.transfer__card {
+  background: #fafbfe;
+  border: 1px solid #eef1f6;
+  border-radius: 16px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.transfer__card h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.transfer__hint {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.transfer__modes {
+  border: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem 1.25rem;
+}
+
+.transfer__modes legend {
+  padding: 0;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+}
+
+.transfer__modes label,
+.transfer__speed {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.92rem;
+}
+
+.transfer__speed {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.transfer__result {
+  padding: 0.75rem;
+  border-radius: 12px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+  font-size: 0.9rem;
+}
+
+.transfer__result p {
+  margin: 0 0 0.4rem;
+}
+
+.transfer__result code {
+  font-size: 0.75rem;
+  word-break: break-all;
+}
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.app-nav {
+  display: flex;
+  gap: 0.4rem;
+  padding: 0.25rem;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+}
+
+.app-nav button {
+  flex: 1;
+  padding: 0.55rem 0.75rem;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #475569;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.app-nav button[aria-current='page'] {
+  background: #6366f1;
+  color: #fff;
+}
+
+@media (min-width: 840px) {
+  .transfer__grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .transfer__grid > .transfer__card:first-child {
+    grid-column: 1 / -1;
+  }
+}
