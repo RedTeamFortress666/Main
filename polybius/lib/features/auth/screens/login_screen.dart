@@ -2,14 +2,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:polybius/core/constants/app_constants.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 import 'package:polybius/core/crypto/unpredictable_shift.dart';
 import 'package:polybius/core/widgets/crt_widgets.dart';
 import 'package:polybius/core/widgets/floating_glyph_keyboard.dart';
 
-/// Replit-style OIDC login gate. First install ships with DEVELOPER account.
+/// V2 protocol login gate. First install ships with DEVELOPER account.
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -21,6 +20,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscure = true;
+  int _visibleLines = 0;
 
   @override
   void dispose() {
@@ -30,12 +30,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _submit() async {
+    setState(() => _visibleLines = 0);
     final ok = await ref.read(authProvider.notifier).login(
           _usernameController.text.trim(),
           _passwordController.text,
+          deferCommit: true,
         );
     if (!mounted) return;
+    final handshake = ref.read(authProvider).handshake;
+    for (var i = 1; i <= handshake.lines.length; i++) {
+      if (!mounted) return;
+      setState(() => _visibleLines = i);
+      await Future<void>.delayed(const Duration(milliseconds: 90));
+    }
+    if (!mounted) return;
     if (ok) {
+      // Hold the finished console for a beat, then publish the account.
+      await Future<void>.delayed(const Duration(milliseconds: 900));
+      if (!mounted) return;
+      ref.read(authProvider.notifier).commitLogin();
       final auth = ref.read(authProvider);
       if (auth.needsPin) {
         context.go('/pin');
@@ -101,75 +114,76 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       AppConstants.appName,
                       style: Theme.of(context).textTheme.displayLarge,
                     ),
+                  ),
+                  const SizedBox(height: 22),
+                  _LoginField(
+                    controller: _usernameController,
+                    label: 'OPERATOR ID',
+                    icon: Icons.person_outline,
+                  ),
+                  const SizedBox(height: 14),
+                  _LoginField(
+                    controller: _passwordController,
+                    label: 'ACCESS KEY',
+                    icon: Icons.lock_outline,
+                    obscure: _obscure,
+                    suffix: IconButton(
+                      icon: Icon(
+                        _obscure ? Icons.visibility : Icons.visibility_off,
+                        color: NeonTheme.neonCyan,
+                      ),
+                      onPressed: () => setState(() => _obscure = !_obscure),
+                    ),
+                    onSubmitted: (_) => _submit(),
+                  ),
+                  if (auth.error != null) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      auth.error!,
+                      style: const TextStyle(color: NeonTheme.dangerRed),
+                    ),
+                  ],
+                  const SizedBox(height: 14),
+                  V2ProtocolConsole(
+                    log: auth.handshake,
+                    visibleLines: auth.handshake.lines.isEmpty
+                        ? null
+                        : _visibleLines,
+                    preview: auth.handshake.lines.isEmpty,
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: NeonButton(
+                      label: auth.isLoading ? 'AUTHENTICATING...' : 'LOGIN',
+                      onPressed: auth.isLoading ? null : _submit,
+                      color: NeonTheme.neonPink,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: auth.isLoading
+                        ? null
+                        : () => context.go('/register'),
+                    child: const Text(
+                      'CREATE ACCOUNT',
+                      style: TextStyle(
+                        fontFamily: 'monospace',
+                        color: NeonTheme.neonCyan,
+                        letterSpacing: 2,
+                      ),
+                    ),
+                  ),
+                  if (kDebugMode) ...[
                     const SizedBox(height: 8),
                     Text(
-                      'CLASSIFIED ARCADE TERMINAL',
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            color: NeonTheme.neonGreen,
+                      'First install: use DEVELOPER / developer',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontSize: 11,
+                            color: Colors.white38,
                           ),
                     ),
-                    const SizedBox(height: 40),
-                    _LoginField(
-                      controller: _usernameController,
-                      label: 'OPERATOR ID',
-                      icon: Icons.person_outline,
-                    ),
-                    const SizedBox(height: 16),
-                    _LoginField(
-                      controller: _passwordController,
-                      label: 'ACCESS KEY',
-                      icon: Icons.lock_outline,
-                      obscure: _obscure,
-                      suffix: IconButton(
-                        icon: Icon(
-                          _obscure ? Icons.visibility : Icons.visibility_off,
-                          color: NeonTheme.neonCyan,
-                        ),
-                        onPressed: () => setState(() => _obscure = !_obscure),
-                      ),
-                      onSubmitted: (_) => _submit(),
-                    ),
-                    if (auth.error != null) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        auth.error!,
-                        style: const TextStyle(color: NeonTheme.dangerRed),
-                      ),
-                    ],
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      child: NeonButton(
-                        label: auth.isLoading ? 'AUTHENTICATING...' : 'LOGIN',
-                        onPressed: auth.isLoading ? null : _submit,
-                        color: NeonTheme.neonPink,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: auth.isLoading
-                          ? null
-                          : () => context.go('/register'),
-                      child: const Text(
-                        'CREATE ACCOUNT',
-                        style: TextStyle(
-                          fontFamily: 'monospace',
-                          color: NeonTheme.neonCyan,
-                          letterSpacing: 2,
-                        ),
-                      ),
-                    ),
-                    if (kDebugMode) ...[
-                      const SizedBox(height: 24),
-                      Text(
-                        'First install: use DEVELOPER / developer',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontSize: 11,
-                              color: Colors.white38,
-                            ),
-                      ),
-                    ],
                   ],
-                ),
+                ],
               ),
             ),
           ),
@@ -220,6 +234,8 @@ class _LoginField extends StatelessWidget {
         labelStyle: const TextStyle(color: NeonTheme.neonGreen),
         prefixIcon: Icon(icon, color: NeonTheme.neonCyan),
         suffixIcon: suffix,
+        filled: true,
+        fillColor: Colors.black.withValues(alpha: 0.45),
         enabledBorder: const OutlineInputBorder(
           borderSide: BorderSide(color: NeonTheme.neonCyan),
         ),

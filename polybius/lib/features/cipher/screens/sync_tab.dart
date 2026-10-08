@@ -80,6 +80,9 @@ class _SyncTabState extends ConsumerState<SyncTab> {
       _t3mpUrl = T3mpClient.extractDropUrl(raw.trim());
       _message = 'POOL ALIGNED — ${token.poolId}';
     });
+    // A new pool is a new cabinet state: re-run the weave so the chrome and
+    // decrypt policy are re-asserted against the imported seed.
+    ref.read(autoPatcherProvider.notifier).weave('SYNC');
   }
 
   Future<void> _scan() async {
@@ -124,7 +127,10 @@ class _SyncTabState extends ConsumerState<SyncTab> {
   @override
   Widget build(BuildContext context) {
     final seed = ref.watch(poolSeedProvider);
-    final engine = ref.watch(cipherEngineProvider);
+    final policy = ref.watch(cabinetPolicyProvider);
+    final engine = policy.chromeUsesRealSeed
+        ? ref.watch(realCipherEngineProvider)
+        : ref.watch(cipherEngineProvider);
     final token = PoolSync.fromSeed(seed);
     final code = token.encode();
     final shareText = _t3mpUrl ?? code;
@@ -145,7 +151,7 @@ class _SyncTabState extends ConsumerState<SyncTab> {
         ),
         const SizedBox(height: 4),
         Text(
-          'Active pool: ${engine.poolId}',
+          'Active pool: ${ref.watch(displayPoolIdProvider)} · slot ${engine.slot}',
           textAlign: TextAlign.center,
           style: const TextStyle(color: Colors.white54, fontSize: 12),
         ),

@@ -115,6 +115,12 @@ class _PolybiusAppState extends ConsumerState<PolybiusApp> {
     ref.listen(gameSettingsProvider.select((s) => s.soundEnabled), (_, enabled) {
       ref.read(musicServiceProvider).setEnabled(enabled);
     });
+    ref.listen(authProvider.select((s) => s.user?.username), (prev, next) {
+      if (next == null) ref.read(duressProvider.notifier).disarm();
+      // LOGIN / RESTORE already ran the weave inside AuthNotifier; here we
+      // only re-read the surface so the detector tracks the operator change.
+      ref.read(leakSurfaceProvider.notifier).refresh(username: next);
+    });
 
     final router = ref.watch(routerProvider);
     final unlock = ref.watch(unlockProvider);

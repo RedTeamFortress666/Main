@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:polybius/core/net/t3mp_client.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
+import 'package:polybius/features/cipher/engine/cipher_engine.dart';
 import 'package:polybius/features/cipher/screens/clipboard_row.dart';
 
 class DecryptTab extends ConsumerStatefulWidget {

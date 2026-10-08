@@ -11,6 +11,9 @@ import 'package:polybius/features/cipher/screens/encrypt_tab.dart';
 import 'package:polybius/features/cipher/screens/pool_tab.dart';
 import 'package:polybius/features/cipher/screens/rotor_gear_sheet.dart';
 import 'package:polybius/features/cipher/screens/sync_tab.dart';
+import 'package:polybius/features/glasses/cover_screensaver.dart';
+import 'package:polybius/features/glasses/glasses_link.dart';
+import 'package:polybius/features/redlight/cabinet_lamp.dart';
 
 /// Layer 3 hidden cipher tool — accessible only after unlock rituals.
 class CipherShell extends ConsumerStatefulWidget {
@@ -48,19 +51,54 @@ class _CipherShellState extends ConsumerState<CipherShell>
   Widget build(BuildContext context) {
     final unlock = ref.watch(unlockProvider);
     final isDev = unlock.state == UnlockState.developer;
+    final cherry = ref.watch(darthCherryProvider);
+    final access = ref.watch(redlightAccessProvider).valueOrNull;
+    final vaultOpen = access?.granted ?? false;
+    // The lamp is a vault property: no open vault, no filter — and the
+    // matrix itself comes out of the sealed profile, not a compiled constant.
+    final lamp = cherry && vaultOpen && ref.watch(cabinetLampProvider);
+    final policy = ref.watch(cabinetPolicyProvider);
+    final viewer = ref.watch(glassesViewerProvider);
+    final attract = policy.glassesHud && viewer != GlassesViewer.hud;
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: NeonTheme.surface,
-        title: const Text(
-          '◈ CIPHER CHANNEL ◈',
-          style: TextStyle(fontFamily: 'monospace', fontSize: 16),
+        backgroundColor: cherry ? NeonTheme.cherryDeep : NeonTheme.surface,
+        title: Text(
+          cherry ? '◈ DΛRTH CHERRY CHANNEL ◈' : '◈ CIPHER CHANNEL ◈',
+          style: TextStyle(
+            fontFamily: 'monospace',
+            fontSize: 15,
+            color: cherry ? NeonTheme.cherry : Colors.white,
+            shadows: cherry
+                ? const [Shadow(color: NeonTheme.dangerRed, blurRadius: 12)]
+                : null,
+          ),
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: NeonTheme.neonCyan),
           onPressed: () => context.go('/menu'),
         ),
         actions: [
+          if (cherry)
+            IconButton(
+              icon: Icon(
+                lamp ? Icons.lightbulb : Icons.lightbulb_outline,
+                color: !vaultOpen
+                    ? Colors.white24
+                    : lamp
+                        ? NeonTheme.dangerRed
+                        : NeonTheme.neonYellow,
+              ),
+              tooltip: !vaultOpen
+                  ? 'Redlight sealed — ${access?.reason ?? 'opening vault'}'
+                  : lamp
+                      ? 'Cabinet lamp'
+                      : 'House lights',
+              onPressed: !vaultOpen
+                  ? null
+                  : () => ref.read(cabinetLampProvider.notifier).state = !lamp,
+            ),
           IconButton(
             icon: const Icon(Icons.settings, color: NeonTheme.neonPink),
             tooltip: 'Rotor Gear',
@@ -94,15 +132,32 @@ class _CipherShellState extends ConsumerState<CipherShell>
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: const [
-          EncryptTab(),
-          DecryptTab(),
-          PoolTab(),
-          SyncTab(),
-          ConnectTab(),
-        ],
+      body: CabinetLamp.wrap(
+        on: lamp,
+        filter: access?.profile?.lampFilter,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            TabBarView(
+              controller: _tabController,
+              children: const [
+                EncryptTab(),
+                DecryptTab(),
+                PoolTab(),
+                SyncTab(),
+                ConnectTab(),
+              ],
+            ),
+            if (attract)
+              CoverScreensaver(
+                canWake: ref.watch(authProvider).isAuthenticated,
+                onOperatorWake: () {
+                  ref.read(glassesViewerProvider.notifier).state =
+                      GlassesViewer.hud;
+                },
+              ),
+          ],
+        ),
       ),
     );
   }

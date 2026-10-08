@@ -1,8 +1,10 @@
-import 'dart:math';
-import 'package:crypto/crypto.dart';
 import 'package:polybius/core/constants/app_constants.dart';
+import 'package:polybius/core/crypto/hkdf.dart';
 
-/// Single Enigma-style rotor with date-seeded wiring.
+/// Single rotor. Wiring is HMAC-shuffled; motion is odometer, not Enigma
+/// notches. The notch is kept as cabinet flavour (and a UI readout) only —
+/// double-stepping and "all rotors always step" are classical flaws we do
+/// not reproduce.
 class Rotor {
   Rotor({
     required this.name,
@@ -21,17 +23,33 @@ class Rotor {
   static const int alphabetSize = AppConstants.halfPool;
 
   factory Rotor.create(String name, String dateKey, int offset) {
-    final seed = sha256.convert('$dateKey::$name::$offset'.codeUnits).bytes;
-    final rng = Random(seed.fold<int>(0, (a, b) => a ^ b));
+    final key = utf8Bytes('$dateKey::ROTOR::$name::$offset');
     final wiring = List<int>.generate(alphabetSize, (i) => i);
-    wiring.shuffle(rng);
-    final notch = rng.nextInt(alphabetSize);
-    return Rotor(name: name, wiring: wiring, notch: notch);
+    for (var i = wiring.length - 1; i > 0; i--) {
+      final block = hmacSha256(key, utf8Bytes('RW::$i'));
+      var n = 0;
+      for (final b in block.take(8)) {
+        n = (n << 8) | b;
+      }
+      final j = n.remainder(i + 1).abs();
+      final tmp = wiring[i];
+      wiring[i] = wiring[j];
+      wiring[j] = tmp;
+    }
+    final notchBlock = hmacSha256(key, utf8Bytes('NOTCH'));
+    final notch = notchBlock[0] | (notchBlock[1] << 8);
+    return Rotor(
+      name: name,
+      wiring: wiring,
+      notch: notch % alphabetSize,
+    );
   }
 
-  void step() {
+  /// Steps one position. Returns true when the wheel wraps to 0 (odometer carry).
+  bool step() {
     position = (position + 1) % alphabetSize;
     stepCount++;
+    return position == 0;
   }
 
   int forward(int input) {
@@ -54,3 +72,5 @@ class Rotor {
         stepCount: stepCount,
       );
 }
+
+List<int> utf8Bytes(String s) => s.codeUnits;

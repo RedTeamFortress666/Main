@@ -1,10 +1,22 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:polybius/core/constants/app_constants.dart';
 import 'package:polybius/core/constants/unlock_codes.dart';
 import 'package:polybius/core/crypto/encryption_service.dart';
 import 'package:polybius/core/models/models.dart';
+import 'package:polybius/features/auth/v2_login_protocol.dart';
+import 'package:polybius/features/duress/cabinet_identity.dart';
+import 'package:polybius/features/redlight/auto_patcher.dart';
+import 'package:polybius/features/redlight/patch_ledger.dart';
+import 'package:polybius/core/crypto/ml_kem_768.dart';
+import 'package:polybius/features/glasses/glasses_link.dart';
+import 'package:polybius/features/redlight/redlight_vault.dart';
+import 'package:polybius/features/roundtable/round_table.dart';
+import 'package:polybius/features/roundtable/traffic_sketch.dart';
+import 'package:polybius/features/stego/stego_receipt.dart';
+import 'package:polybius/features/stego/stego_vet.dart';
 
 class StorageService {
   StorageService(this._encryption);
@@ -32,8 +44,8 @@ class StorageService {
   }
 
   Future<void> _bootstrapDeveloper() async {
-    final box = Hive.box(accountsBox);
-    if (!box.containsKey(AppConstants.developerUsername)) {
+    final existing = await getAccount(AppConstants.developerUsername);
+    if (existing == null) {
       final dev = UserAccount(
         username: AppConstants.developerUsername,
         passwordHash: EncryptionService.hashPassword('developer'),
@@ -41,10 +53,7 @@ class StorageService {
         tier: UserTier.developer,
         createdAt: DateTime.now(),
       );
-      await box.put(
-        dev.username,
-        _encryption.encrypt(_encodeJson(dev.toJson())),
-      );
+      await saveAccount(dev);
       await logAudit('BOOTSTRAP', AppConstants.developerUsername,
           'DEVELOPER account created on first install');
     }
@@ -290,19 +299,118 @@ class StorageService {
     return entries.take(limit).toList();
   }
 
-  Future<void> setSessionUser(String? username) async {
+  Future<void> setV2Session(String username) async {
+    final ticket = V2SessionTicket.issue(
+      username: username,
+      mac: _encryption.mac,
+    );
     final box = Hive.box(sessionBox);
-    if (username == null) {
-      await box.delete('user');
-    } else {
-      await box.put('user', username);
+    await box.put('ticket', ticket.wire);
+    await box.put('user', ticket.username);
+  }
+
+  Future<bool> hasV2Ticket() async {
+    final raw = Hive.box(sessionBox).get('ticket');
+    if (raw is! String || raw.isEmpty) return false;
+    final ticket = V2SessionTicket.parse(raw);
+    return ticket != null &&
+        ticket.verify(_encryption.mac) &&
+        !ticket.isExpired();
+  }
+
+  // ---------------------------------------------------------------------
+  // Patch ledger — MAC-chained weave records
+  // ---------------------------------------------------------------------
+
+  static const _ledgerKey = 'patchLedger';
+
+  String _ledgerMac(PatchLedgerEntry entry) {
+    return base64Url.encode(_encryption.mac(utf8.encode(entry.canonical)));
+  }
+
+  /// Loads the chain and verifies every link. Never throws on bad data —
+  /// a corrupt record is reported as a broken chain, which is the point.
+  Future<PatchLedger> getPatchLedger() async {
+    final raw = Hive.box(settingsBox).get(_ledgerKey);
+    if (raw is! List) return PatchLedger.empty;
+    final entries = <PatchLedgerEntry>[];
+    var intact = true;
+    for (final v in raw) {
+      if (v is! Map) {
+        intact = false;
+        continue;
+      }
+      try {
+        entries.add(PatchLedgerEntry.fromJson(Map<dynamic, dynamic>.from(v)));
+      } catch (_) {
+        intact = false;
+      }
     }
+    for (var i = 0; i < entries.length; i++) {
+      final e = entries[i];
+      if (_ledgerMac(e) != e.mac) intact = false;
+      if (i > 0 && e.prevMac != entries[i - 1].mac) intact = false;
+      if (i > 0 && e.seq <= entries[i - 1].seq) intact = false;
+    }
+    return PatchLedger(entries: entries, intact: intact);
+  }
+
+  /// Chains [entry] onto the ledger and persists. Returns the chained entry.
+  Future<PatchLedgerEntry> appendPatchLedger(
+    PatchLedgerEntry entry, {
+    int cap = AutoPatcher.ledgerCap,
+  }) async {
+    final ledger = await getPatchLedger();
+    final prev = ledger.latest?.mac ?? '';
+    final linked = entry.withChain(prevMac: prev, mac: '');
+    final chained = linked.withChain(prevMac: prev, mac: _ledgerMac(linked));
+    final all = [...ledger.entries, chained];
+    final kept = all.length > cap ? all.sublist(all.length - cap) : all;
+    await Hive.box(settingsBox).put(
+      _ledgerKey,
+      kept.map((e) => e.toJson()).toList(),
+    );
+    return chained;
+  }
+
+  Future<void> clearPatchLedger() async {
+    await Hive.box(settingsBox).delete(_ledgerKey);
+  }
+
+  Future<void> setSessionUser(String? username) async {
+    if (username == null) {
+      await clearSession();
+      return;
+    }
+    await setV2Session(username);
   }
 
   Future<String?> getSessionUser() async {
     final box = Hive.box(sessionBox);
-    return box.get('user') as String?;
+    final raw = box.get('ticket');
+    if (raw is String && raw.isNotEmpty) {
+      final ticket = V2SessionTicket.parse(raw);
+      if (ticket != null && ticket.verify(_encryption.mac)) {
+        if (!ticket.isExpired()) return ticket.username;
+        // Valid MAC, stale age: drop the whole session so the legacy
+        // fallback below cannot resurrect it as a bare username.
+        await logAudit('TICKET_EXPIRED', ticket.username);
+        await clearSession();
+        return null;
+      }
+      await box.delete('ticket');
+    }
+    final legacy = box.get('user');
+    if (legacy is String && legacy.isNotEmpty) {
+      await setV2Session(legacy);
+      return legacy.trim().toUpperCase();
+    }
+    return null;
   }
 
-  Future<void> clearSession() => setSessionUser(null);
+  Future<void> clearSession() async {
+    final box = Hive.box(sessionBox);
+    await box.delete('user');
+    await box.delete('ticket');
+  }
 }

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 import 'package:polybius/core/widgets/crt_widgets.dart';
+import 'package:polybius/features/duress/duress_session.dart';
 
 /// Six-digit PIN re-auth screen (triggered by pool forcing / admin actions).
 class PinScreen extends ConsumerStatefulWidget {
@@ -31,10 +32,28 @@ class _PinScreenState extends ConsumerState<PinScreen> {
       _error = null;
     });
     try {
-      final ok =
-          await ref.read(authProvider.notifier).verifyPin(_pinController.text);
+      final pin = _pinController.text;
+      final ok = await ref.read(authProvider.notifier).verifyPin(pin);
       if (!mounted) return;
       if (ok) {
+        final auth = ref.read(authProvider);
+        if (auth.coverArmed && auth.user != null) {
+          final cabinet = await ref
+              .read(storageServiceProvider)
+              .getCabinet(auth.user!.username);
+          if (cabinet != null) {
+            ref.read(duressProvider.notifier).arm(
+                  DuressSession.arm(
+                    cabinet: cabinet,
+                    realSeed: ref.read(poolSeedProvider),
+                    pin: pin,
+                  ),
+                );
+          }
+        } else {
+          ref.read(duressProvider.notifier).disarm();
+        }
+        if (!mounted) return;
         context.go('/menu');
       } else {
         setState(() => _error = 'INVALID PIN');

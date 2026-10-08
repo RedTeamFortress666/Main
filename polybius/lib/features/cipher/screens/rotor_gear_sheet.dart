@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 import 'package:polybius/features/cipher/engine/rotor.dart';
+import 'package:polybius/features/cipher/screens/sixth_rotor_plate.dart';
 
 /// Live view of the three Enigma rotors — step counts and engine status.
 class RotorGearSheet extends ConsumerWidget {
@@ -10,7 +12,10 @@ class RotorGearSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final engine = ref.watch(cipherEngineProvider);
+    final policy = ref.watch(cabinetPolicyProvider);
+    final engine = policy.chromeUsesRealSeed
+        ? ref.watch(realCipherEngineProvider)
+        : ref.watch(cipherEngineProvider);
     final rotors = engine.rotors;
 
     return Padding(
@@ -30,6 +35,7 @@ class RotorGearSheet extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
           ...rotors.map((r) => _RotorCard(rotor: r)),
+          const SixthRotorPlate(),
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(12),
@@ -61,13 +67,29 @@ class RotorGearSheet extends ConsumerWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Pool: ${engine.poolId} | Alphabet: ${Rotor.alphabetSize}',
+                  'Pool: ${ref.watch(displayPoolIdProvider)} | SLOT ${engine.slot} | ODO ${Rotor.alphabetSize}',
                   style: const TextStyle(color: Colors.white38, fontSize: 10),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 16),
+          OutlinedButton(
+            onPressed: () async {
+              await ref.read(authProvider.notifier).requestOperatorCheckpoint();
+              if (!context.mounted) return;
+              Navigator.of(context).pop();
+              context.go('/pin');
+            },
+            child: const Text(
+              'GEAR CAL — OPERATOR CHECKPOINT',
+              style: TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 11,
+                color: NeonTheme.neonYellow,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -115,7 +137,7 @@ class _RotorCard extends StatelessWidget {
                 style: const TextStyle(color: Colors.white54, fontSize: 10),
               ),
               Text(
-                'NOTCH: ${rotor.notch}',
+                'NOTCH (FLAVOUR): ${rotor.notch}',
                 style: const TextStyle(color: Colors.white38, fontSize: 10),
               ),
             ],

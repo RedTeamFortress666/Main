@@ -84,4 +84,50 @@ void main() {
     final decrypted = encryption.decrypt(reloadedRaw);
     expect(jsonDecode(decrypted), isA<Map>());
   });
+
+  test('Darth Cherry defaults off and persists', () async {
+    expect(await storage.getDarthCherry(), isFalse);
+    await storage.setDarthCherry(true);
+    expect(await storage.getDarthCherry(), isTrue);
+    await storage.setDarthCherry(false);
+    expect(await storage.getDarthCherry(), isFalse);
+  });
+
+  test('V2 session ticket migrates a bare username and rejects a swap', () async {
+    await Hive.box(StorageService.sessionBox).put('user', 'DEVELOPER');
+    final restored = await storage.getSessionUser();
+    expect(restored, 'DEVELOPER');
+    expect(await storage.hasV2Ticket(), isTrue);
+
+    final wire = Hive.box(StorageService.sessionBox).get('ticket') as String;
+    final swapped = wire.replaceFirst('DEVELOPER', 'INTRUDER');
+    await Hive.box(StorageService.sessionBox).put('ticket', swapped);
+    await Hive.box(StorageService.sessionBox).delete('user');
+    expect(await storage.getSessionUser(), isNull);
+    expect(await storage.hasV2Ticket(), isFalse);
+  });
+
+  test('stale DEVELOPER ciphertext is rebuilt on init', () async {
+    await Hive.box(StorageService.accountsBox).put(
+      AppConstants.developerUsername,
+      'v2:not-valid-ciphertext',
+    );
+    expect(await storage.getAccount(AppConstants.developerUsername), isNull);
+    await storage.init(hivePath: tempDir.path);
+    final account = await storage.getAccount(AppConstants.developerUsername);
+    expect(account, isNotNull);
+    expect(
+      EncryptionService.verifyPassword('developer', account!.passwordHash),
+      isTrue,
+    );
+  });
+
+  test('cherry mixer is not the operator name and survives reload', () async {
+    final a = await storage.ensureCherryMixer();
+    expect(a, isNot(equals('DEVELOPER')));
+    expect(a.length, greaterThan(8));
+    expect(await storage.getCherryMixer(), a);
+    final b = await storage.ensureCherryMixer();
+    expect(b, a);
+  });
 }
