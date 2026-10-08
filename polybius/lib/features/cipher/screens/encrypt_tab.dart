@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:polybius/core/net/t3mp_client.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 import 'package:polybius/features/cipher/screens/clipboard_row.dart';
@@ -14,6 +16,9 @@ class EncryptTab extends ConsumerStatefulWidget {
 class _EncryptTabState extends ConsumerState<EncryptTab> {
   final _inputController = TextEditingController();
   String _output = '';
+  String? _dropUrl;
+  String? _dropError;
+  bool _dropping = false;
 
   @override
   void dispose() {
@@ -25,12 +30,44 @@ class _EncryptTabState extends ConsumerState<EncryptTab> {
     final engine = ref.read(cipherEngineProvider);
     setState(() {
       _output = engine.encrypt(_inputController.text);
+      _dropUrl = null;
+      _dropError = null;
     });
     ref.read(storageServiceProvider).logAudit(
           'ENCRYPT',
           ref.read(authProvider).user?.username ?? 'UNKNOWN',
           '${_inputController.text.length} chars',
         );
+  }
+
+  Future<void> _dropT3mp() async {
+    if (_output.isEmpty || _dropping) return;
+    setState(() {
+      _dropping = true;
+      _dropError = null;
+    });
+    try {
+      final url = await ref.read(t3mpClientProvider).uploadText(
+            _output,
+            filename: 'cipher.txt',
+          );
+      await Clipboard.setData(ClipboardData(text: url));
+      if (!mounted) return;
+      setState(() => _dropUrl = url);
+      ref.read(storageServiceProvider).logAudit(
+            'T3MP_DROP',
+            ref.read(authProvider).user?.username ?? 'UNKNOWN',
+            'cipher',
+          );
+    } on T3mpException catch (e) {
+      if (!mounted) return;
+      setState(() => _dropError = e.message);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _dropError = 'T3MP DROP FAILED');
+    } finally {
+      if (mounted) setState(() => _dropping = false);
+    }
   }
 
   @override
@@ -75,9 +112,41 @@ class _EncryptTabState extends ConsumerState<EncryptTab> {
           ),
           ClipboardRow(
             color: NeonTheme.neonCyan,
-            getCopyText: () => _output,
+            getCopyText: () => _dropUrl ?? _output,
             onPaste: (text) => setState(() => _inputController.text = text),
           ),
+          TextButton.icon(
+            onPressed: _dropping ? null : _dropT3mp,
+            icon: const Icon(
+              Icons.link,
+              color: NeonTheme.neonYellow,
+              size: 18,
+            ),
+            label: Text(
+              _dropping ? 'DROPPING…' : 'T3MP LINK',
+              style: const TextStyle(color: NeonTheme.neonYellow),
+            ),
+          ),
+          if (_dropUrl != null)
+            SelectableText(
+              _dropUrl!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontFamily: 'monospace',
+                color: NeonTheme.neonYellow,
+                fontSize: 11,
+              ),
+            ),
+          if (_dropError != null)
+            Text(
+              _dropError!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontFamily: 'monospace',
+                color: NeonTheme.dangerRed,
+                fontSize: 11,
+              ),
+            ),
         ],
       ),
     );
