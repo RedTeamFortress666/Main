@@ -1,5 +1,9 @@
 import 'dart:math';
 
+/// Glyphs for the floating Polybius-square keyboard (Darth Cherry v3).
+class PolybiusSquareGlyphs {
+  static const String phrase = r'A POLYBĪUS SQU\R3';
+
 /// Glyphs for the floating Polybius-square keyboard.
 ///
 /// Phrase is the stylized square legend `A POLYBĪUS SQU\R3`. Spaces are not
@@ -12,6 +16,27 @@ class PolybiusSquareGlyphs {
         for (final rune in phrase.runes)
           if (rune != 0x20) String.fromCharCode(rune),
       ];
+
+  /// Visual-only keycaps used by the disappearing keyboard. Mapping to latin
+  /// characters lives in RAM for the current pulse and is never serialized.
+  static const List<int> cherryRunes = [
+    0x16A0, 0x16A2, 0x16A6, 0x16A8, 0x16B1, 0x16B2, 0x16B7, 0x16B9,
+    0x16BA, 0x16BE, 0x16C1, 0x16C3, 0x16C7, 0x16C8, 0x16C9, 0x16CA,
+    0x16CB, 0x16CF, 0x16D2, 0x16D6, 0x16DA, 0x16DC, 0x16DE, 0x16DF,
+    0x2591, 0x2592, 0x2593, 0x2588, 0x25CF, 0x25C9, 0x2726, 0x2727,
+    0x272A, 0x2730, 0x269C, 0x2620,
+  ];
+
+  static List<String> get cherryKeys => [
+        for (final r in cherryRunes) String.fromCharCode(r),
+      ];
+}
+
+/// Keyboard rearrangements that cannot be read as a "next shift".
+class UnpredictableShift {
+  UnpredictableShift({
+    Random? random,
+    this.columns = 6,
 }
 
 /// Builds keyboard rearrangements that cannot be read as a "next shift".
@@ -52,6 +77,9 @@ class UnpredictableShift {
     return _rng.nextBool() ? speed : -speed;
   }
 
+  List<int> nextPermutation(int n) {
+    if (n <= 1) return [0];
+    var perm = _fisherYates(n);
   /// Permutation of `0..n-1` that is not a structured shift.
   List<int> nextPermutation(int n) {
     if (n <= 1) return [0];
@@ -75,6 +103,8 @@ class UnpredictableShift {
     final n = current.length;
     if (n <= 1) return List<T>.from(current);
 
+    var perm = _fisherYates(n);
+    var next = [for (final i in perm) current[i]];
     List<int> perm = _fisherYates(n);
     List<T> next = [for (final i in perm) current[i]];
     for (var attempt = 0; attempt < maxAttempts; attempt++) {
@@ -92,6 +122,15 @@ class UnpredictableShift {
     }
     _lastRelative = List<int>.from(perm);
     return next;
+  }
+
+  /// Pair visual glyphs with latin letters for this pulse only.
+  Map<String, String> latinMap(List<String> glyphs, List<String> latin) {
+    final n = min(glyphs.length, latin.length);
+    final order = scramble(List<int>.generate(n, (i) => i));
+    return {
+      for (var i = 0; i < n; i++) glyphs[i]: latin[order[i]],
+    };
   }
 
   List<int> _fisherYates(int n) {

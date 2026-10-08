@@ -15,6 +15,11 @@ Future<void> _bootstrap() async {
   try {
     await container.read(encryptionServiceProvider).init();
     await container.read(storageServiceProvider).init();
+    await container.read(kyberKeystoreProvider).init();
+    final peer = await container.read(storageServiceProvider).getPeerPublicKey();
+    if (peer != null) {
+      container.read(peerPublicKeyProvider.notifier).state = peer;
+    }
   } catch (error, stackTrace) {
     container.dispose();
     if (kDebugMode) {

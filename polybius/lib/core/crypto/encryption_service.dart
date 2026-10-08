@@ -4,13 +4,14 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:encrypt/encrypt.dart' as enc;
+import 'package:polybius/core/crypto/aead.dart';
 import 'package:polybius/core/storage/polybius_secret_store.dart';
 
-/// Wraps AES encryption for Hive payloads and sensitive local data.
+/// Authenticated encryption for Hive payloads.
 ///
-/// Payload format `v2:<ivB64>:<cipherB64>` uses a random IV per message.
-/// Legacy payloads (no prefix) were encrypted with a single stored IV and
-/// remain readable for migration.
+/// New payloads: `v3:` + AES-256-GCM (random 12-byte nonce, 128-bit tag).
+/// `v2:` AES-CBC (random IV, no MAC) remains readable for migration.
+/// Pre-v2 static-IV CBC remains readable when a legacy IV is still stored.
 class EncryptionService {
   EncryptionService(this._storage);
 
@@ -19,16 +20,15 @@ class EncryptionService {
   static const _ivName = 'polybius_aes_iv';
   static const _deviceIdName = 'polybius_device_id';
   static const _v2Prefix = 'v2:';
+  static const _v3Prefix = 'v3:';
 
-  /// Reports how strongly data-at-rest is bound to this device.
-  /// - native (flutter_secure_storage): keystore-backed, genuinely device-scoped
-  /// - web/keystore-less Linux: obfuscation only (see BUILD.md)
+  /// Native keystore-backed stores report true. Web localStorage is obfuscation.
   bool deviceBound = false;
 
-  static const _pbkdf2Iterations = 10000;
+  static const _pbkdf2Iterations = 210000;
   static const _pbkdf2Prefix = 'pbkdf2';
 
-  enc.Key? _key;
+  Uint8List? _key;
   enc.IV? _legacyIv;
 
   Future<void> init() async {
@@ -39,10 +39,6 @@ class EncryptionService {
       await _storage.write(_keyName, masterB64);
     }
 
-    // New installs bind the working key to a per-install device id via HMAC,
-    // so the working key differs from the stored master (defense in depth).
-    // Existing installs (no device id) keep using the master directly so
-    // previously-encrypted data still decrypts.
     var deviceIdB64 = await _storage.read(_deviceIdName);
     if (deviceIdB64 == null && freshInstall) {
       deviceIdB64 = base64Encode(_randomBytes(16));
@@ -53,14 +49,13 @@ class EncryptionService {
     if (deviceIdB64 != null) {
       final derived =
           Hmac(sha256, master).convert(base64Decode(deviceIdB64)).bytes;
-      _key = enc.Key(Uint8List.fromList(derived));
+      _key = Uint8List.fromList(derived);
       deviceBound = true;
     } else {
-      _key = enc.Key(Uint8List.fromList(master));
+      _key = Uint8List.fromList(master);
       deviceBound = false;
     }
 
-    // Legacy static IV: only needed to decrypt payloads written before v2.
     final ivB64 = await _storage.read(_ivName);
     if (ivB64 != null) {
       _legacyIv = enc.IV(Uint8List.fromList(base64Decode(ivB64)));
@@ -73,14 +68,21 @@ class EncryptionService {
   }
 
   String encrypt(String plain) {
-    final iv = enc.IV(Uint8List.fromList(_randomBytes(16)));
-    final encrypter = enc.Encrypter(enc.AES(_key!, mode: enc.AESMode.cbc));
-    final cipher = encrypter.encrypt(plain, iv: iv).base64;
-    return '$_v2Prefix${iv.base64}:$cipher';
+    final sealed = AesGcmAead.encrypt(
+      key: _key!,
+      plaintext: Uint8List.fromList(utf8.encode(plain)),
+    );
+    return '$_v3Prefix${base64Encode(sealed)}';
   }
 
   String decrypt(String cipher) {
-    final encrypter = enc.Encrypter(enc.AES(_key!, mode: enc.AESMode.cbc));
+    if (cipher.startsWith(_v3Prefix)) {
+      final sealed = base64Decode(cipher.substring(_v3Prefix.length));
+      return utf8.decode(AesGcmAead.decrypt(key: _key!, sealed: sealed));
+    }
+    final encrypter = enc.Encrypter(
+      enc.AES(enc.Key(_key!), mode: enc.AESMode.cbc),
+    );
     if (cipher.startsWith(_v2Prefix)) {
       final parts = cipher.substring(_v2Prefix.length).split(':');
       final iv = enc.IV(Uint8List.fromList(base64Decode(parts[0])));
@@ -93,18 +95,15 @@ class EncryptionService {
     return encrypter.decrypt64(cipher, iv: legacyIv);
   }
 
-  /// PBKDF2-HMAC-SHA256 with a random per-credential salt.
-  /// Format: `pbkdf2:<iterations>:<saltB64>:<hashB64>`.
-  static String hashPassword(String password) =>
-      _pbkdf2Hash('pw::$password');
+  static String hashPassword(String password) => _pbkdf2Hash('pw::$password');
 
   static String hashPin(String pin) => _pbkdf2Hash('pin::$pin');
 
   static bool verifyPassword(String password, String stored) =>
-      _verify('pw::$password', stored, _legacyPasswordHash(password));
+      _verify('pw::$password', stored);
 
   static bool verifyPin(String pin, String stored) =>
-      _verify('pin::$pin', stored, _legacyPinHash(pin));
+      _verify('pin::$pin', stored);
 
   static bool isLegacyHash(String stored) =>
       !stored.startsWith('$_pbkdf2Prefix:');
@@ -115,9 +114,9 @@ class EncryptionService {
     return '$_pbkdf2Prefix:$_pbkdf2Iterations:${base64Encode(salt)}:${base64Encode(hash)}';
   }
 
-  static bool _verify(String input, String stored, String legacyHash) {
+  static bool _verify(String input, String stored) {
     if (isLegacyHash(stored)) {
-      return _constantTimeEquals(utf8.encode(legacyHash), utf8.encode(stored));
+      return false;
     }
     final parts = stored.split(':');
     if (parts.length != 4) return false;
@@ -130,13 +129,6 @@ class EncryptionService {
     final actual = _pbkdf2(utf8.encode(input), salt, iterations, expected.length);
     return _constantTimeEquals(actual, expected);
   }
-
-  // Pre-PBKDF2 hashes kept only to verify (and then upgrade) old accounts.
-  static String _legacyPasswordHash(String password) =>
-      sha256.convert(utf8.encode('polybius_salt_v1::$password')).toString();
-
-  static String _legacyPinHash(String pin) =>
-      sha256.convert(utf8.encode('pin::$pin')).toString();
 
   static Uint8List _pbkdf2(
     List<int> password,

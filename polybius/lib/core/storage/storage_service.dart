@@ -1,7 +1,7 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:polybius/core/constants/app_constants.dart';
 import 'package:polybius/core/constants/unlock_codes.dart';
 import 'package:polybius/core/crypto/encryption_service.dart';
 import 'package:polybius/core/models/models.dart';
@@ -28,33 +28,21 @@ class StorageService {
     await Hive.openBox(auditBox);
     await Hive.openBox(settingsBox);
     await Hive.openBox(sessionBox);
-    await _bootstrapDeveloper();
-  }
-
-  Future<void> _bootstrapDeveloper() async {
-    final box = Hive.box(accountsBox);
-    if (!box.containsKey(AppConstants.developerUsername)) {
-      final dev = UserAccount(
-        username: AppConstants.developerUsername,
-        passwordHash: EncryptionService.hashPassword('developer'),
-        pinHash: EncryptionService.hashPin(AppConstants.developerDefaultPin),
-        tier: UserTier.developer,
-        createdAt: DateTime.now(),
-      );
-      await box.put(
-        dev.username,
-        _encryption.encrypt(_encodeJson(dev.toJson())),
-      );
-      await logAudit('BOOTSTRAP', AppConstants.developerUsername,
-          'DEVELOPER account created on first install');
-    }
-    // Embed the developer's game file number on first install.
-    if (await getGameFileNumber() == null) {
-      await setGameFileNumber(AppConstants.devGameFileNumber);
-    }
   }
 
   String _encodeJson(Map<String, dynamic> json) => jsonEncode(json);
+
+  String _sealMap(Map<String, dynamic> json) =>
+      _encryption.encrypt(_encodeJson(json));
+
+  Map<String, dynamic>? _openMap(dynamic raw) {
+    if (raw is! String) return null;
+    try {
+      final parsed = jsonDecode(_encryption.decrypt(raw));
+      if (parsed is Map) return Map<String, dynamic>.from(parsed);
+    } catch (_) {}
+    return null;
+  }
 
   Map<String, dynamic> _decodeLegacyPipeJson(String raw) {
     final map = <String, dynamic>{};
@@ -119,15 +107,15 @@ class StorageService {
 
   Future<void> saveInvite(InviteCode invite) async {
     final box = Hive.box(invitesBox);
-    await box.put(invite.code, invite.toJson());
+    await box.put(invite.code, _sealMap(invite.toJson()));
   }
 
   Future<InviteCode?> getInvite(String code) async {
     final box = Hive.box(invitesBox);
-    final raw = box.get(code.toUpperCase());
-    if (raw == null || raw is! Map) return null;
+    final map = _openMap(box.get(code.toUpperCase()));
+    if (map == null) return null;
     try {
-      return InviteCode.fromJson(Map<dynamic, dynamic>.from(raw));
+      return InviteCode.fromJson(map);
     } catch (_) {
       return null;
     }
@@ -137,12 +125,11 @@ class StorageService {
     final box = Hive.box(invitesBox);
     final invites = <InviteCode>[];
     for (final v in box.values) {
-      if (v is! Map) continue;
+      final map = _openMap(v);
+      if (map == null) continue;
       try {
-        invites.add(InviteCode.fromJson(Map<dynamic, dynamic>.from(v)));
-      } catch (_) {
-        // Skip a single corrupt record instead of failing the whole load.
-      }
+        invites.add(InviteCode.fromJson(map));
+      } catch (_) {}
     }
     return invites;
   }
@@ -165,7 +152,9 @@ class StorageService {
 
   Future<UnlockState?> getUnlockState() async {
     final box = Hive.box(settingsBox);
-    final raw = box.get('unlockState');
+    final map = _openMap(box.get('unlockState'));
+    if (map == null) return null;
+    final raw = map['state'];
     if (raw is! String) return null;
     try {
       return UnlockState.values.byName(raw);
@@ -176,7 +165,7 @@ class StorageService {
 
   Future<void> saveUnlockState(UnlockState state) async {
     final box = Hive.box(settingsBox);
-    await box.put('unlockState', state.name);
+    await box.put('unlockState', _sealMap({'state': state.name}));
   }
 
   Future<void> clearUnlockState() async {
@@ -186,83 +175,68 @@ class StorageService {
 
   /// The invite code / game file number bound to this copy of the game.
   Future<String?> getGameFileNumber() async {
-    final raw = Hive.box(settingsBox).get('gameFileNumber');
-    return raw is String ? raw : null;
+    return _openSealedString('gameFileNumber');
   }
 
   Future<void> setGameFileNumber(String code) async {
-    await Hive.box(settingsBox).put('gameFileNumber', code);
+    await _putSealedString('gameFileNumber', code);
   }
 
   /// Optional trusted public key override (per-SD/USB keyset binding). When set,
   /// signed tokens/updates are verified against this instead of the embedded key.
   Future<String?> getTrustedPublicKey() async {
-    final raw = Hive.box(settingsBox).get('trustedPublicKey');
-    return raw is String && raw.isNotEmpty ? raw : null;
+    return _openSealedString('trustedPublicKey');
   }
 
   Future<void> setTrustedPublicKey(String keyB64) async {
-    await Hive.box(settingsBox).put('trustedPublicKey', keyB64);
+    await _putSealedString('trustedPublicKey', keyB64);
   }
 
   /// The signature-verified access token bound to this copy (base64url wire form).
   Future<String?> getActiveToken() async {
-    final raw = Hive.box(settingsBox).get('activeToken');
-    return raw is String && raw.isNotEmpty ? raw : null;
+    return _openSealedString('activeToken');
   }
 
   Future<void> setActiveToken(String token) async {
-    await Hive.box(settingsBox).put('activeToken', token);
+    await _putSealedString('activeToken', token);
   }
 
-  /// The active cipher pool seed (randomised or synced from another user).
-  Future<String?> getPoolSeed() async {
-    final raw = Hive.box(settingsBox).get('poolSeed');
-    return raw is String && raw.isNotEmpty ? raw : null;
+  Future<String?> _openSealedString(String key) async {
+    final raw = Hive.box(settingsBox).get(key);
+    final map = _openMap(raw);
+    if (map != null) {
+      final v = map['v'];
+      return v is String && v.isNotEmpty ? v : null;
+    }
+    return null;
   }
 
-  Future<void> setPoolSeed(String seed) async {
-    await Hive.box(settingsBox).put('poolSeed', seed);
+  Future<void> _putSealedString(String key, String value) async {
+    await Hive.box(settingsBox).put(key, _sealMap({'v': value}));
   }
 
-  static const _clockHashKey = 'clockPwHash';
-  static const _clockChangedKey = 'clockPwChanged';
-  static const _clockAlphabetKey = 'clockAlphabetSeed';
-
-  Future<String?> getClockPasswordHash() async {
-    final raw = Hive.box(settingsBox).get(_clockHashKey);
-    return raw is String && raw.isNotEmpty ? raw : null;
+  /// Peer Kyber public key used as the encrypt target (never a pool seed).
+  Future<Uint8List?> getPeerPublicKey() async {
+    final map = _openMap(Hive.box(settingsBox).get('peerPublicKey'));
+    final b64 = map?['pk'];
+    if (b64 is! String || b64.isEmpty) return null;
+    try {
+      return Uint8List.fromList(base64Decode(b64));
+    } catch (_) {
+      return null;
+    }
   }
 
-  Future<void> setClockPasswordHash(String hash) async {
-    await Hive.box(settingsBox).put(_clockHashKey, hash);
-  }
-
-  Future<bool> getClockPasswordChanged() async {
-    final raw = Hive.box(settingsBox).get(_clockChangedKey);
-    return raw == true || raw == 'true';
-  }
-
-  Future<void> setClockPasswordChanged(bool value) async {
-    await Hive.box(settingsBox).put(_clockChangedKey, value);
-  }
-
-  Future<void> ensureClockFactoryPassword() async {
-    if (await getClockPasswordHash() != null) return;
-    await setClockPasswordHash(
-      EncryptionService.hashPassword('oneeyedking'),
+  Future<void> setPeerPublicKey(Uint8List publicKey) async {
+    await Hive.box(settingsBox).put(
+      'peerPublicKey',
+      _sealMap({'pk': base64Encode(publicKey)}),
     );
-    await setClockPasswordChanged(false);
   }
 
-  Future<String?> getClockAlphabetSeed() async {
-    final raw = Hive.box(settingsBox).get(_clockAlphabetKey);
-    return raw is String && raw.isNotEmpty ? raw : null;
-  }
+  Future<String?> getPoolSeed() async => null;
 
-  Future<void> setClockAlphabetSeed(String seed) async {
-    await Hive.box(settingsBox).put(_clockAlphabetKey, seed);
-  }
+  Future<void> setPoolSeed(String seed) async {}
 
   Future<void> logAudit(String action, String actor, [String? details]) async {
     final box = Hive.box(auditBox);
@@ -272,19 +246,19 @@ class StorageService {
       actor: actor,
       details: details,
     );
-    await box.add(entry.toJson());
+    await box.add(_sealMap(entry.toJson()));
   }
 
   Future<List<AuditLogEntry>> getAuditLogs({int limit = 100}) async {
     final box = Hive.box(auditBox);
     final entries = <AuditLogEntry>[];
     for (final v in box.values) {
-      if (v is! Map) continue;
+      final map = _openMap(v) ??
+          (v is Map ? Map<String, dynamic>.from(v) : null);
+      if (map == null) continue;
       try {
-        entries.add(AuditLogEntry.fromJson(Map<dynamic, dynamic>.from(v)));
-      } catch (_) {
-        // Skip a single corrupt record instead of failing the whole load.
-      }
+        entries.add(AuditLogEntry.fromJson(map));
+      } catch (_) {}
     }
     entries.sort((a, b) => b.timestamp.compareTo(a.timestamp));
     return entries.take(limit).toList();
@@ -295,13 +269,19 @@ class StorageService {
     if (username == null) {
       await box.delete('user');
     } else {
-      await box.put('user', username);
+      await box.put('user', _encryption.encrypt(username));
     }
   }
 
   Future<String?> getSessionUser() async {
     final box = Hive.box(sessionBox);
-    return box.get('user') as String?;
+    final raw = box.get('user');
+    if (raw is! String) return null;
+    try {
+      return _encryption.decrypt(raw);
+    } catch (_) {
+      return raw;
+    }
   }
 
   Future<void> clearSession() => setSessionUser(null);

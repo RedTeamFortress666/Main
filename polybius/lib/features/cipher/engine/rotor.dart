@@ -1,6 +1,5 @@
 import 'dart:math';
 import 'package:crypto/crypto.dart';
-import 'package:polybius/core/constants/app_constants.dart';
 
 /// Single Enigma-style rotor with date-seeded wiring.
 class Rotor {
@@ -18,7 +17,7 @@ class Rotor {
   int position;
   int stepCount;
 
-  static const int alphabetSize = AppConstants.halfPool;
+  static const int alphabetSize = 280;
 
   factory Rotor.create(String name, String dateKey, int offset) {
     final seed = sha256.convert('$dateKey::$name::$offset'.codeUnits).bytes;

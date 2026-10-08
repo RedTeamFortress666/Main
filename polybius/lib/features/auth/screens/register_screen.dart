@@ -17,6 +17,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _username = TextEditingController();
   final _password = TextEditingController();
   final _confirm = TextEditingController();
+  final _pin = TextEditingController();
+  final _invite = TextEditingController();
   String? _error;
   bool _busy = false;
 
@@ -25,6 +27,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _username.dispose();
     _password.dispose();
     _confirm.dispose();
+    _pin.dispose();
+    _invite.dispose();
     super.dispose();
   }
 
@@ -40,7 +44,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     });
     final err = await ref
         .read(authProvider.notifier)
-        .register(_username.text, _password.text);
+        .register(
+      _username.text,
+      _password.text,
+      _pin.text,
+      inviteCode: _invite.text,
+    );
     if (!mounted) return;
     if (err == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -82,9 +91,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   const SizedBox(height: 24),
                   _field('OPERATOR ID', _username),
                   const SizedBox(height: 14),
-                  _field('ACCESS KEY', _password, obscure: true),
+                  _field('ACCESS KEY (12+)', _password, obscure: true),
                   const SizedBox(height: 14),
                   _field('CONFIRM ACCESS KEY', _confirm, obscure: true),
+                  const SizedBox(height: 14),
+                  _field('6-DIGIT PIN', _pin, obscure: true),
+                  const SizedBox(height: 14),
+                  _field('INVITE (AFTER FIRST ACCOUNT)', _invite),
                   if (_error != null) ...[
                     const SizedBox(height: 14),
                     Text(_error!,

@@ -17,6 +17,13 @@ class _FlutterSecurePolybiusSecretStore implements PolybiusSecretStore {
 PolybiusSecretStore createPolybiusSecretStore() {
   return _FlutterSecurePolybiusSecretStore(
     const FlutterSecureStorage(
+      aOptions: AndroidOptions(encryptedSharedPreferences: true),
+      iOptions: IOSOptions(
+        accessibility: KeychainAccessibility.first_unlock_this_device,
+      ),
+      mOptions: MacOsOptions(
+        accessibility: KeychainAccessibility.first_unlock_this_device,
+      ),
       webOptions: WebOptions(
         dbName: 'polybius',
         publicKey: 'polybius_web_storage',

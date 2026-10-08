@@ -4,6 +4,17 @@ import 'package:flutter/material.dart';
 import 'package:polybius/core/crypto/unpredictable_shift.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 
+/// Darth Cherry v3 disappearing / rotating glyph keyboard.
+///
+/// Glyphs pulse visible then vanish; while invisible the layout is replaced
+/// by an unpredictable scramble. Taps emit the latin character mapped for
+/// *this pulse only* — the map never leaves RAM.
+class FloatingGlyphKeyboard extends StatefulWidget {
+  const FloatingGlyphKeyboard({
+    super.key,
+    this.columns = 6,
+    this.interactive = false,
+    this.onChar,
 /// Floating Polybius-square keyboard.
 ///
 /// Each glyph occupies a keycap, spins while the pulse is visible, then fades
@@ -21,6 +32,7 @@ class FloatingGlyphKeyboard extends StatefulWidget {
 
   final int columns;
   final bool interactive;
+  final ValueChanged<String>? onChar;
   final ValueChanged<String>? onGlyph;
 
   /// Optional engine (tests inject a seeded [UnpredictableShift]).
@@ -32,11 +44,21 @@ class FloatingGlyphKeyboard extends StatefulWidget {
 
 class FloatingGlyphKeyboardState extends State<FloatingGlyphKeyboard>
     with TickerProviderStateMixin {
+  static const latin = [
+    'A', 'B', 'C', 'D', 'E', 'F',
+    'G', 'H', 'I', 'J', 'K', 'L',
+    'M', 'N', 'O', 'P', 'Q', 'R',
+    'S', 'T', 'U', 'V', 'W', 'X',
+    'Y', 'Z', '0', '1', '2', '3',
+    '4', '5', '6', '7', '8', '9',
+  ];
+
   late final UnpredictableShift _shift;
   late final AnimationController _pulse;
   late final AnimationController _spin;
 
   late List<String> _glyphs;
+  late Map<String, String> _map;
   late List<double> _spinRates;
   late List<double> _floatPhase;
 
@@ -46,6 +68,12 @@ class FloatingGlyphKeyboardState extends State<FloatingGlyphKeyboard>
   void initState() {
     super.initState();
     _shift = widget.shift ?? UnpredictableShift(columns: widget.columns);
+    _glyphs = List<String>.from(PolybiusSquareGlyphs.cherryKeys);
+    _map = _shift.latinMap(_glyphs, latin);
+    _spinRates = [
+      for (var i = 0; i < _glyphs.length; i++) _shift.nextSpinRadiansPerSecond(),
+    ];
+    _floatPhase = [for (var i = 0; i < _glyphs.length; i++) i * 0.73];
     _glyphs = _shift.scramble(
       PolybiusSquareGlyphs.keys,
       canonical: PolybiusSquareGlyphs.keys,
@@ -79,6 +107,9 @@ class FloatingGlyphKeyboardState extends State<FloatingGlyphKeyboard>
     setState(() {
       _glyphs = _shift.scramble(
         _glyphs,
+        canonical: PolybiusSquareGlyphs.cherryKeys,
+      );
+      _map = _shift.latinMap(_glyphs, latin);
         canonical: PolybiusSquareGlyphs.keys,
       );
       _spinRates = [
@@ -105,6 +136,7 @@ class FloatingGlyphKeyboardState extends State<FloatingGlyphKeyboard>
   @override
   Widget build(BuildContext context) {
     return Semantics(
+      label: 'Darth Cherry v3 disappearing glyph keyboard',
       label: 'A POLYBĪUS SQU\\R3 floating glyph keyboard',
       child: AnimatedBuilder(
         animation: Listenable.merge([_pulse, _spin]),
@@ -117,6 +149,9 @@ class FloatingGlyphKeyboardState extends State<FloatingGlyphKeyboard>
             itemCount: _glyphs.length,
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: widget.columns,
+              mainAxisSpacing: 5,
+              crossAxisSpacing: 5,
+              childAspectRatio: 1.1,
               mainAxisSpacing: 6,
               crossAxisSpacing: 6,
               childAspectRatio: 1.15,
@@ -131,6 +166,12 @@ class FloatingGlyphKeyboardState extends State<FloatingGlyphKeyboard>
                 opacity: visible,
                 angle: angle,
                 bob: bob,
+                color: index.isEven ? NeonTheme.cherryBright : NeonTheme.cherryGold,
+                onTap: widget.interactive
+                    ? () {
+                        final ch = _map[glyph];
+                        if (ch != null) widget.onChar?.call(ch);
+                      }
                 color: _colorFor(glyph),
                 onTap: widget.interactive
                     ? () => widget.onGlyph?.call(glyph)
@@ -180,11 +221,20 @@ class _GlyphKey extends StatelessWidget {
       child: Transform.translate(
         offset: Offset(0, bob),
         child: Padding(
+          padding: const EdgeInsets.all(3),
           padding: const EdgeInsets.all(5),
           child: Transform.rotate(
             angle: angle,
             child: DecoratedBox(
               decoration: BoxDecoration(
+                color: NeonTheme.cherryGlass.withValues(alpha: 0.85),
+                border: Border.all(
+                  color: color.withValues(alpha: 0.9),
+                  width: 1.3,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.4 * opacity),
                 color: color.withValues(alpha: 0.08),
                 border: Border.all(
                   color: color.withValues(alpha: 0.85),
@@ -202,6 +252,7 @@ class _GlyphKey extends StatelessWidget {
                   glyph,
                   style: TextStyle(
                     fontFamily: 'monospace',
+                    fontSize: 16,
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: color,

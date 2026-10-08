@@ -1,8 +1,8 @@
-# Downloadable BETA builds
+# Downloadable builds
 
-`polybius-1.0.0-beta.1-android-arm64.apk` — Android **arm64-v8a** release APK
-(debug-signed for BETA side-loading). Works on modern ARM Android devices.
+No APK is committed to git. Debug-signed binaries are not published.
 
+Get builds from GitHub Actions (see `../RELEASES.md`):
 `polybius-flasher-1.8.0-android-arm64.apk` — **PØLYBÎŪS FLASHER** 1.8.0
 (R36S required-filename list + CRYPT3X Etcher/Rufus kit + USB/SD + CYD/T-Deck + OTG ADB)
 SHA-256 `feab0d28e00caa7ee476ca395c4c4c762146d161a1aa080f06249f731f00a350`:
@@ -19,18 +19,18 @@ https://github.com/RedTeamFortress666/Main/tree/cursor/r36s-polybius-product-034
 
 ## Install (Android / ARM handheld)
 
-1. Download the `.apk` file.
-2. On the device, enable "install unknown apps" for your file manager/browser.
-3. Open the APK to install, then launch **PØLYBĪUS**.
+1. GitHub → **Actions** → **Build Polybius downloads** → **Run workflow**.
+2. Download `polybius-android-apk` from the run artifacts.
 
-First login: `DEVELOPER` / `developer`.
+Android CI **fails** unless repository secrets `ANDROID_KEYSTORE_BASE64` and
+`ANDROID_KEY_PROPERTIES` are set. See `../BUILD.md` for local keystore setup.
 
-## Notes
+## First run
 
-- This APK is **debug-signed** — fine for BETA side-loading, not for store
-  distribution. Add a release keystore (`android/key.properties`, see
-  `../BUILD.md`) for a properly signed build.
-- Other targets (web zip, Linux `.tar.gz`, universal/other-ABI APKs) are
-  produced by the GitHub Actions release workflow — see `../RELEASES.md`.
-- This binary is committed only as a BETA convenience; the durable delivery
-  path is CI artifacts / GitHub Releases, and it can be removed from git later.
+There is no factory account. Create an operator id, a 12+ character password,
+and a 6-digit PIN.
+
+## Web / confidentiality
+
+The web target stores keys in `localStorage`. Treat it as a preview, not a
+confidentiality target. Native builds use the platform keystore.

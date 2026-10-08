@@ -53,8 +53,17 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
       - run: flutter pub get
         working-directory: ${{ env.WORKING_DIR }}
-      # Builds a release APK. Without android/key.properties this is debug-signed
-      # (fine for BETA side-loading); add a keystore for distribution signing.
+      - name: Require release keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_PROPERTIES: ${{ secrets.ANDROID_KEY_PROPERTIES }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ] || [ -z "$ANDROID_KEY_PROPERTIES" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 and ANDROID_KEY_PROPERTIES secrets are required. Debug-signed APKs are not published."
+            exit 1
+          fi
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$WORKING_DIR/android/upload.jks"
+          printf '%s\n' "$ANDROID_KEY_PROPERTIES" > "$WORKING_DIR/android/key.properties"
       - run: flutter build apk --release
         working-directory: ${{ env.WORKING_DIR }}
       - uses: actions/upload-artifact@v4

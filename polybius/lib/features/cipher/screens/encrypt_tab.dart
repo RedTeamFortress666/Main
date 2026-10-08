@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
-import 'package:polybius/features/cipher/screens/clipboard_row.dart';
+import 'package:polybius/core/widgets/floating_glyph_keyboard.dart';
+import 'package:polybius/core/widgets/unique_qr_player.dart';
 
 class EncryptTab extends ConsumerStatefulWidget {
   const EncryptTab({super.key});
@@ -12,74 +13,84 @@ class EncryptTab extends ConsumerStatefulWidget {
 }
 
 class _EncryptTabState extends ConsumerState<EncryptTab> {
-  final _inputController = TextEditingController();
-  String _output = '';
-
-  @override
-  void dispose() {
-    _inputController.dispose();
-    super.dispose();
-  }
+  String _draft = '';
+  String _envelope = '';
 
   void _encrypt() {
+    if (_draft.isEmpty) return;
     final engine = ref.read(cipherEngineProvider);
-    setState(() {
-      _output = engine.encrypt(_inputController.text);
-    });
+    setState(() => _envelope = engine.encrypt(_draft));
     ref.read(storageServiceProvider).logAudit(
           'ENCRYPT',
           ref.read(authProvider).user?.username ?? 'UNKNOWN',
-          '${_inputController.text.length} chars',
+          '${_draft.length} chars',
         );
+    setState(() => _draft = '');
   }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TextField(
-            controller: _inputController,
-            maxLines: 3,
-            style: const TextStyle(fontFamily: 'monospace', color: Colors.white),
-            decoration: const InputDecoration(
-              labelText: 'PLAINTEXT',
-              labelStyle: TextStyle(color: NeonTheme.neonGreen),
-              border: OutlineInputBorder(),
+    final fp = ref.watch(cipherEngineProvider).fingerprint;
+    return ListView(
+      padding: const EdgeInsets.all(12),
+      children: [
+        Text(
+          'KYBER→AES  fp $fp',
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontFamily: 'monospace',
+            color: NeonTheme.cherryGold,
+            fontSize: 11,
+            letterSpacing: 1,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            border: Border.all(color: NeonTheme.cherryBright.withValues(alpha: 0.5)),
+            color: NeonTheme.cherryGlass,
+          ),
+          child: Text(
+            _draft.isEmpty ? '…' : _draft,
+            style: const TextStyle(
+              fontFamily: 'monospace',
+              color: Colors.white,
+              letterSpacing: 2,
             ),
           ),
-          ClipboardRow(
-            color: NeonTheme.neonGreen,
-            getCopyText: () => _inputController.text,
-            onPaste: (text) => setState(() => _inputController.text = text),
-          ),
-          const SizedBox(height: 4),
-          ElevatedButton(onPressed: _encrypt, child: const Text('ENCRYPT')),
+        ),
+        const SizedBox(height: 8),
+        FloatingGlyphKeyboard(
+          interactive: true,
+          onChar: (ch) => setState(() => _draft += ch),
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            TextButton(
+              onPressed: () {
+                if (_draft.isNotEmpty) {
+                  setState(() => _draft = _draft.substring(0, _draft.length - 1));
+                }
+              },
+              child: const Text('DEL', style: TextStyle(color: NeonTheme.cherryBright)),
+            ),
+            TextButton(
+              onPressed: () => setState(() => _draft += ' '),
+              child: const Text('SPC', style: TextStyle(color: NeonTheme.cherryGold)),
+            ),
+            ElevatedButton(
+              onPressed: _encrypt,
+              child: const Text('SEAL'),
+            ),
+          ],
+        ),
+        if (_envelope.isNotEmpty) ...[
           const SizedBox(height: 12),
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                border: Border.all(color: NeonTheme.neonCyan),
-                color: NeonTheme.surface,
-              ),
-              child: SingleChildScrollView(
-                child: SelectableText(
-                  _output.isEmpty ? '...' : _output,
-                  style: const TextStyle(fontSize: 20),
-                ),
-              ),
-            ),
-          ),
-          ClipboardRow(
-            color: NeonTheme.neonCyan,
-            getCopyText: () => _output,
-            onPaste: (text) => setState(() => _inputController.text = text),
-          ),
+          UniqueQrPlayer(payload: _envelope),
         ],
-      ),
+      ],
     );
   }
 }

@@ -53,7 +53,7 @@ class _CipherShellState extends ConsumerState<CipherShell>
       appBar: AppBar(
         backgroundColor: NeonTheme.surface,
         title: const Text(
-          '◈ CIPHER CHANNEL ◈',
+          '◈ CHERRY CIPHER v3 ◈',
           style: TextStyle(fontFamily: 'monospace', fontSize: 16),
         ),
         leading: IconButton(
@@ -63,7 +63,7 @@ class _CipherShellState extends ConsumerState<CipherShell>
         actions: [
           IconButton(
             icon: const Icon(Icons.settings, color: NeonTheme.neonPink),
-            tooltip: 'Rotor Gear',
+            tooltip: 'Engine',
             onPressed: _showRotorGear,
           ),
           if (isDev)

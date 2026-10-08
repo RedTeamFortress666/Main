@@ -1,15 +1,10 @@
-/// Application-wide constants for PØLYBĪUS.
+/// Application-wide constants for PØLYBĪUS Darth Cherry v3.
 library;
 
 class AppConstants {
   static const String appName = 'PØLYBĪUS';
-  static const String developerUsername = 'DEVELOPER';
-  static const String developerDefaultPin = '000000';
-
-  /// Game file number embedded for the developer's copy of the game.
-  static const String devGameFileNumber = 'B1-66-3R';
-  static const int poolSize = 560;
-  static const int halfPool = 280;
+  static const int minPasswordLength = 12;
+  static const int pinLength = 6;
   static const int titleHoldMs = 3000;
   static const int devTitleHoldMs = 6000;
   static const int langSelectHoldMs = 3000;

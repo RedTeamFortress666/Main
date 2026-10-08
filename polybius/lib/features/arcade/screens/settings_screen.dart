@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -21,6 +22,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   _Page _page = _Page.menu;
   Timer? _holdTimer;
   bool _holdingSelect = false;
+  int _debugSelectTaps = 0;
 
   @override
   void dispose() {
@@ -218,12 +220,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         const SizedBox(height: 12),
         // Hold-to-select. On RUSSIAN with the pathway primed + difficulty 11,
         // a 3-second hold opens the dev access portal.
-        GestureDetector(
-          onLongPressStart: (_) => _startSelectHold(),
-          onLongPressEnd: (_) => _endSelectHold(),
-          onLongPressCancel: _endSelectHold,
-          onTap: () => _endSelectHold(),
-          child: Container(
+        Listener(
+          onPointerDown: (_) => _startSelectHold(),
+          onPointerUp: (_) => _endSelectHold(),
+          onPointerCancel: (_) => _endSelectHold(),
+          child: GestureDetector(
+            onTap: _onDebugSelectTap,
+            child: Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 14),
             decoration: BoxDecoration(
@@ -257,6 +260,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
         ),
+        ),
       ],
     );
   }
@@ -274,9 +278,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _holdTimer?.cancel();
   }
 
+  void _onDebugSelectTap() {
+    if (!kDebugMode) return;
+    _debugSelectTaps++;
+    if (_debugSelectTaps >= 3) {
+      _debugSelectTaps = 0;
+      _openPortalIfReady();
+    }
+  }
+
   void _completeSelectHold() {
     if (!_holdingSelect) return;
     setState(() => _holdingSelect = false);
+    _openPortalIfReady();
+  }
+
+  void _openPortalIfReady() {
     final settings = ref.read(gameSettingsProvider);
     final unlock = ref.read(unlockProvider);
     final ritualReady = unlock.pathwayPrimed &&

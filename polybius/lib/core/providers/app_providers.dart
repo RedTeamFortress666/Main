@@ -1,14 +1,14 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:polybius/core/constants/app_constants.dart';
-import 'package:polybius/core/storage/create_polybius_secret_store.dart';
 import 'package:polybius/core/constants/unlock_codes.dart';
 import 'package:polybius/core/crypto/encryption_service.dart';
+import 'package:polybius/core/crypto/kyber_keystore.dart';
 import 'package:polybius/core/models/models.dart';
+import 'package:polybius/core/storage/create_polybius_secret_store.dart';
 import 'package:polybius/core/storage/storage_service.dart';
 import 'package:polybius/features/cipher/engine/cipher_engine.dart';
-import 'package:polybius/features/cipher/engine/daily_pool.dart';
-import 'dart:convert';
-import 'dart:math';
 import 'package:uuid/uuid.dart';
 
 final secretStoreProvider = Provider((_) => createPolybiusSecretStore());
@@ -21,42 +21,16 @@ final storageServiceProvider = Provider<StorageService>((ref) {
   return StorageService(ref.read(encryptionServiceProvider));
 });
 
-/// The active cipher pool seed. Defaults to today's date so behaviour is
-/// unchanged until the user randomises or syncs a pool. Persisted so a synced
-/// pool survives restarts.
-final poolSeedProvider =
-    StateNotifierProvider<PoolSeedNotifier, String>((ref) {
-  return PoolSeedNotifier(ref.read(storageServiceProvider));
+final kyberKeystoreProvider = Provider<KyberKeystore>((ref) {
+  return KyberKeystore(ref.read(secretStoreProvider));
 });
 
-class PoolSeedNotifier extends StateNotifier<String> {
-  PoolSeedNotifier(this._storage) : super(DailyPool().dateKey) {
-    _load();
-  }
-
-  final StorageService _storage;
-
-  Future<void> _load() async {
-    final saved = await _storage.getPoolSeed();
-    if (saved != null) state = saved;
-  }
-
-  /// Generate a fresh random pool (new hidden mapping / rotor configuration).
-  void randomise() {
-    final random = Random.secure();
-    final bytes = List<int>.generate(16, (_) => random.nextInt(256));
-    setSeed(base64Url.encode(bytes));
-  }
-
-  void setSeed(String seed) {
-    state = seed;
-    _storage.setPoolSeed(seed);
-  }
-}
+final peerPublicKeyProvider = StateProvider<Uint8List?>((ref) => null);
 
 final cipherEngineProvider = Provider<CipherEngine>((ref) {
-  final seed = ref.watch(poolSeedProvider);
-  return CipherEngine(seed: seed);
+  final keystore = ref.watch(kyberKeystoreProvider);
+  final peer = ref.watch(peerPublicKeyProvider);
+  return CipherEngine(keystore: keystore, recipientPublicKey: peer);
 });
 
 final gameSettingsProvider =
@@ -119,9 +93,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = const AuthState();
       return;
     }
+    // Restored sessions always re-auth with PIN. Password login is stronger.
     state = AuthState(
       user: account,
-      needsPin: account.requiresPin,
+      needsPin: true,
     );
   }
 
@@ -170,26 +145,62 @@ class AuthNotifier extends StateNotifier<AuthState> {
     return true;
   }
 
-  /// Creates a new user-tier account. Returns null on success, or an error
-  /// message. Does not log the new user in.
-  Future<String?> register(String username, String password) async {
+  /// Creates an account. The first operator on an empty store needs no invite;
+  /// every later account requires a minted invite code.
+  Future<String?> register(
+    String username,
+    String password,
+    String pin, {
+    String? inviteCode,
+  }) async {
     final u = username.trim().toUpperCase();
     if (u.isEmpty || password.isEmpty) {
       return 'ENTER A USERNAME AND PASSWORD';
     }
-    if (password.length < 4) return 'PASSWORD TOO SHORT';
+    if (password.length < AppConstants.minPasswordLength) {
+      return 'PASSWORD TOO SHORT';
+    }
+    if (pin.length != AppConstants.pinLength || int.tryParse(pin) == null) {
+      return 'CHOOSE A 6-DIGIT PIN';
+    }
     final existing = await _storage.getAccount(u);
     if (existing != null) return 'ACCOUNT ALREADY EXISTS';
+    final accounts = await _storage.getAllAccounts();
+    InviteCode? invite;
+    if (accounts.isNotEmpty) {
+      final code = inviteCode?.trim().toUpperCase() ?? '';
+      if (code.isEmpty) return 'INVITE REQUIRED';
+      invite = await _storage.getInvite(code);
+      if (invite == null || invite.isUsed) return 'INVALID INVITE';
+      if (invite.expiresAt != null &&
+          invite.expiresAt!.isBefore(DateTime.now())) {
+        return 'INVITE EXPIRED';
+      }
+    }
     final account = UserAccount(
       username: u,
       passwordHash: EncryptionService.hashPassword(password),
-      pinHash: EncryptionService.hashPin('000000'),
-      tier: UserTier.agent,
+      pinHash: EncryptionService.hashPin(pin),
+      tier: accounts.isEmpty
+          ? UserTier.developer
+          : _userTierFromInvite(invite!.tier),
       createdAt: DateTime.now(),
     );
     await _storage.saveAccount(account);
+    if (invite != null) {
+      await _storage.saveInvite(invite.copyWith(isUsed: true, usedBy: u));
+    }
     await _storage.logAudit('REGISTER', u);
     return null;
+  }
+
+  static UserTier _userTierFromInvite(InviteTier tier) {
+    return switch (tier) {
+      InviteTier.standard => UserTier.guest,
+      InviteTier.agent => UserTier.agent,
+      InviteTier.admin => UserTier.admin,
+      InviteTier.developer => UserTier.developer,
+    };
   }
 
   Future<bool> verifyPin(String pin) async {
@@ -230,7 +241,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       expiresAt: DateTime.now().add(const Duration(days: 30)),
     );
     await _storage.saveInvite(invite);
-    await _storage.logAudit('INVITE_MINT', createdBy, code);
+    await _storage.logAudit('INVITE_MINT', createdBy);
     return code;
   }
 
@@ -247,12 +258,33 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> setAdminPin(String pin, String actor) async {
-    final dev = await _storage.getAccount(AppConstants.developerUsername);
-    if (dev == null) return;
+    final user = state.user ?? await _storage.getAccount(actor);
+    if (user == null) return;
     await _storage.saveAccount(
-      dev.copyWith(pinHash: EncryptionService.hashPin(pin)),
+      user.copyWith(pinHash: EncryptionService.hashPin(pin)),
     );
     await _storage.logAudit('PIN_MINT', actor);
+  }
+
+  Future<String?> setPortalPassphrase(String passphrase) async {
+    final user = state.user;
+    if (user == null) return 'NOT SIGNED IN';
+    if (passphrase.length < AppConstants.minPasswordLength) {
+      return 'PASSPHRASE TOO SHORT';
+    }
+    final updated = user.copyWith(
+      portalPassHash: EncryptionService.hashPassword(passphrase),
+    );
+    await _storage.saveAccount(updated);
+    state = AuthState(user: updated, needsPin: state.needsPin);
+    await _storage.logAudit('PORTAL_PASS', user.username);
+    return null;
+  }
+
+  bool verifyPortalPassphrase(String passphrase) {
+    final hash = state.user?.portalPassHash;
+    if (hash == null) return false;
+    return EncryptionService.verifyPassword(passphrase, hash);
   }
 }
 
@@ -295,36 +327,20 @@ class UnlockStateData {
 }
 
 class UnlockNotifier extends StateNotifier<UnlockStateData> {
-  UnlockNotifier(this._storage) : super(const UnlockStateData()) {
-    _loadPersisted();
-  }
+  UnlockNotifier(this._storage) : super(const UnlockStateData());
 
   final StorageService _storage;
-
-  Future<void> _loadPersisted() async {
-    final saved = await _storage.getUnlockState();
-    if (saved != null) {
-      state = state.copyWith(state: saved);
-    }
-  }
-
-  void _persistUnlock() {
-    _storage.saveUnlockState(state.state);
-  }
 
   void grantDeveloperAccess() {
     if (state.state.index < UnlockState.developer.index) {
       state = state.copyWith(state: UnlockState.developer);
-      _persistUnlock();
     }
   }
 
-  /// User-tier cipher access (no dev panel) — granted by the Tr1-66-3R code or
-  /// a user-tier signed invite token.
+  /// User-tier cipher access (no developer panel). Session-only — not persisted.
   void grantUserAccess() {
     if (state.state.index < UnlockState.unlocked.index) {
       state = state.copyWith(state: UnlockState.unlocked);
-      _persistUnlock();
     }
   }
 
@@ -342,9 +358,6 @@ class UnlockNotifier extends StateNotifier<UnlockStateData> {
       state: nextState,
       pathwayPrimed: true,
     );
-    if (nextState != UnlockState.locked) {
-      _persistUnlock();
-    }
     _storage.logAudit('UNLOCK_RITUAL', 'SYSTEM', 'Title hold completed');
   }
 
@@ -362,30 +375,8 @@ class UnlockNotifier extends StateNotifier<UnlockStateData> {
     GameSettings settings,
     UserTier? userTier,
   ) async {
-    final upper = code.toUpperCase();
-    if (upper == UnlockCodes.devB1663R || upper == UnlockCodes.devD1663R) {
-      if (settings.language == UnlockCodes.ritualLanguage) {
-        state = state.copyWith(state: UnlockState.developer, showGlitch: true);
-        _persistUnlock();
-        await _storage.logAudit('DEV_UNLOCK', 'SYSTEM', upper);
-        return;
-      }
-    }
-    final invite = await _storage.getInvite(upper);
-    if (invite != null && !invite.isUsed) {
-      if (invite.expiresAt != null &&
-          invite.expiresAt!.isBefore(DateTime.now())) {
-        await _storage.logAudit('INVITE_EXPIRED', 'SYSTEM', upper);
-        return;
-      }
-      final usedBy = userTier?.name ?? 'UNKNOWN';
-      await _storage.saveInvite(
-        invite.copyWith(isUsed: true, usedBy: usedBy),
-      );
-      state = state.copyWith(state: UnlockState.unlocked, showGlitch: true);
-      _persistUnlock();
-      await _storage.logAudit('INVITE_UNLOCK', 'SYSTEM', upper);
-    }
+    // Invites are consumed only during register(). This remains a no-op
+    // so arcade "load game" rituals cannot open the cipher.
   }
 
   void triggerFakeCrash() {

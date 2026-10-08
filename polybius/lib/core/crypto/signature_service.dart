@@ -12,9 +12,8 @@ import 'package:pointycastle/export.dart';
 ///
 /// SECURITY NOTE: this stops forged invite codes and tampered update payloads.
 /// It does NOT stop someone who controls the binary from patching the verifier
-/// out — that is not achievable client-side (see BUILD.md). Also note the fixed
-/// access codes (B1-66-3R / D1-66-3R / Tr1-66-3R) are the working entry gate;
-/// signed tokens are an optional extra path.
+/// out — that is not achievable client-side (see BUILD.md). Cipher access is
+/// never a compiled code; the portal passphrase is hashed on the account.
 class SignatureService {
   SignatureService({String? modulusB64})
       : modulusB64 = (modulusB64 == null || modulusB64.isEmpty)

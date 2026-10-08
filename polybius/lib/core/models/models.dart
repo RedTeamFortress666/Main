@@ -16,6 +16,7 @@ class UserAccount {
     this.createdAt,
     this.lastLogin,
     this.requiresPin = false,
+    this.portalPassHash,
   });
 
   final String username;
@@ -25,6 +26,7 @@ class UserAccount {
   final DateTime? createdAt;
   final DateTime? lastLogin;
   final bool requiresPin;
+  final String? portalPassHash;
 
   Map<String, dynamic> toJson() => {
         'username': username,
@@ -34,6 +36,7 @@ class UserAccount {
         'createdAt': createdAt?.toIso8601String(),
         'lastLogin': lastLogin?.toIso8601String(),
         'requiresPin': requiresPin,
+        'portalPassHash': portalPassHash,
       };
 
   factory UserAccount.fromJson(Map<dynamic, dynamic> json) => UserAccount(
@@ -48,6 +51,7 @@ class UserAccount {
             ? DateTime.parse(json['lastLogin'] as String)
             : null,
         requiresPin: _parseBool(json['requiresPin']),
+        portalPassHash: json['portalPassHash'] as String?,
       );
 
   UserAccount copyWith({
@@ -58,6 +62,7 @@ class UserAccount {
     DateTime? createdAt,
     DateTime? lastLogin,
     bool? requiresPin,
+    String? portalPassHash,
   }) =>
       UserAccount(
         username: username ?? this.username,
@@ -67,6 +72,7 @@ class UserAccount {
         createdAt: createdAt ?? this.createdAt,
         lastLogin: lastLogin ?? this.lastLogin,
         requiresPin: requiresPin ?? this.requiresPin,
+        portalPassHash: portalPassHash ?? this.portalPassHash,
       );
 }
 
