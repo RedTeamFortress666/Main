@@ -1,123 +1,247 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import './App.css'
+import {
+  BOOT_MODE_HINTS,
+  BOOT_MODE_LABELS,
+  profilesByGroup,
+  type BootMode,
+  type DeviceProfile,
+} from './data/profiles'
+import { buildStagePlan, treeToText } from './data/stagePlan'
 
-interface Task {
-  id: number
-  text: string
-  done: boolean
-}
+function App() {
+  const groups = useMemo(() => profilesByGroup(), [])
+  const allProfiles = useMemo(
+    () => groups.flatMap((g) => g.items),
+    [groups],
+  )
+  const [profileId, setProfileId] = useState(allProfiles[0].id)
+  const [bootMode, setBootMode] = useState<BootMode>('single')
+  const [includePolybius, setIncludePolybius] = useState(true)
+  const [copied, setCopied] = useState(false)
 
-const STORAGE_KEY = 'first-app.tasks'
-
-function loadTasks(): Task[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return []
-    const parsed = JSON.parse(raw) as Task[]
-    return Array.isArray(parsed) ? parsed : []
-  } catch {
-    return []
-  }
-}
-
-function nextTaskId(tasks: Task[]) {
-  return tasks.reduce((max, task) => Math.max(max, task.id), 0) + 1
-}
-
-export default function App() {
-  const [tasks, setTasks] = useState<Task[]>(() => loadTasks())
-  const [draft, setDraft] = useState('')
-  const [persistError, setPersistError] = useState(false)
-
-  const remaining = useMemo(
-    () => tasks.filter((t) => !t.done).length,
-    [tasks],
+  const profile = useMemo(
+    () => allProfiles.find((p) => p.id === profileId) ?? allProfiles[0],
+    [allProfiles, profileId],
   )
 
-  const commit = useCallback((next: Task[]) => {
-    setTasks(next)
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
-      setPersistError(false)
-    } catch {
-      setPersistError(true)
+  const plan = useMemo(
+    () => buildStagePlan(profile, bootMode, includePolybius),
+    [profile, bootMode, includePolybius],
+  )
+
+  function selectProfile(next: DeviceProfile) {
+    setProfileId(next.id)
+    if (!next.supportedModes.includes(bootMode)) {
+      setBootMode(next.supportedModes[0] ?? 'single')
     }
-  }, [])
-
-  function addTask() {
-    const text = draft.trim()
-    if (!text) return
-    commit([{ id: nextTaskId(tasks), text, done: false }, ...tasks])
-    setDraft('')
   }
 
-  function toggleTask(id: number) {
-    commit(tasks.map((t) => (t.id === id ? { ...t, done: !t.done } : t)))
-  }
-
-  function removeTask(id: number) {
-    commit(tasks.filter((t) => t.id !== id))
+  async function copyManifest() {
+    const text = JSON.stringify(
+      {
+        profileId: plan.profileId,
+        mode: plan.mode,
+        includePolybius: plan.includePolybius,
+        title: plan.title,
+        summary: plan.summary,
+        tree: plan.tree,
+        checklist: plan.checklist,
+        flashCommands: plan.flashCommands,
+      },
+      null,
+      2,
+    )
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1800)
+    } catch {
+      /* ignore */
+    }
   }
 
   return (
-    <main className="app">
-      <header className="app__header">
-        <h1>My Tasks</h1>
-        <p className="app__subtitle">
-          {tasks.length === 0
-            ? 'Nothing here yet — add your first task.'
-            : `${remaining} of ${tasks.length} remaining`}
+    <div className="press">
+      <div className="press-atmosphere" aria-hidden="true" />
+
+      <header className="press-hero">
+        <p className="press-brand">POLYBIUS PRESS</p>
+        <h1>Stage SD cards before you flash.</h1>
+        <p className="press-lede">
+          Organise OS images and firmware for R36S, LilyGO T-Deck, M5Stack
+          Cardputer, and more — with dual-card, dual-OS, and dual-firmware
+          layouts including LineageOS.
         </p>
+        <div className="press-cta-row">
+          <a className="press-cta" href="#workshop">
+            Open workshop
+          </a>
+          <a
+            className="press-cta press-cta-ghost"
+            href="https://github.com/andr36oid/release_uploads"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Lineage images
+          </a>
+        </div>
       </header>
 
-      {persistError && (
-        <p className="app__error" role="alert">
-          Couldn’t save your tasks — changes may be lost when you close the page.
-        </p>
-      )}
+      <main id="workshop" className="press-workshop">
+        <section className="press-panel" aria-labelledby="device-heading">
+          <h2 id="device-heading">Device</h2>
+          <p className="press-hint">
+            R36S handhelds (SD OS images) or ESP32 decks (USB firmware).
+          </p>
+          {groups.map(({ group, items }) => (
+            <div key={group} className="press-group">
+              <h3 className="press-group-label">{group}</h3>
+              <div className="press-device-grid">
+                {items.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className={
+                      p.id === profile.id
+                        ? 'press-device press-device-active'
+                        : 'press-device'
+                    }
+                    onClick={() => selectProfile(p)}
+                  >
+                    <span className="press-device-name">{p.name}</span>
+                    <span className="press-device-meta">
+                      {p.family.toUpperCase()} · {p.supportedModes.length} layout
+                      {p.supportedModes.length === 1 ? '' : 's'}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+          <p className="press-blurb">{profile.blurb}</p>
+        </section>
 
-      <form
-        className="composer"
-        onSubmit={(e) => {
-          e.preventDefault()
-          addTask()
-        }}
-      >
-        <input
-          className="composer__input"
-          aria-label="New task"
-          placeholder="What needs to be done?"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-        />
-        <button className="composer__button" type="submit">
-          Add
-        </button>
-      </form>
+        <section className="press-panel" aria-labelledby="boot-heading">
+          <h2 id="boot-heading">Boot layout</h2>
+          <p className="press-hint">
+            {profile.family === 'r36'
+              ? 'R36S dual boot uses two physical cards — OS+ROMs or two OS images swapped in TF1.'
+              : 'ESP32 dual boot means reflashing an alternate .bin over USB, or pairing firmware with a FAT microSD for assets.'}
+          </p>
+          <div className="press-mode-row" role="radiogroup" aria-label="Boot mode">
+            {profile.supportedModes.map((id) => (
+              <button
+                key={id}
+                type="button"
+                role="radio"
+                aria-checked={bootMode === id}
+                className={
+                  bootMode === id ? 'press-mode press-mode-active' : 'press-mode'
+                }
+                onClick={() => setBootMode(id)}
+              >
+                <span className="press-mode-label">{BOOT_MODE_LABELS[id]}</span>
+                <span className="press-mode-desc">{BOOT_MODE_HINTS[id]}</span>
+              </button>
+            ))}
+          </div>
 
-      <ul className="task-list">
-        {tasks.map((task) => (
-          <li key={task.id} className="task">
-            <label className="task__label">
+          {profile.ports && profile.ports.length > 0 && (
+            <label className="press-toggle">
               <input
                 type="checkbox"
-                checked={task.done}
-                onChange={() => toggleTask(task.id)}
+                checked={includePolybius}
+                onChange={(e) => setIncludePolybius(e.target.checked)}
               />
-              <span className={task.done ? 'task__text task__text--done' : 'task__text'}>
-                {task.text}
+              <span>
+                Include POLYBIUS{' '}
+                {profile.id === 'r36s-lineage' ? 'APK sideload' : 'port folder'}
               </span>
             </label>
-            <button
-              className="task__delete"
-              aria-label={`Delete ${task.text}`}
-              onClick={() => removeTask(task.id)}
-            >
-              ×
+          )}
+        </section>
+
+        <section className="press-panel" aria-labelledby="files-heading">
+          <h2 id="files-heading">Downloads</h2>
+          <p className="press-hint">
+            Grab official images, then stage with the CLI. Files are not uploaded
+            — this UI only builds the plan.
+          </p>
+          <div className="press-links">
+            {profile.images.map((h) => (
+              <a key={h.url} href={h.url} target="_blank" rel="noreferrer">
+                {h.label}
+              </a>
+            ))}
+            {includePolybius &&
+              profile.ports?.map((h) => (
+                <a key={h.url} href={h.url} target="_blank" rel="noreferrer">
+                  {h.label}
+                </a>
+              ))}
+          </div>
+          {profile.images.some((i) => i.note) && (
+            <ul className="press-notes">
+              {profile.images
+                .filter((i) => i.note)
+                .map((i) => (
+                  <li key={i.url}>{i.note}</li>
+                ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="press-panel press-plan" aria-labelledby="plan-heading">
+          <div className="press-plan-head">
+            <div>
+              <h2 id="plan-heading">{plan.title}</h2>
+              <p className="press-hint">{plan.summary}</p>
+            </div>
+            <button type="button" className="press-copy" onClick={copyManifest}>
+              {copied ? 'Copied' : 'Copy manifest'}
             </button>
-          </li>
-        ))}
-      </ul>
-    </main>
+          </div>
+
+          <ol className="press-steps">
+            {plan.checklist.map((step) => (
+              <li key={step}>
+                <p>{step}</p>
+              </li>
+            ))}
+          </ol>
+
+          <div className="press-tree" aria-label="Staging tree">
+            {treeToText(plan.tree)
+              .split('\n')
+              .map((line) => (
+                <code key={line}>{line}</code>
+              ))}
+          </div>
+
+          {plan.flashCommands.length > 0 && (
+            <pre className="press-cli" tabIndex={0}>
+              {plan.flashCommands.join('\n')}
+            </pre>
+          )}
+
+          <p className="press-hint">
+            Stage on disk:{' '}
+            <code className="press-inline">
+              python tools/sd_organiser/sd_organiser.py stage --profile{' '}
+              {profile.id} --mode {bootMode}
+              {includePolybius ? ' --polybius' : ''}
+            </code>
+          </p>
+        </section>
+      </main>
+
+      <footer className="press-foot">
+        <span>POLYBIUS PRESS · local-only organiser</span>
+        <span>Flash with verified images · dd / Balena / Rufus</span>
+      </footer>
+    </div>
   )
 }
+
+export default App

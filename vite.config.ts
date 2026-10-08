@@ -9,6 +9,9 @@ export default defineConfig({
     host: true,
     port: 5173,
     strictPort: true,
+    allowedHosts: [
+      'e4dab2c5218ab90b517a-pod-5t32rkv72faxdppocuu6s7szaa-5173.us3p.cursorvm.com',
+    ],
   },
   preview: {
     host: true,
@@ -19,5 +22,6 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
   },
 })

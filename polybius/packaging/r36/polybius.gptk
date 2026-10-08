@@ -1,0 +1,20 @@
+# gptokeyb keymap: handheld gamepad -> keyboard for PØLYBĪUS.
+# Movement is on the d-pad/arrows; A fires/confirms, B is back/escape.
+up = up
+down = down
+left = left
+right = right
+a = space
+b = escape
+x = z
+y = x
+start = enter
+select = tab
+l1 = q
+r1 = e
+l2 = a
+r2 = d
+left_analog_up = up
+left_analog_down = down
+left_analog_left = left
+left_analog_right = right

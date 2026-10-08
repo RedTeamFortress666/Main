@@ -5,14 +5,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:polybius/core/constants/app_constants.dart';
+import 'package:polybius/core/constants/unlock_codes.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 
 /// Hidden dev/admin "SYS_CRASH" report screen (reached by holding GAME OVER).
 ///
-/// Flow: enter at least 6 words describing the incident, put the game file
-/// number in the diagnostic code box, hold SAVE AS DRAFT for 3 seconds until
-/// it glitches, then press SEND to proceed to the dev/admin login gate.
+/// Flow: enter at least 6 words describing the incident, optionally put a
+/// non-secret game file number in the diagnostic box, hold SAVE AS DRAFT for
+/// 3 seconds until it glitches, then press SEND to proceed to the login gate.
 class ErrorScreen extends ConsumerStatefulWidget {
   const ErrorScreen({super.key});
 
@@ -34,9 +35,14 @@ class _ErrorScreenState extends ConsumerState<ErrorScreen> {
   @override
   void initState() {
     super.initState();
-    // Pre-fill the diagnostic code with the bound game file number if present.
+    // Pre-fill only a bound game-file id that is NOT a developer unlock code
+    // (B1/D1/W1 must never appear here — those belong in the portal DEV CODE).
     ref.read(storageServiceProvider).getGameFileNumber().then((code) {
-      if (code != null && mounted) _diagnostic.text = code;
+      if (!mounted || code == null || code.trim().isEmpty) return;
+      if (UnlockCodes.developerCodes.contains(code.trim().toUpperCase())) {
+        return;
+      }
+      _diagnostic.text = code;
     });
   }
 

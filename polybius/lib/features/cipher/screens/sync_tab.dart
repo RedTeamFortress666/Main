@@ -52,9 +52,10 @@ class _SyncTabState extends ConsumerState<SyncTab> {
       return;
     }
     ref.read(poolSeedProvider.notifier).setSeed(token.seed);
+    ref.read(cipherComplexityProvider.notifier).setComplexity(token.complexity);
     setState(() {
       _ok = true;
-      _message = 'POOL ALIGNED — ${token.poolId}';
+      _message = 'POOL ALIGNED — ${token.poolId} (${token.complexity}/char)';
     });
   }
 
@@ -68,8 +69,9 @@ class _SyncTabState extends ConsumerState<SyncTab> {
   @override
   Widget build(BuildContext context) {
     final seed = ref.watch(poolSeedProvider);
+    final complexity = ref.watch(cipherComplexityProvider);
     final engine = ref.watch(cipherEngineProvider);
-    final token = PoolSync.fromSeed(seed);
+    final token = PoolSync.fromSeed(seed, complexity: complexity);
     final code = token.encode();
 
     return ListView(

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:polybius/core/constants/unlock_codes.dart';
 import 'package:polybius/core/audio/music_service.dart';
+import 'package:polybius/core/providers/intro_provider.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/routing/router_refresh.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
@@ -19,6 +20,7 @@ import 'package:polybius/features/auth/screens/pin_screen.dart';
 import 'package:polybius/features/auth/screens/register_screen.dart';
 import 'package:polybius/features/cipher/screens/cipher_shell.dart';
 import 'package:polybius/features/game/screens/game_screen.dart';
+import 'package:polybius/features/reticulum/reticulum_relay_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ref.watch(routerRefreshProvider);
@@ -29,18 +31,22 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final authState = ref.read(authProvider);
       final unlockState = ref.read(unlockProvider);
+      final introDone = ref.read(introCompleteProvider);
       final loc = state.matchedLocation;
 
-      // Keep the splash visible until session restore completes.
-      if (authState.isRestoring) {
+      // Stay on splash only while the cinematic intro runs.
+      // Do NOT block on auth restore — that previously trapped Android on
+      // "loading..." forever when restore lagged or failed.
+      if (!introDone) {
         return loc == '/' ? null : '/';
       }
 
       final loggedIn = authState.isAuthenticated;
       final needsPin = authState.needsPin && authState.user != null;
 
-      // Route away from the splash once restore has finished.
+      // Route away from the splash once intro has finished.
       if (loc == '/') {
+        if (authState.isRestoring) return '/login';
         if (needsPin) return '/pin';
         return loggedIn ? '/menu' : '/login';
       }
@@ -71,6 +77,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/devportal', builder: (_, _) => const DevPortalScreen()),
       GoRoute(path: '/error', builder: (_, _) => const ErrorScreen()),
       GoRoute(path: '/cipher', builder: (_, _) => const CipherShell()),
+      GoRoute(path: '/relay', builder: (_, _) => const ReticulumRelayScreen()),
     ],
   );
 });
