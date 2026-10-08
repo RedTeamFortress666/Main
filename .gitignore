@@ -12,6 +12,7 @@ __pycache__/
 dist
 dist-ssr
 *.local
+*.tsbuildinfo
 
 # Environment variables (never commit secrets)
 .env
