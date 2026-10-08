@@ -7,6 +7,8 @@ yarn-error.log*
 pnpm-debug.log*
 
 node_modules
+__pycache__/
+*.py[cod]
 dist
 dist-ssr
 *.local
@@ -15,6 +17,7 @@ dist-ssr
 .env
 .env.*
 !.env.example
+.matrix-rns-queue
 
 # Editor directories and files
 .vscode/*
@@ -34,3 +37,21 @@ phant0m/.vscode/c_cpp_properties.json
 phant0m/.vscode/launch.json
 phant0m/.vscode/ipch
 *.map
+# AndR36oid / LineageOS 18.1 trees (nested clones; do not vendor into this repo)
+/device/
+/kernel/
+/hardware/
+/docker_build/
+/.repo/
+
+# User-supplied ROM prebuilts (drop APKs locally; do not commit binaries)
+device_r36s_polybius/prebuilts/**/*.apk
+device_r36s_polybius/prebuilts/**/*.apk.idsig
+
+# CRYPT3X OS lite GPT image (8 GiB) — never commit
+polybius_flasher/images/*.img
+polybius_flasher/images/*.img.zip
+
+# Generated CRYPT3X boot animation (rebuild with media/render_bootanim.py)
+device_r36s_polybius/media/build/
+device_r36s_polybius/media/bootanimation.zip

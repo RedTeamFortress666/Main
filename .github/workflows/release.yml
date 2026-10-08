@@ -1,8 +1,9 @@
 name: Build Polybius downloads
 
 # Produces downloadable PØLYBĪUS builds. Run manually (Actions -> this workflow
-# -> Run workflow) to get artifacts, or push a tag like `v1.0.0-beta.1` to also
-# publish a GitHub Release with the files attached.
+# -> Run workflow) or push a tag like `v1.0.0-beta.1`. Artifacts stay on the
+# run for the operator; shareable links are minted on temp.sh (t3mp), not as a
+# GitHub Release.
 on:
   workflow_dispatch:
   push:
@@ -10,10 +11,11 @@ on:
       - 'v*'
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   FLUTTER_CHANNEL: stable
+  FLUTTER_VERSION: 3.44.8
   WORKING_DIR: polybius
 
 jobs:
@@ -24,6 +26,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: ${{ env.FLUTTER_CHANNEL }}
+          flutter-version: ${{ env.FLUTTER_VERSION }}
       - run: flutter pub get
         working-directory: ${{ env.WORKING_DIR }}
       - run: flutter build web --release
@@ -48,6 +51,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: ${{ env.FLUTTER_CHANNEL }}
+          flutter-version: ${{ env.FLUTTER_VERSION }}
       - run: flutter pub get
         working-directory: ${{ env.WORKING_DIR }}
       # Builds a release APK. Without android/key.properties this is debug-signed
@@ -66,10 +70,15 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: ${{ env.FLUTTER_CHANNEL }}
+          flutter-version: ${{ env.FLUTTER_VERSION }}
       - name: Install Linux build deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build cmake clang pkg-config libgtk-3-dev liblzma-dev
+          sudo apt-get install -y ninja-build cmake clang pkg-config \
+            libgtk-3-dev liblzma-dev \
+            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+            gstreamer1.0-plugins-good \
+            libsecret-1-dev libjsoncpp-dev
       - run: flutter pub get
         working-directory: ${{ env.WORKING_DIR }}
       - run: flutter build linux --release
@@ -84,17 +93,27 @@ jobs:
           path: polybius-linux-x64.tar.gz
 
   # aarch64 Linux build for ARM handhelds (R36 S / R36 Ultra run ARM Linux).
+  # flutter-action cannot resolve stable/arm64 from the Flutter archive JSON,
+  # so the SDK is cloned from the 3.44.8 tag instead.
   linux-arm64:
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: ${{ env.FLUTTER_CHANNEL }}
+      - name: Install Flutter from git
+        run: |
+          git clone --depth 1 --branch ${{ env.FLUTTER_VERSION }} \
+            https://github.com/flutter/flutter.git "$HOME/flutter"
+          echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
       - name: Install Linux build deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build cmake clang pkg-config libgtk-3-dev liblzma-dev
+          sudo apt-get install -y ninja-build cmake clang pkg-config \
+            libgtk-3-dev liblzma-dev \
+            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+            gstreamer1.0-plugins-good \
+            libsecret-1-dev libjsoncpp-dev
+      - run: flutter config --no-analytics
+      - run: flutter doctor -v
       - run: flutter pub get
         working-directory: ${{ env.WORKING_DIR }}
       - run: flutter build linux --release
@@ -118,6 +137,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: ${{ env.FLUTTER_CHANNEL }}
+          flutter-version: ${{ env.FLUTTER_VERSION }}
       - run: flutter pub get
         working-directory: ${{ env.WORKING_DIR }}
       - run: flutter build ios --release --no-codesign
@@ -131,17 +151,39 @@ jobs:
           name: polybius-ios-unsigned
           path: polybius-ios-unsigned.zip
 
-  release:
+  t3mp:
     needs: [web, android, linux, linux-arm64, ios]
-    if: startsWith(github.ref, 'refs/tags/')
+    if: |
+      startsWith(github.ref, 'refs/tags/') &&
+      !cancelled() &&
+      needs.web.result == 'success' &&
+      needs.android.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
-      - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: artifacts/**/*
-          draft: true
-          generate_release_notes: true
+      - name: Mint t3mp drops (not GitHub Releases)
+        run: |
+          set -euo pipefail
+          {
+            echo "## PØLYBĪUS t3mp links"
+            echo
+            echo "Anonymous [temp.sh](https://temp.sh) drops — **not** GitHub Releases or raw GitHub URLs."
+            echo "Files expire after **3 days**. Open the page, then **Click here to download**."
+            echo "Direct: \`curl -X POST -O -J <url>\`"
+            echo
+            echo "| Artifact | t3mp URL |"
+            echo "| --- | --- |"
+            found=0
+            while IFS= read -r -d '' file; do
+              found=1
+              url=$(curl -sS -F "file=@${file}" https://temp.sh/upload | tr -d '\r')
+              url="${url%%$'\n'*}"
+              name=$(basename "$file")
+              echo "| \`$name\` | $url |"
+            done < <(find artifacts -type f -print0)
+            if [[ "$found" -eq 0 ]]; then
+              echo "| _none_ | build jobs produced no files |"
+            fi
+          } | tee -a "$GITHUB_STEP_SUMMARY"
