@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- USB OTG / ESP32-S3: do not prompt for every CDC/HID attach. -->
+    <bool name="config_disableUsbPermissionDialogs">true</bool>
+
+    <bool name="config_bluetooth_le_peripheral_mode_supported">true</bool>
+
+    <!-- Wi-Fi Direct is already declared in common; keep P2P available. -->
+    <bool name="config_wifi_fast_bss_transition_supported">true</bool>
+
+    <!-- Fingerprint: randomize STA MAC when the firmware allows (common already true). -->
+    <bool name="config_wifi_connected_mac_randomization_supported">true</bool>
+
+    <!-- No microG on this product — do not load fused/network location stubs. -->
+    <bool name="config_enableNetworkLocationOverlay">false</bool>
+    <bool name="config_enableFusedLocationOverlay">false</bool>
+</resources>

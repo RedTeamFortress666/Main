@@ -9,6 +9,7 @@ import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 import 'package:polybius/core/widgets/arcade_ui.dart';
 import 'package:polybius/core/widgets/crt_widgets.dart';
+import 'package:polybius/core/widgets/floating_glyph_keyboard.dart';
 
 /// Layer 2 public face — retro arcade main menu with hidden unlock rituals.
 ///
@@ -75,6 +76,15 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen>
         child: Stack(
           children: [
             SubliminalFlash(phrases: AppConstants.mkUltraPhrases),
+            Positioned(
+              right: 0,
+              top: 0,
+              child: IconButton(
+                tooltip: 'Clock',
+                icon: const Icon(Icons.access_time, color: Color(0xFFC9A227)),
+                onPressed: () => context.go('/clock'),
+              ),
+            ),
             LayoutBuilder(
               builder: (context, constraints) => SingleChildScrollView(
                 child: ConstrainedBox(
@@ -83,6 +93,20 @@ class _MainMenuScreenState extends ConsumerState<MainMenuScreen>
                     child: Column(
               children: [
                 const Spacer(),
+                const SizedBox(
+                  height: 148,
+                  child: IgnorePointer(
+                    child: FittedBox(
+                      fit: BoxFit.contain,
+                      child: SizedBox(
+                        width: 360,
+                        height: 230,
+                        child: FloatingGlyphKeyboard(),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
                 GestureDetector(
                   onLongPressStart: (_) => _startTitleHold(),
                   onLongPressEnd: (_) => _endTitleHold(),

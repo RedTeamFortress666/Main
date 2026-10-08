@@ -1,0 +1,29 @@
+# Polybius product extras. USB ACM nodes + optional local WebSocket bridge.
+
+on boot
+    mkdir /data/polybius 0770 system system
+    mkdir /data/polybius/bridge 0770 system system
+
+    # ESP32-S3 / USB-UART appear as ttyACM* or ttyUSB* once the kernel
+    # CONFIG_USB_ACM / CONFIG_USB_SERIAL options are enabled.
+    chmod 0660 /dev/ttyACM0
+    chmod 0660 /dev/ttyUSB0
+    chown system system /dev/ttyACM0
+    chown system system /dev/ttyUSB0
+
+# Hotplug nodes are 0660 system system via ueventd (ttyACM* / ttyUSB*).
+# Do not use device-added-/dev/... triggers — Android 11 host_init_verifier
+# rejects '/' in those action names.
+
+# Starts only if you install a native binary at /system/bin/polybius_bridge
+# (recommended) or wrap scripts/polybius_bridge.py with Termux / a python
+# prebuilt. Disabled by default so boot does not fail.
+service polybius_bridge /system/bin/polybius_bridge
+    class late_start
+    user system
+    group system inet wifi usb
+    disabled
+    oneshot
+
+on property:ro.polybius.bridge=1
+    start polybius_bridge

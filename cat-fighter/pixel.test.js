@@ -1,0 +1,65 @@
+import { describe, it, expect } from 'vitest';
+import { FONT5, pixelTextWidth, lifeBarWidth, fighterPoseFromState, paintApril } from './js/pixel.js';
+
+describe('pixel font', () => {
+  it('has glyphs for A-Z, 0-9, and FIGHT punctuation', () => {
+    const need = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?.\'-:/+*><';
+    for (const ch of need) {
+      expect(FONT5[ch], ch).toBeTruthy();
+      expect(FONT5[ch]).toHaveLength(7);
+    }
+  });
+
+  it('measures YOKO\'S TUNA BRAWL at scale 4', () => {
+    expect(pixelTextWidth("YOKO'S TUNA BRAWL", 4)).toBe(17 * 6 * 4);
+  });
+});
+
+describe('lifeBarWidth', () => {
+  it('fills the bar at full HP and shrinks from the right when flipped by caller', () => {
+    expect(lifeBarWidth(1000, 1000, 400)).toBe(400);
+    expect(lifeBarWidth(500, 1000, 400)).toBe(200);
+    expect(lifeBarWidth(0, 1000, 400)).toBe(0);
+    expect(lifeBarWidth(50, 1000, 400)).toBe(20);
+  });
+});
+
+describe('fighterPoseFromState', () => {
+  it('crouches, punches, and KOs from fighter flags', () => {
+    expect(fighterPoseFromState({ crouching: true, airborne: false, animTime: 0 }).crouch).toBe(1);
+    expect(fighterPoseFromState({
+      attacking: true,
+      attack: { id: 'lp', startup: 1, active: 2, recovery: 1 },
+      attackFrame: 2,
+      animTime: 0,
+    }).punch).toBe(1);
+    expect(fighterPoseFromState({ state: 'ko', animTime: 0 }).ko).toBe(1);
+  });
+
+  it('fires laser-eye pose from laserEyes', () => {
+    expect(fighterPoseFromState({
+      attacking: true,
+      attack: { id: 'laserEyes', projectile: 'laser', startup: 1, active: 2, recovery: 1 },
+      attackFrame: 2,
+      animTime: 0,
+    }).laser).toBe(1);
+  });
+});
+
+describe('April sprite', () => {
+  it('paints a goth hoodie sprite', () => {
+    const fills = [];
+    const ctx = {
+      clearRect() {},
+      fillRect(x, y, w, h) { fills.push({ x, y, w, h, color: ctx.fillStyle }); },
+      fillStyle: '',
+    };
+    paintApril(ctx, 12, 'dust');
+    expect(fills.length).toBeGreaterThan(12);
+    expect(fills.some((f) => f.color === '#141018')).toBe(true);
+    expect(fills.some((f) => f.color === '#ff4da6')).toBe(true);
+    expect(fills.some((f) => f.color === '#ffc4e1')).toBe(true);
+    const bagCat = fills.filter((f) => f.color === '#ffc4e1' || f.color === '#ffe6f3');
+    expect(Math.max(...bagCat.map((f) => f.w * f.h))).toBeGreaterThanOrEqual(16 * 14);
+  });
+});

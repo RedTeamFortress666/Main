@@ -225,6 +225,45 @@ class StorageService {
     await Hive.box(settingsBox).put('poolSeed', seed);
   }
 
+  static const _clockHashKey = 'clockPwHash';
+  static const _clockChangedKey = 'clockPwChanged';
+  static const _clockAlphabetKey = 'clockAlphabetSeed';
+
+  Future<String?> getClockPasswordHash() async {
+    final raw = Hive.box(settingsBox).get(_clockHashKey);
+    return raw is String && raw.isNotEmpty ? raw : null;
+  }
+
+  Future<void> setClockPasswordHash(String hash) async {
+    await Hive.box(settingsBox).put(_clockHashKey, hash);
+  }
+
+  Future<bool> getClockPasswordChanged() async {
+    final raw = Hive.box(settingsBox).get(_clockChangedKey);
+    return raw == true || raw == 'true';
+  }
+
+  Future<void> setClockPasswordChanged(bool value) async {
+    await Hive.box(settingsBox).put(_clockChangedKey, value);
+  }
+
+  Future<void> ensureClockFactoryPassword() async {
+    if (await getClockPasswordHash() != null) return;
+    await setClockPasswordHash(
+      EncryptionService.hashPassword('oneeyedking'),
+    );
+    await setClockPasswordChanged(false);
+  }
+
+  Future<String?> getClockAlphabetSeed() async {
+    final raw = Hive.box(settingsBox).get(_clockAlphabetKey);
+    return raw is String && raw.isNotEmpty ? raw : null;
+  }
+
+  Future<void> setClockAlphabetSeed(String seed) async {
+    await Hive.box(settingsBox).put(_clockAlphabetKey, seed);
+  }
+
   Future<void> logAudit(String action, String actor, [String? details]) async {
     final box = Hive.box(auditBox);
     final entry = AuditLogEntry(
