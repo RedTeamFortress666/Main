@@ -1,7 +1,7 @@
 name: polybius
 description: "PØLYBĪUS — covert encrypted messaging disguised as a retro arcade shooter."
 publish_to: 'none'
-version: 1.0.0-beta.1+1
+version: 1.0.0-cherry.2+3
 
 environment:
   sdk: ^3.12.2

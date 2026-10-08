@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Hint file for USB host apps. ESP32-S3 native USB is typically CDC ACM
+     (class 02 / subclass 02). Generic HID and USB-UART bridges included. -->
+<resources>
+    <usb-device class="2" subclass="2" />
+    <usb-device class="3" />
+    <!-- Common USB-UART: FTDI, CP210x, CH340, ESP32-S3 (Espressif 0x303A) -->
+    <usb-device vendor-id="1027" />
+    <usb-device vendor-id="4292" />
+    <usb-device vendor-id="6790" />
+    <usb-device vendor-id="12346" />
+</resources>
