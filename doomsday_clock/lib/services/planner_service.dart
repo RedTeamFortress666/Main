@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/models.dart';
 
+import 'ritual_settings_service.dart';
+
 /// Daily planner notes + DARTH CHERRY sealed operator cache.
 ///
 /// **5 November** — type `Remember remember` → hold SAVE NOTE 3s → unlocks
@@ -49,7 +51,14 @@ class PlannerService {
         .trim();
   }
 
-  bool matchesRitual(String input, DateTime day) {
+  bool matchesRitual(
+    String input,
+    DateTime day, {
+    RitualSettings? custom,
+  }) {
+    if (custom != null && (custom.hasCustomDate || custom.hasCustomPhrase)) {
+      return RitualSettingsService().matchesUnlock(input, day, custom);
+    }
     if (isGunpowderDay(day)) return _matchesRememberRemember(input);
     if (isMechaHDay(day)) return _matchesMechaH(input);
     return false;

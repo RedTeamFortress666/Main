@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../app_config.dart';
 import '../services/auth_service.dart';
 import '../theme/noir_theme.dart';
 import '../widgets/doomsday_logo.dart';
 import '../widgets/matrix_chrome.dart';
+import 'create_account_sheet.dart';
 
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key, required this.onAuthenticated});
@@ -49,7 +51,9 @@ class _AuthGateState extends State<AuthGate> {
     if (session == null) {
       setState(() {
         _busy = false;
-        _error = 'ACCESS DENIED — developer / admin only';
+        _error = AppConfig.isStable
+            ? 'ACCESS DENIED — check credentials or create account'
+            : 'ACCESS DENIED — SpamKat2 / Gam3.0n bunker only';
       });
       return;
     }
@@ -77,7 +81,7 @@ class _AuthGateState extends State<AuthGate> {
               const Center(child: DoomsdayLogo(size: 140)),
               const SizedBox(height: 18),
               Text(
-                'CYBER TERMINAL · OPERATOR AUTH',
+                AppConfig.authSubtitle,
                 style: Theme.of(context).textTheme.labelLarge,
               ),
               const SizedBox(height: 24),
@@ -132,13 +136,35 @@ class _AuthGateState extends State<AuthGate> {
                         style: const TextStyle(color: NoirTheme.crimson),
                       ),
                     ],
+                    if (AppConfig.isStable) ...[
+                      const SizedBox(height: 12),
+                      TextButton(
+                        onPressed: _busy
+                            ? null
+                            : () async {
+                                final session = await CreateAccountSheet.show(
+                                  context,
+                                  _auth,
+                                );
+                                if (session != null && mounted) {
+                                  widget.onAuthenticated(session);
+                                }
+                              },
+                        child: const Text(
+                          'CREATE ACCOUNT',
+                          style: TextStyle(
+                            color: NoirTheme.neonCyan,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
               const SizedBox(height: 16),
               Text(
-                'Privileged PØLYBÎŪS operators only. '
-                'DARTH CHERRY sealed data unlocks in Planner on 5 November.',
+                AppConfig.authFooter,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: NoirTheme.mist.withValues(alpha: 0.55),
                     ),

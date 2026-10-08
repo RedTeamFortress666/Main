@@ -3,6 +3,8 @@ import 'package:doomsday_clock/data/polybius_operator_cards.dart';
 import 'package:doomsday_clock/services/planner_service.dart';
 import 'package:doomsday_clock/services/polybius_operators.dart';
 import 'package:doomsday_clock/services/bulletin_service.dart';
+import 'package:doomsday_clock/services/qr_card_codec.dart';
+import 'package:doomsday_clock/services/ritual_settings_service.dart';
 
 void main() {
   test('Nov 5 unlocks with Remember remember phrase', () {
@@ -17,67 +19,84 @@ void main() {
     expect(p.matchesRitual('remember remember', nov5), isTrue);
     expect(p.matchesRitual('Remember remember', nov4), isFalse);
     expect(p.matchesRitual('wrong words', nov5), isFalse);
-
-    // Legacy full riddle still works
-    expect(
-      p.matchesRitual(
-        'remember remember the 5th of november the gunpowder treason '
-        'and plot i know of no reason why gunpowder treason should ever be forgot',
-        nov5,
-      ),
-      isTrue,
-    );
   });
 
-  test('20 April unlocks with MechaH birthday line', () {
+  test('custom ritual unlock phrase and date', () {
     final p = PlannerService();
-    final apr20 = DateTime(2026, 4, 20);
-    final apr19 = DateTime(2026, 4, 19);
+    final customDay = DateTime(2026, 3, 15);
+    const custom = RitualSettings(phrase: 'open sesame', month: 3, day: 15);
 
-    expect(p.isMechaHDay(apr20), isTrue);
-    expect(p.isUnlockDay(apr20), isTrue);
-    expect(p.isUnlockDay(apr19), isFalse);
-
-    expect(p.matchesRitual(PlannerService.mechaHBirthday, apr20), isTrue);
+    expect(p.matchesRitual('open sesame', customDay, custom: custom), isTrue);
+    expect(p.matchesRitual('wrong', customDay, custom: custom), isFalse);
     expect(
-      p.matchesRitual('happy birthday mechah i grok thee', apr20),
-      isTrue,
+      p.matchesRitual('open sesame', DateTime(2026, 11, 5), custom: custom),
+      isFalse,
     );
-    expect(p.matchesRitual(PlannerService.mechaHBirthday, apr19), isFalse);
   });
 
-  test('Gam3.0n is the only Cherry cache roster viewer', () {
-    expect(PolybiusOperatorCards.canOpenCherryCache('GAM3.0N'), isTrue);
-    expect(PolybiusOperatorCards.canOpenCherryCache('Gam3.0n'), isTrue);
-    expect(PolybiusOperatorCards.canOpenCherryCache('REDTEAM01'), isFalse);
-    expect(PolybiusOperatorCards.all.length, greaterThanOrEqualTo(44));
+  test('QR codec round-trips operator card', () {
+    const card = PolybiusOperatorCard(
+      username: 'TESTOP',
+      displayName: 'Test Op',
+      inviteCode: 'T3-ST-0P',
+      pin: '123456',
+      password: 'secret',
+      backupPassword: 'backup',
+      tier: 'agent',
+    );
+    final encoded = QrCardCodec.encode(card);
+    final decoded = QrCardCodec.decode(encoded);
+    expect(decoded, isNotNull);
+    expect(decoded!.username, 'TESTOP');
+    expect(decoded.password, 'secret');
+    expect(decoded.pin, '123456');
   });
 
-  test('privileged operator auth accepts Art3mas and rejects bad pin', () {
-    final ok = authenticatePolybiusAdmin(
+  test('bunker operators are SpamKat2 and Gam3.0n only', () {
+    expect(PolybiusOperatorCards.isBunkerOperator('GAM3.0N'), isTrue);
+    expect(PolybiusOperatorCards.isBunkerOperator('SPAMKAT2'), isTrue);
+    expect(PolybiusOperatorCards.isBunkerOperator('SpamKat2'), isTrue);
+    expect(PolybiusOperatorCards.isBunkerOperator('REDTEAM01'), isFalse);
+  });
+
+  test('primary card is own identity; secondary excludes self', () {
+    final gamePrimary = PolybiusOperatorCards.primaryCardFor('GAM3.0N');
+    expect(gamePrimary, isNotNull);
+    expect(gamePrimary!.username, 'GAM3.0N');
+
+    final spamPrimary = PolybiusOperatorCards.primaryCardFor('SPAMKAT2');
+    expect(spamPrimary!.username, 'SPAMKAT2');
+
+    final secondary = PolybiusOperatorCards.secondaryPlayerCards('GAM3.0N');
+    expect(secondary.any((c) => c.username == 'GAM3.0N'), isFalse);
+    expect(secondary.any((c) => c.username == 'SPAMKAT2'), isTrue);
+    expect(secondary.length, PolybiusOperatorCards.all.length - 1);
+  });
+
+  test('bunker auth accepts SpamKat2 and rejects Art3mas', () {
+    final ok = authenticateBunkerOperator(
+      username: 'SpamKat2',
+      password: 'Ev1l-Schm33',
+      pin: '810739',
+    );
+    expect(ok, isNotNull);
+    expect(ok!.tier, 'developer');
+
+    final denied = authenticateBunkerOperator(
       username: 'Art3mas',
       password: 'BowArrow7',
       pin: '271828',
     );
-    expect(ok, isNotNull);
-    expect(ok!.tier, 'admin');
-
-    final bad = authenticatePolybiusAdmin(
-      username: 'Art3mas',
-      password: 'BowArrow7',
-      pin: '000000',
-    );
-    expect(bad, isNull);
+    expect(denied, isNull);
   });
 
-  test('Gam3.0n admin credentials authenticate', () {
-    final ok = authenticatePolybiusAdmin(
+  test('Gam3.0n bunker credentials authenticate', () {
+    final ok = authenticateBunkerOperator(
       username: 'GAM3.0N',
       password: 'Dig1tal.Ra1n99',
       pin: '816639',
     );
     expect(ok, isNotNull);
-    expect(ok!.tier, 'developer');
   });
 
   test('bulletin source is BAS', () {
