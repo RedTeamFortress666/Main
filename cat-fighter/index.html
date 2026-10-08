@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Tuna Brawl" />
+  <meta name="theme-color" content="#05040a" />
+  <title>Yoko's Tuna Brawl</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="assets/icon-192.png" />
+  <link rel="apple-touch-icon" href="assets/icon-192.png" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="wrap">
+    <canvas id="game" width="1280" height="720" aria-label="Yoko's Tuna Brawl game canvas">
+      Your browser needs canvas support to host this tea party.
+    </canvas>
+    <div class="scanlines" aria-hidden="true"></div>
+  </div>
+  <div id="touch-ui" class="touch-ui show" aria-hidden="false">
+    <div class="touch-cluster left">
+      <div class="dpad">
+        <button type="button" class="tbtn dpad-up" data-code="KeyW">UP</button>
+        <button type="button" class="tbtn dpad-left" data-code="KeyA">LEFT</button>
+        <button type="button" class="tbtn dpad-down" data-code="KeyS">DOWN</button>
+        <button type="button" class="tbtn dpad-right" data-code="KeyD">RIGHT</button>
+      </div>
+    </div>
+    <div class="touch-cluster right">
+      <div class="touch-row">
+        <button type="button" class="tbtn jump" data-code="Space">JUMP</button>
+        <button type="button" class="tbtn punch" data-code="KeyZ">PUNCH</button>
+      </div>
+      <div class="touch-row">
+        <button type="button" class="tbtn kick" data-code="KeyX">KICK</button>
+        <button type="button" class="tbtn laser" data-code="KeyC">LASER</button>
+      </div>
+      <div class="touch-row">
+        <button type="button" class="tbtn start" data-code="Enter">START</button>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

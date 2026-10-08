@@ -1,0 +1,60 @@
+CRYPT3X OS LITE — flash onto an R36S
+====================================
+
+This zip is a GPT disk image for a microSD card, not a CD/DVD ISO.
+Use balenaEtcher, Raspberry Pi Imager, Rufus (DD mode), or dd.
+Do not mount it and copy files onto an existing ArkOS/JELOS card.
+
+  Build     lineage_r36s_crypt3x_lite-userdebug  20260815-1244
+  Image     lineage-18.1-20260815-1244-r36s-crypt3x-lite.img
+  Image sz  8.0 GiB  (8589934592 bytes)
+  Image sha ece3a41fe3d5fed083c788a75cb912dc5c7013af9be26f52d7b4ecb94b95abcc
+  Card      32 GB or larger microSD
+
+THIS ERASES THE ENTIRE CARD. Confirm the device name before you write.
+
+1. Verify this zip, then unzip it (or point Etcher at this zip).
+
+     sha256sum lineage-18.1-20260815-1244-r36s-crypt3x-lite.img
+     # expect ece3a41fe3d5fed083c788a75cb912dc5c7013af9be26f52d7b4ecb94b95abcc
+
+2. Write the card
+
+   Linux:
+     lsblk
+     sudo umount /dev/sdX* || true
+     sudo dd if=lineage-18.1-20260815-1244-r36s-crypt3x-lite.img \
+       of=/dev/sdX bs=4M status=progress conv=fsync
+     sync
+     # or: polybius_flasher/tool/flash_crypt3x_lite.sh /dev/sdX
+
+   macOS:
+     diskutil list
+     diskutil unmountDisk /dev/diskN
+     sudo dd if=lineage-18.1-20260815-1244-r36s-crypt3x-lite.img \
+       of=/dev/rdiskN bs=4m
+     sync
+
+   Windows:
+     balenaEtcher or Raspberry Pi Imager:
+       select the .img (or this zip) → select the microSD → Flash → Eject
+     Rufus: open the .img, DD Image mode, write, eject
+
+   The phone PØLYBÎŪS FLASHER can only stage this file onto a USB stick.
+   It cannot dd GPT onto the R36S card. Finish on a PC.
+
+3. Boot the R36S
+
+   Power off. Insert the card in the R36S OS microSD slot (not a
+   secondary ROMs slot). Power on. First boot can take a few minutes.
+   You should see the CRYPT3X boot animation, then the vault desk
+   (Mail / F-Droid / Brave / Cherry).
+
+   If it boots ArkOS/JELOS, the card is in the wrong slot or was not
+   written as a raw disk image.
+
+Notes
+  FAT32 cannot hold the raw 8 GiB .img when you copy the file around.
+  Flashing does not need FAT32 — dd / Etcher write the GPT.
+  Do not cp the .img onto a formatted card. That is not a flash.
+  Change the vault PIN at first setup.
