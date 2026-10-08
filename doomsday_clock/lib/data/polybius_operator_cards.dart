@@ -1,4 +1,4 @@
-/// Full PØLYBÎŪS operator identity roster for Gam3.0n DARTH CHERRY cache.
+/// Full PØLYBÎŪS operator identity roster for DARTH CHERRY vaults.
 class PolybiusOperatorCard {
   const PolybiusOperatorCard({
     required this.username,
@@ -21,9 +21,35 @@ class PolybiusOperatorCard {
 class PolybiusOperatorCards {
   PolybiusOperatorCards._();
   static const gam3onUsername = 'GAM3.0N';
+  static const spamkatUsername = 'SPAMKAT2';
 
-  static bool canOpenCherryCache(String username) =>
-      username.trim().toUpperCase() == gam3onUsername;
+  /// Bunker operators: SpamKat2 & Gam3.0n only.
+  static bool isBunkerOperator(String username) {
+    final u = username.trim().toUpperCase();
+    return u == gam3onUsername || u == spamkatUsername;
+  }
+
+  static bool canOpenCherryCache(String username) => isBunkerOperator(username);
+
+  static PolybiusOperatorCard? findByUsername(String username) {
+    final u = username.trim().toUpperCase();
+    for (final card in all) {
+      if (card.username.toUpperCase() == u ||
+          card.displayName.toUpperCase() == u) {
+        return card;
+      }
+    }
+    return null;
+  }
+
+  /// Own card first (game on for game on / spamkat for spamkat).
+  static PolybiusOperatorCard? primaryCardFor(String username) =>
+      findByUsername(username);
+
+  static List<PolybiusOperatorCard> secondaryPlayerCards(String username) {
+    final u = username.trim().toUpperCase();
+    return all.where((c) => c.username.toUpperCase() != u).toList();
+  }
 
   static const all = <PolybiusOperatorCard>[
     PolybiusOperatorCard(username: 'ARTEM3S', displayName: 'Art3mas', inviteCode: 'AR2-66-3R', pin: '271828', password: 'BowArrow7', backupPassword: 'Huntress9', tier: 'admin'),

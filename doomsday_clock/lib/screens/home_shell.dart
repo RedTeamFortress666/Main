@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app_config.dart';
 import '../services/auth_service.dart';
 import '../theme/noir_theme.dart';
 import '../widgets/doomsday_logo.dart';
@@ -59,12 +60,12 @@ class _HomeShellState extends State<HomeShell> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'DOOMSDAY CLOCK 2.1',
+                            AppConfig.shortTitle,
                             style: Theme.of(context)
                                 .textTheme
                                 .displayLarge
                                 ?.copyWith(
-                                  fontSize: 18,
+                                  fontSize: 16,
                                   color: NoirTheme.neonCyan,
                                   shadows: [
                                     Shadow(

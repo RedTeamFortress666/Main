@@ -1,4 +1,4 @@
-/// Privileged developer / admin identities accepted for terminal login.
+/// Bunker developer identities — SpamKat2 & Gam3.0n only.
 class PolybiusOperator {
   const PolybiusOperator({
     required this.username,
@@ -19,18 +19,8 @@ class PolybiusOperator {
   final String? inviteOrDevCode;
 }
 
-/// Only privileged admins + developers may jack in.
-/// DEVELOPER / developer is stricken for V1 Stable.
-const polybiusPrivilegedOperators = <PolybiusOperator>[
-  PolybiusOperator(
-    username: 'REDTEAM01',
-    displayName: 'RedTeam01',
-    password: '816639',
-    backupPassword: '816639',
-    pin: '816639',
-    tier: 'admin',
-    inviteOrDevCode: 'B1-66-3R',
-  ),
+/// DOØMSDAY BUNKER v1 login roster — SpamKat2 & Gam3.0n.
+const polybiusBunkerOperators = <PolybiusOperator>[
   PolybiusOperator(
     username: 'SPAMKAT2',
     displayName: 'SpamKat2',
@@ -49,52 +39,10 @@ const polybiusPrivilegedOperators = <PolybiusOperator>[
     tier: 'developer',
     inviteOrDevCode: 'B1-66-3R',
   ),
-  PolybiusOperator(
-    username: 'KASP3R',
-    displayName: 'KASP3R',
-    password: 'BurnHideFr13d',
-    backupPassword: 'P1ckl3M0rty69',
-    pin: '791639',
-    tier: 'admin',
-    inviteOrDevCode: 'TR1-66-3R',
-  ),
-  PolybiusOperator(
-    username: 'CROWNOFCORNS',
-    displayName: 'CrownOfCorns',
-    password: '20YokoMicrowave14',
-    backupPassword: 'C0rnS1lo14',
-    pin: '539667',
-    tier: 'admin',
-    inviteOrDevCode: 'C0-9N-3E',
-  ),
-  PolybiusOperator(
-    username: 'P!K.ZUP',
-    displayName: 'P!k.ZuP',
-    password: 'DocCh1ck3n',
-    backupPassword: 'TakeAOrdaPr33z',
-    pin: '839093',
-    tier: 'admin',
-    inviteOrDevCode: 'D4-N6-3R',
-  ),
-  PolybiusOperator(
-    username: 'NITEQUEEN',
-    displayName: 'NiteQueen',
-    password: 'NiteOwl42',
-    backupPassword: 'NightOwl7',
-    pin: '314159',
-    tier: 'admin',
-    inviteOrDevCode: 'NQ1-66-3R',
-  ),
-  PolybiusOperator(
-    username: 'ARTEM3S',
-    displayName: 'Art3mas',
-    password: 'BowArrow7',
-    backupPassword: 'Huntress9',
-    pin: '271828',
-    tier: 'admin',
-    inviteOrDevCode: 'AR2-66-3R',
-  ),
 ];
+
+/// Legacy alias — bunker operators only.
+const polybiusPrivilegedOperators = polybiusBunkerOperators;
 
 PolybiusOperator? authenticatePolybiusAdmin({
   required String username,
@@ -102,7 +50,7 @@ PolybiusOperator? authenticatePolybiusAdmin({
   required String pin,
 }) {
   final u = username.trim().toUpperCase();
-  for (final op in polybiusPrivilegedOperators) {
+  for (final op in polybiusBunkerOperators) {
     if (op.username.toUpperCase() != u && op.displayName.toUpperCase() != u) {
       continue;
     }
@@ -113,3 +61,14 @@ PolybiusOperator? authenticatePolybiusAdmin({
   }
   return null;
 }
+
+PolybiusOperator? authenticateBunkerOperator({
+  required String username,
+  required String password,
+  required String pin,
+}) =>
+    authenticatePolybiusAdmin(
+      username: username,
+      password: password,
+      pin: pin,
+    );

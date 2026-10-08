@@ -1,7 +1,7 @@
 name: doomsday_clock
-description: DOØMSDAY CLØCK — cyberpunk crisis clock + DARTH CHERRY operator cache
+description: DOØMSDAY BUNKER v1 / DOØMSDAY CLØCK (stable) — DARTH CHERRY vaults
 publish_to: 'none'
-version: 2.2.0+5
+version: 2.3.0+6
 
 environment:
   sdk: ^3.12.2

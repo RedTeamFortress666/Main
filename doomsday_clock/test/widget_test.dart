@@ -3,14 +3,17 @@ import 'package:doomsday_clock/app_config.dart';
 import 'package:doomsday_clock/main.dart';
 
 void main() {
-  testWidgets('renders cyber terminal login', (tester) async {
+  tearDown(AppConfig.resetFlavorForTest);
+
+  testWidgets('renders bunker terminal login', (tester) async {
     await tester.pumpWidget(const DoomsdayClockApp());
-    expect(find.textContaining('CLØCK'), findsWidgets);
-    expect(find.textContaining('CYBER TERMINAL'), findsOneWidget);
+    expect(find.textContaining('BUNKER'), findsWidgets);
+    expect(find.textContaining('SPAMKAT2'), findsOneWidget);
   });
 
-  test('privileged flavor by default', () {
-    expect(AppConfig.isPrivileged, isTrue);
-    expect(AppConfig.isAllTier, isFalse);
+  test('bunker flavor by default', () {
+    expect(AppConfig.isBunker, isTrue);
+    expect(AppConfig.isStable, isFalse);
+    expect(AppConfig.displayName, contains('BUNKER'));
   });
 }

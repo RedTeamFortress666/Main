@@ -4,9 +4,12 @@ import 'package:doomsday_clock/app_config.dart';
 void main() {
   tearDown(AppConfig.resetFlavorForTest);
 
-  test('all-tier runtime flag', () {
-    expect(AppConfig.isAllTier, isFalse);
-    AppConfig.enableAllTierRuntime();
-    expect(AppConfig.isAllTier, isTrue);
+  test('stable runtime flag', () {
+    expect(AppConfig.isStable, isFalse);
+    expect(AppConfig.isBunker, isTrue);
+    AppConfig.enableStableRuntime();
+    expect(AppConfig.isStable, isTrue);
+    expect(AppConfig.isBunker, isFalse);
+    expect(AppConfig.displayName, contains('stable'));
   });
 }

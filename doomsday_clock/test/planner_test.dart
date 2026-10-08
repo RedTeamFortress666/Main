@@ -52,28 +52,51 @@ void main() {
     expect(decoded.pin, '123456');
   });
 
-  test('Gam3.0n is the only Cherry cache roster viewer', () {
-    expect(PolybiusOperatorCards.canOpenCherryCache('GAM3.0N'), isTrue);
-    expect(PolybiusOperatorCards.canOpenCherryCache('Gam3.0n'), isTrue);
-    expect(PolybiusOperatorCards.canOpenCherryCache('REDTEAM01'), isFalse);
-    expect(PolybiusOperatorCards.all.length, greaterThanOrEqualTo(44));
+  test('bunker operators are SpamKat2 and Gam3.0n only', () {
+    expect(PolybiusOperatorCards.isBunkerOperator('GAM3.0N'), isTrue);
+    expect(PolybiusOperatorCards.isBunkerOperator('SPAMKAT2'), isTrue);
+    expect(PolybiusOperatorCards.isBunkerOperator('SpamKat2'), isTrue);
+    expect(PolybiusOperatorCards.isBunkerOperator('REDTEAM01'), isFalse);
   });
 
-  test('privileged operator auth accepts Art3mas and rejects bad pin', () {
-    final ok = authenticatePolybiusAdmin(
+  test('primary card is own identity; secondary excludes self', () {
+    final gamePrimary = PolybiusOperatorCards.primaryCardFor('GAM3.0N');
+    expect(gamePrimary, isNotNull);
+    expect(gamePrimary!.username, 'GAM3.0N');
+
+    final spamPrimary = PolybiusOperatorCards.primaryCardFor('SPAMKAT2');
+    expect(spamPrimary!.username, 'SPAMKAT2');
+
+    final secondary = PolybiusOperatorCards.secondaryPlayerCards('GAM3.0N');
+    expect(secondary.any((c) => c.username == 'GAM3.0N'), isFalse);
+    expect(secondary.any((c) => c.username == 'SPAMKAT2'), isTrue);
+    expect(secondary.length, PolybiusOperatorCards.all.length - 1);
+  });
+
+  test('bunker auth accepts SpamKat2 and rejects Art3mas', () {
+    final ok = authenticateBunkerOperator(
+      username: 'SpamKat2',
+      password: 'Ev1l-Schm33',
+      pin: '810739',
+    );
+    expect(ok, isNotNull);
+    expect(ok!.tier, 'developer');
+
+    final denied = authenticateBunkerOperator(
       username: 'Art3mas',
       password: 'BowArrow7',
       pin: '271828',
     );
-    expect(ok, isNotNull);
-    expect(ok!.tier, 'admin');
+    expect(denied, isNull);
+  });
 
-    final bad = authenticatePolybiusAdmin(
-      username: 'Art3mas',
-      password: 'BowArrow7',
-      pin: '000000',
+  test('Gam3.0n bunker credentials authenticate', () {
+    final ok = authenticateBunkerOperator(
+      username: 'GAM3.0N',
+      password: 'Dig1tal.Ra1n99',
+      pin: '816639',
     );
-    expect(bad, isNull);
+    expect(ok, isNotNull);
   });
 
   test('bulletin source is BAS', () {
