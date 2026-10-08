@@ -4,11 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
-import 'package:polybius/core/widgets/arcade_ui.dart';
-import 'package:polybius/core/widgets/cabinet_atmosphere.dart';
+import 'package:polybius/core/crypto/unpredictable_shift.dart';
 import 'package:polybius/core/widgets/crt_widgets.dart';
-import 'package:polybius/features/auth/v2_login_protocol.dart';
-import 'package:polybius/features/auth/widgets/v2_protocol_console.dart';
+import 'package:polybius/core/widgets/floating_glyph_keyboard.dart';
 
 /// V2 protocol login gate. First install ships with DEVELOPER account.
 class LoginScreen extends ConsumerStatefulWidget {
@@ -64,37 +62,57 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final auth = ref.watch(authProvider);
 
-    return ArcadeScaffold(
-      child: CabinetAtmosphere(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const ArcadeTitle(fontSize: 40),
-                  const SizedBox(height: 6),
-                  Text(
-                    '${V2LoginProtocol.name}  PROTOCOL',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: NeonTheme.neonGreen,
-                          letterSpacing: 3,
-                          shadows: const [
-                            Shadow(color: NeonTheme.neonGreen, blurRadius: 12),
-                          ],
+    return Scaffold(
+      body: Stack(
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF0D0221),
+                  Color(0xFF1A0533),
+                  Color(0xFF0A1628),
+                ],
+              ),
+            ),
+          ),
+          Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(32),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 400),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(
+                      height: 196,
+                      child: IgnorePointer(
+                        child: FittedBox(
+                          fit: BoxFit.contain,
+                          child: SizedBox(
+                            width: 360,
+                            height: 230,
+                            child: FloatingGlyphKeyboard(),
+                          ),
                         ),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'CHALLENGE · VERIFY · TICKET · SWEEP · PATCH · CABINET',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 9,
-                      letterSpacing: 1,
-                      color: Colors.white38,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      PolybiusSquareGlyphs.phrase,
+                      style: const TextStyle(
+                        fontFamily: 'monospace',
+                        color: NeonTheme.neonPurple,
+                        letterSpacing: 3,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      AppConstants.appName,
+                      style: Theme.of(context).textTheme.displayLarge,
                     ),
                   ),
                   const SizedBox(height: 22),
@@ -169,7 +187,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
             ),
           ),
-        ),
+          Positioned(
+            right: 12,
+            bottom: 12,
+            child: IconButton(
+              tooltip: 'Clock',
+              icon: const Icon(Icons.access_time, color: Color(0xFFC9A227)),
+              onPressed: () => context.go('/clock'),
+            ),
+          ),
+        ],
       ),
     );
   }

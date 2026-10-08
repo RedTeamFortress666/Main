@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:polybius/core/net/t3mp_client.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 import 'package:polybius/features/cipher/engine/cipher_engine.dart';
@@ -15,6 +16,8 @@ class DecryptTab extends ConsumerStatefulWidget {
 class _DecryptTabState extends ConsumerState<DecryptTab> {
   final _inputController = TextEditingController();
   String _output = '';
+  String? _fetchError;
+  bool _working = false;
 
   @override
   void dispose() {
@@ -22,24 +25,45 @@ class _DecryptTabState extends ConsumerState<DecryptTab> {
     super.dispose();
   }
 
-  void _decrypt() {
-    final seed = ref.read(cipherEngineProvider).seed;
-    final policy = ref.read(cabinetPolicyProvider);
-    final text = _inputController.text;
-    final out = policy.autoDensity
-        ? CipherEngine.decryptAuto(seed: seed, text: text)
-        : CipherEngine(
-            seed: seed,
-            density: ref.read(glyphDensityProvider),
-            stego: false,
-          ).decrypt(text);
+  Future<void> _decrypt() async {
+    if (_working) return;
+    var input = _inputController.text.trim();
     setState(() {
-      _output = out;
+      _working = true;
+      _fetchError = null;
     });
-    ref.read(storageServiceProvider).logAudit(
-          'DECRYPT',
-          ref.read(authProvider).user?.username ?? 'UNKNOWN',
-        );
+    try {
+      if (T3mpClient.isDropUrl(input)) {
+        input = (await ref.read(t3mpClientProvider).downloadText(input)).trim();
+        if (!mounted) return;
+        _inputController.text = input;
+        ref.read(storageServiceProvider).logAudit(
+              'T3MP_FETCH',
+              ref.read(authProvider).user?.username ?? 'UNKNOWN',
+              'cipher',
+            );
+      }
+      final engine = ref.read(cipherEngineProvider);
+      setState(() => _output = engine.decrypt(input));
+      ref.read(storageServiceProvider).logAudit(
+            'DECRYPT',
+            ref.read(authProvider).user?.username ?? 'UNKNOWN',
+          );
+    } on T3mpException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _output = '';
+        _fetchError = e.message;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _output = '';
+        _fetchError = 'DECRYPT FAILED';
+      });
+    } finally {
+      if (mounted) setState(() => _working = false);
+    }
   }
 
   @override
@@ -54,7 +78,7 @@ class _DecryptTabState extends ConsumerState<DecryptTab> {
             maxLines: 3,
             style: const TextStyle(fontSize: 20),
             decoration: const InputDecoration(
-              labelText: 'EMOJI CIPHERTEXT',
+              labelText: 'EMOJI CIPHERTEXT OR T3MP URL',
               labelStyle: TextStyle(color: NeonTheme.neonPink),
               border: OutlineInputBorder(),
             ),
@@ -65,7 +89,10 @@ class _DecryptTabState extends ConsumerState<DecryptTab> {
             onPaste: (text) => setState(() => _inputController.text = text),
           ),
           const SizedBox(height: 4),
-          ElevatedButton(onPressed: _decrypt, child: const Text('DECRYPT')),
+          ElevatedButton(
+            onPressed: _working ? null : _decrypt,
+            child: Text(_working ? 'WORKING…' : 'DECRYPT'),
+          ),
           const SizedBox(height: 12),
           Expanded(
             child: Container(
@@ -91,6 +118,16 @@ class _DecryptTabState extends ConsumerState<DecryptTab> {
             getCopyText: () => _output,
             onPaste: (text) => setState(() => _inputController.text = text),
           ),
+          if (_fetchError != null)
+            Text(
+              _fetchError!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontFamily: 'monospace',
+                color: NeonTheme.dangerRed,
+                fontSize: 11,
+              ),
+            ),
         ],
       ),
     );

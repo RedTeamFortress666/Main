@@ -5,6 +5,7 @@ import 'package:polybius/core/storage/create_polybius_secret_store.dart';
 import 'package:polybius/core/constants/unlock_codes.dart';
 import 'package:polybius/core/crypto/encryption_service.dart';
 import 'package:polybius/core/models/models.dart';
+import 'package:polybius/core/net/t3mp_client.dart';
 import 'package:polybius/core/storage/storage_service.dart';
 import 'package:polybius/features/auth/v2_login_protocol.dart';
 import 'package:polybius/features/cipher/engine/cipher_engine.dart';
@@ -32,6 +33,9 @@ final encryptionServiceProvider = Provider<EncryptionService>((ref) {
 final storageServiceProvider = Provider<StorageService>((ref) {
   return StorageService(ref.read(encryptionServiceProvider));
 });
+
+/// Anonymous temp.sh drops. Override in tests with a MockClient-backed instance.
+final t3mpClientProvider = Provider<T3mpClient>((_) => T3mpClient());
 
 /// The active cipher pool seed. Defaults to today's date so behaviour is
 /// unchanged until the user randomises or syncs a pool. Persisted so a synced

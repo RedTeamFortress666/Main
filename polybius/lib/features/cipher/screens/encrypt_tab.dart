@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:polybius/core/net/t3mp_client.dart';
 import 'package:polybius/core/providers/app_providers.dart';
 import 'package:polybius/core/theme/neon_theme.dart';
 import 'package:polybius/features/cipher/engine/cipher_engine.dart';
@@ -34,8 +36,9 @@ class _EncryptTabState extends ConsumerState<EncryptTab> {
   final _inputController = TextEditingController();
   final _buffer = VanishingBuffer();
   String _output = '';
-  StegoReceipt? _receipt;
-  PatternReport? _report;
+  String? _dropUrl;
+  String? _dropError;
+  bool _dropping = false;
 
   @override
   void dispose() {
@@ -87,15 +90,45 @@ class _EncryptTabState extends ConsumerState<EncryptTab> {
     }
     if (!mounted) return;
     setState(() {
-      _output = cipher;
-      _receipt = receipt;
-      _report = report;
+      _output = engine.encrypt(_inputController.text);
+      _dropUrl = null;
+      _dropError = null;
     });
     ref.read(storageServiceProvider).logAudit(
           'ENCRYPT',
           ref.read(authProvider).user?.username ?? 'UNKNOWN',
           cherry ? 'cabinet' : 'v1',
         );
+  }
+
+  Future<void> _dropT3mp() async {
+    if (_output.isEmpty || _dropping) return;
+    setState(() {
+      _dropping = true;
+      _dropError = null;
+    });
+    try {
+      final url = await ref.read(t3mpClientProvider).uploadText(
+            _output,
+            filename: 'cipher.txt',
+          );
+      await Clipboard.setData(ClipboardData(text: url));
+      if (!mounted) return;
+      setState(() => _dropUrl = url);
+      ref.read(storageServiceProvider).logAudit(
+            'T3MP_DROP',
+            ref.read(authProvider).user?.username ?? 'UNKNOWN',
+            'cipher',
+          );
+    } on T3mpException catch (e) {
+      if (!mounted) return;
+      setState(() => _dropError = e.message);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _dropError = 'T3MP DROP FAILED');
+    } finally {
+      if (mounted) setState(() => _dropping = false);
+    }
   }
 
   @override
@@ -218,63 +251,41 @@ class _EncryptTabState extends ConsumerState<EncryptTab> {
           Expanded(child: _cipherOut()),
           ClipboardRow(
             color: NeonTheme.neonCyan,
-            getCopyText: () => _output,
-            onPaste: (_) {},
+            getCopyText: () => _dropUrl ?? _output,
+            onPaste: (text) => setState(() => _inputController.text = text),
           ),
-        ],
-      ),
-      ),
-    );
-  }
-
-  Widget _vetStrip() {
-    final receipt = _receipt;
-    final report = _report;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Column(
-        children: [
-          if (receipt != null)
-            Text(
-              'VET ${receipt.readout} · ${receipt.origin.toUpperCase()}',
-              key: const ValueKey<String>('stego-vet-receipt'),
+          TextButton.icon(
+            onPressed: _dropping ? null : _dropT3mp,
+            icon: const Icon(
+              Icons.link,
+              color: NeonTheme.neonYellow,
+              size: 18,
+            ),
+            label: Text(
+              _dropping ? 'DROPPING…' : 'T3MP LINK',
+              style: const TextStyle(color: NeonTheme.neonYellow),
+            ),
+          ),
+          if (_dropUrl != null)
+            SelectableText(
+              _dropUrl!,
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontFamily: 'monospace',
-                fontSize: 10,
-                letterSpacing: 1,
                 color: NeonTheme.neonYellow,
+                fontSize: 11,
               ),
             ),
-          if (report != null)
+          if (_dropError != null)
             Text(
-              'TABLE ${report.readout} · ${report.boil}',
-              key: const ValueKey<String>('roundtable-report'),
+              _dropError!,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontFamily: 'monospace',
-                fontSize: 9,
-                color: report.verdict == CadenceVerdict.hostile
-                    ? NeonTheme.dangerRed
-                    : NeonTheme.neonGreen,
+                color: NeonTheme.dangerRed,
+                fontSize: 11,
               ),
             ),
-        ],
-      ),
-    );
-  }
-
-  Widget _cipherOut() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        border: Border.all(color: NeonTheme.neonCyan),
-        color: NeonTheme.surface.withValues(alpha: 0.82),
-        boxShadow: [
-          BoxShadow(
-            color: NeonTheme.neonCyan.withValues(alpha: 0.22),
-            blurRadius: 12,
-          ),
         ],
       ),
       child: SingleChildScrollView(

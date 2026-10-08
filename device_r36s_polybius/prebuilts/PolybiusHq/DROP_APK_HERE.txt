@@ -1,0 +1,12 @@
+Portal / EMOJINIGMA HQ lands here as PolybiusHq.apk
+
+  applicationId: com.polybius.polybius.hq
+  source: polybius/dist/polybius-v1-stable-hq-android-arm64.apk
+  sha256 (after conceal-prebuilts.sh):
+    ef6433fa0d85480d35826e0c5a44a1c2e0250bb1b3725c639d2669805869ada4
+
+No LAUNCHER icon. Admin long-press OPEN in the vault starts this
+package.
+
+./device_r36s_polybius/fetch-apks.sh
+./device_r36s_polybius/conceal-prebuilts.sh

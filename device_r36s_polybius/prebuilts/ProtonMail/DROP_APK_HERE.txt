@@ -1,0 +1,8 @@
+Proton Mail lands here as ProtonMail.apk
+
+  applicationId: ch.protonmail.android
+  role: desk mail
+  source: GitHub ProtonMail/proton-mail-android 3.0.17
+          (last official OSS APK; replace with a current Proton build if you have one)
+
+./device_r36s_polybius/fetch-cover-apks.sh

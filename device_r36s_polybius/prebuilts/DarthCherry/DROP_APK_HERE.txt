@@ -1,0 +1,7 @@
+Darth Cherry lands here as DarthCherry.apk
+
+  applicationId: com.polybius.red_veil
+  versionName: 1.0.2
+  source: polybius/dist/darth-cherry-1.0.2-android-arm64.apk
+
+./device_r36s_polybius/fetch-apks.sh

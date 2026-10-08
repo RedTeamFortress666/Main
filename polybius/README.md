@@ -165,12 +165,12 @@ plaintext index.
 
 ## Cipher Tabs
 
-- **🔒 ENCRYPT** — advanced V1 plaintext field → emoji ciphertext (2 glyphs/char, no decoys). Glyph keyboard only after **Darth Cherry** is armed *and* the red-light vault opens for the ticketed operator; otherwise `REDLIGHT SEALED`. Cherry shows the leak sweep.
-- **🔓 DECRYPT** — emoji → plaintext
-- **🎲 POOL** — active 560-glyph window + slot
-- **🔗 SYNC** — QR / padded courier token
-- **📡 CONNECT** — QR / RNS / Matrix status, cabinet mesh (ML-KEM / vet / table / glasses), HUD vs attract toggle, logout
-- **⚙ Rotor Gear** — odometer positions (notch is flavour only). **GEAR CAL** re-opens the PIN gate so a cover PIN can be entered while logged in.
+- **🔒 ENCRYPT** — plaintext → emoji ciphertext; **T3MP LINK** mints a temp.sh URL
+- **🔓 DECRYPT** — emoji or a t3mp URL → plaintext
+- **🎲 POOL** — today's 560-emoji cipher pool
+- **🔗 SYNC** — randomise pool, QR, **T3MP LINK** (not GitHub gists)
+- **📡 CONNECT** — device info, Bluetooth placeholder, logout
+- **⚙ Rotor Gear** — live rotor positions and step counts
 
 ## Build
 
@@ -188,6 +188,9 @@ flutter build web        # Web / emulation devices
 ```bash
 flutter test
 ```
+
+Sideload builds are shared as **t3mp** (`temp.sh`) links, not GitHub Releases.
+See `RELEASES.md` and `downloads.html`.
 
 ## Security Notes
 

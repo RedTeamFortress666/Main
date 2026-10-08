@@ -234,292 +234,43 @@ class StorageService {
     await Hive.box(settingsBox).put('poolSeed', seed);
   }
 
-  Future<CabinetIdentity?> getCabinet(String username) async {
-    final raw = Hive.box(settingsBox).get('cabinet::$username');
-    if (raw is! String || raw.isEmpty) return null;
-    try {
-      final map = jsonDecode(_encryption.decrypt(raw));
-      if (map is Map) {
-        return CabinetIdentity.fromJson(Map<dynamic, dynamic>.from(map));
-      }
-    } catch (_) {}
-    return null;
+  static const _clockHashKey = 'clockPwHash';
+  static const _clockChangedKey = 'clockPwChanged';
+  static const _clockAlphabetKey = 'clockAlphabetSeed';
+
+  Future<String?> getClockPasswordHash() async {
+    final raw = Hive.box(settingsBox).get(_clockHashKey);
+    return raw is String && raw.isNotEmpty ? raw : null;
   }
 
-  Future<void> saveCabinet(String username, CabinetIdentity cabinet) async {
-    await Hive.box(settingsBox).put(
-      'cabinet::$username',
-      _encryption.encrypt(jsonEncode(cabinet.toJson())),
+  Future<void> setClockPasswordHash(String hash) async {
+    await Hive.box(settingsBox).put(_clockHashKey, hash);
+  }
+
+  Future<bool> getClockPasswordChanged() async {
+    final raw = Hive.box(settingsBox).get(_clockChangedKey);
+    return raw == true || raw == 'true';
+  }
+
+  Future<void> setClockPasswordChanged(bool value) async {
+    await Hive.box(settingsBox).put(_clockChangedKey, value);
+  }
+
+  Future<void> ensureClockFactoryPassword() async {
+    if (await getClockPasswordHash() != null) return;
+    await setClockPasswordHash(
+      EncryptionService.hashPassword('oneeyedking'),
     );
+    await setClockPasswordChanged(false);
   }
 
-  Future<String> getOperatorInitials() async {
-    final raw = Hive.box(settingsBox).get('operatorInitials');
-    return raw is String && raw.isNotEmpty ? raw : 'YOU';
+  Future<String?> getClockAlphabetSeed() async {
+    final raw = Hive.box(settingsBox).get(_clockAlphabetKey);
+    return raw is String && raw.isNotEmpty ? raw : null;
   }
 
-  Future<bool> getDarthCherry() async {
-    final raw = Hive.box(settingsBox).get('darthCherry');
-    if (raw is bool) return raw;
-    if (raw is String) return raw.toLowerCase() == 'true';
-    return false;
-  }
-
-  Future<void> setDarthCherry(bool enabled) async {
-    await Hive.box(settingsBox).put('darthCherry', enabled);
-  }
-
-  /// Random mixer for the phosphor keyboard. Never the operator username.
-  Future<String?> getCherryMixer() async {
-    final raw = Hive.box(settingsBox).get('cherryMixer');
-    if (raw is! String || raw.isEmpty) return null;
-    try {
-      return _encryption.decrypt(raw);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  Future<void> setCherryMixer(String mixer) async {
-    await Hive.box(settingsBox).put(
-      'cherryMixer',
-      _encryption.encrypt(mixer),
-    );
-  }
-
-  Future<String> ensureCherryMixer() async {
-    final existing = await getCherryMixer();
-    if (existing != null && existing.isNotEmpty && existing.length >= 8) {
-      return existing;
-    }
-    final bytes = List<int>.generate(16, (_) => Random.secure().nextInt(256));
-    final mixer = base64Url.encode(bytes);
-    await setCherryMixer(mixer);
-    return mixer;
-  }
-
-  // ---------------------------------------------------------------------
-  // Red-light vault — filter + keypress obfuscation, sealed per operator
-  // ---------------------------------------------------------------------
-
-  static const _redlightKey = 'redlightVault';
-
-  /// Opens the vault for [owner]. Null when absent, undecryptable under this
-  /// device key, unparsable, or minted for a different operator.
-  Future<RedlightProfile?> getRedlightVault(String owner) async {
-    final raw = Hive.box(settingsBox).get(_redlightKey);
-    if (raw is! String || raw.isEmpty) return null;
-    String plain;
-    try {
-      plain = _encryption.decrypt(raw);
-    } catch (_) {
-      return null;
-    }
-    final profile = RedlightProfile.tryParse(plain);
-    if (profile == null) return null;
-    if (profile.owner != owner.trim().toUpperCase()) return null;
-    return profile;
-  }
-
-  Future<bool> hasRedlightVault() async {
-    final raw = Hive.box(settingsBox).get(_redlightKey);
-    return raw is String && raw.startsWith('v2:');
-  }
-
-  /// Mints the vault for [owner] if it is missing or belongs to someone else.
-  /// Reuses an existing cherry mixer so the phosphor map does not jump on
-  /// the first sealed run. Returns the open profile.
-  Future<RedlightProfile> ensureRedlightVault(String owner) async {
-    final existing = await getRedlightVault(owner);
-    if (existing != null) return existing;
-    final mixer = await ensureCherryMixer();
-    final profile = RedlightProfile.mint(
-      owner: owner,
-      mixer: mixer.length >= 16 ? mixer : null,
-    );
-    await Hive.box(settingsBox).put(
-      _redlightKey,
-      _encryption.encrypt(jsonEncode(profile.toJson())),
-    );
-    return profile;
-  }
-
-  Future<void> clearRedlightVault() async {
-    await Hive.box(settingsBox).delete(_redlightKey);
-  }
-
-  /// Verified, unexpired ticket currently in the session box, or null.
-  Future<V2SessionTicket?> currentTicket() async {
-    final raw = Hive.box(sessionBox).get('ticket');
-    if (raw is! String || raw.isEmpty) return null;
-    final ticket = V2SessionTicket.parse(raw);
-    if (ticket == null) return null;
-    if (!ticket.verify(_encryption.mac) || ticket.isExpired()) return null;
-    return ticket;
-  }
-
-  /// Device-key HMAC, exposed for derivations that must not be recomputable
-  /// off-device (red-light derangement secret).
-  List<int> deviceMac(List<int> data) => _encryption.mac(data);
-
-  StegoVetAuthority localVetAuthority() =>
-      StegoVetAuthority.local(_encryption.mac);
-
-  // ---------------------------------------------------------------------
-  // ML-KEM-768 hybrid keypair (AES-sealed under the device key)
-  // ---------------------------------------------------------------------
-
-  static const _pqPkKey = 'mlkem768.pk';
-  static const _pqSkKey = 'mlkem768.sk';
-
-  Future<bool> hasPqKem() async {
-    final raw = Hive.box(settingsBox).get(_pqPkKey);
-    return raw is String && raw.startsWith('v2:');
-  }
-
-  Future<({List<int> publicKey, List<int> secretKey})?> getPqKem() async {
-    final pkRaw = Hive.box(settingsBox).get(_pqPkKey);
-    final skRaw = Hive.box(settingsBox).get(_pqSkKey);
-    if (pkRaw is! String || skRaw is! String) return null;
-    try {
-      final pk = base64Url.decode(_encryption.decrypt(pkRaw));
-      final sk = base64Url.decode(_encryption.decrypt(skRaw));
-      if (pk.length != MlKem768.publicKeyBytes) return null;
-      if (sk.length != MlKem768.secretKeyBytes) return null;
-      return (publicKey: pk, secretKey: sk);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  Future<({List<int> publicKey, List<int> secretKey})> ensurePqKem() async {
-    final existing = await getPqKem();
-    if (existing != null) return existing;
-    final pair = const MlKem768().generateKeyPair();
-    await Hive.box(settingsBox).put(
-      _pqPkKey,
-      _encryption.encrypt(base64Url.encode(pair.$1)),
-    );
-    await Hive.box(settingsBox).put(
-      _pqSkKey,
-      _encryption.encrypt(base64Url.encode(pair.$2)),
-    );
-    return (publicKey: pair.$1, secretKey: pair.$2);
-  }
-
-  // ---------------------------------------------------------------------
-  // Stego vet receipts + boiled pattern reports (no notes, no payload)
-  // ---------------------------------------------------------------------
-
-  static const _receiptKey = 'stegoReceipt';
-  static const _reportKey = 'patternReport';
-  static const _vetBoundKey = 'stegoVetBound';
-
-  Future<bool> isStegoVetBound() async {
-    return Hive.box(settingsBox).get(_vetBoundKey) == true;
-  }
-
-  Future<void> bindStegoVet() async {
-    await Hive.box(settingsBox).put(_vetBoundKey, true);
-  }
-
-  Future<StegoReceipt?> getLastReceipt() async {
-    return StegoReceipt.tryParse(Hive.box(settingsBox).get(_receiptKey));
-  }
-
-  Future<void> putReceipt(StegoReceipt receipt) async {
-    if (!localVetAuthority().verify(receipt) && receipt.origin == 'local') {
-      return;
-    }
-    await Hive.box(settingsBox).put(_receiptKey, jsonEncode(receipt.toJson()));
-  }
-
-  Future<PatternReport?> getLastPatternReport() async {
-    final raw = Hive.box(settingsBox).get(_reportKey);
-    if (raw is! String || raw.isEmpty) return null;
-    try {
-      return PatternReport.fromJson(
-        jsonDecode(raw) as Map<String, dynamic>,
-      );
-    } catch (_) {
-      return null;
-    }
-  }
-
-  Future<void> putPatternReport(PatternReport report) async {
-    await Hive.box(settingsBox).put(_reportKey, jsonEncode(report.toJson()));
-  }
-
-  Future<({StegoReceipt receipt, PatternReport report})> vetStego({
-    required StegoFingerprint fingerprint,
-    TrafficSketch? sketch,
-  }) async {
-    await bindStegoVet();
-    final out = localVetAuthority().vet(
-      fingerprint: fingerprint,
-      sketch: sketch,
-    );
-    await putReceipt(out.receipt);
-    await putPatternReport(out.report);
-    return out;
-  }
-
-  Future<PatternReport> armRoundTable() async {
-    await bindStegoVet();
-    final existing = await getLastPatternReport();
-    if (existing != null) return existing;
-    const table = RoundTable();
-    final report = table.convene(
-      const TrafficSketch(gapsMs: [240, 180, 410, 160, 520]),
-      nowMs: DateTime.now().toUtc().millisecondsSinceEpoch,
-    );
-    await putPatternReport(report);
-    return report;
-  }
-
-  // ---------------------------------------------------------------------
-  // Glasses HUD session
-  // ---------------------------------------------------------------------
-
-  static const _glassesKey = 'glassesSession';
-
-  Future<GlassesSession?> getGlassesSession(String owner) async {
-    final raw = Hive.box(settingsBox).get(_glassesKey);
-    if (raw is! String || raw.isEmpty) return null;
-    final session = GlassesSession.parse(raw);
-    if (session == null) return null;
-    if (!session.verify(_encryption.mac)) return null;
-    if (session.owner != owner.trim().toUpperCase()) return null;
-    return session;
-  }
-
-  Future<bool> hasGlassesSession() async {
-    final raw = Hive.box(settingsBox).get(_glassesKey);
-    if (raw is! String) return false;
-    final session = GlassesSession.parse(raw);
-    return session != null && session.verify(_encryption.mac);
-  }
-
-  Future<GlassesSession> ensureGlassesLink(String owner) async {
-    final existing = await getGlassesSession(owner);
-    if (existing != null) return existing;
-    final session = GlassesSession.issue(
-      owner: owner,
-      deviceMac: _encryption.mac,
-    );
-    await Hive.box(settingsBox).put(_glassesKey, session.wire);
-    return session;
-  }
-
-  Future<void> clearGlassesLink() async {
-    await Hive.box(settingsBox).delete(_glassesKey);
-  }
-
-  Future<void> setOperatorInitials(String initials) async {
-    await Hive.box(settingsBox).put(
-      'operatorInitials',
-      initials.toUpperCase().padRight(3).substring(0, 3),
-    );
+  Future<void> setClockAlphabetSeed(String seed) async {
+    await Hive.box(settingsBox).put(_clockAlphabetKey, seed);
   }
 
   Future<void> logAudit(String action, String actor, [String? details]) async {
