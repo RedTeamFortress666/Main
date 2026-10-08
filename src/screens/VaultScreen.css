@@ -1,0 +1,77 @@
+.vault {
+  position: relative;
+  overflow: hidden;
+}
+
+.vault__cave {
+  pointer-events: none;
+  position: absolute;
+  inset: 0 0 auto;
+  height: 7rem;
+  background:
+    radial-gradient(ellipse at 50% -20%, rgba(20, 40, 80, 0.55), transparent 70%),
+    linear-gradient(180deg, #05080f, transparent);
+  opacity: 0.9;
+}
+
+.vault__cave--open {
+  background:
+    radial-gradient(ellipse at 50% -10%, rgba(57, 255, 20, 0.18), transparent 65%),
+    linear-gradient(180deg, #07140a, transparent);
+}
+
+.vault__stalactites {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(135deg, transparent 40%, #0b1220 41%, #0b1220 44%, transparent 45%) 10% 0 / 18% 70% no-repeat,
+    linear-gradient(150deg, transparent 42%, #0a1018 43%, #0a1018 47%, transparent 48%) 35% 0 / 14% 85% no-repeat,
+    linear-gradient(210deg, transparent 40%, #0c1422 41%, #0c1422 46%, transparent 47%) 62% 0 / 16% 75% no-repeat,
+    linear-gradient(190deg, transparent 38%, #091018 39%, #091018 45%, transparent 46%) 88% 0 / 12% 90% no-repeat;
+  opacity: 0.85;
+}
+
+.vault__bat {
+  position: absolute;
+  top: 1.4rem;
+  left: 50%;
+  color: #9eb6ff;
+  filter: drop-shadow(0 0 8px rgba(120, 160, 255, 0.45));
+  animation: bat-hover 3s ease-in-out infinite;
+}
+
+.vault__bat--fly {
+  animation: bat-fly 4.5s ease-in-out infinite;
+}
+
+@keyframes bat-hover {
+  0%, 100% { transform: translate(-50%, 0); }
+  50% { transform: translate(-50%, 6px); }
+}
+
+@keyframes bat-fly {
+  0%, 100% { transform: translate(-50%, 0) rotate(-4deg); }
+  50% { transform: translate(calc(-50% + 18px), 10px) rotate(6deg); }
+}
+
+.vault .screen-header,
+.vault .panel {
+  position: relative;
+  z-index: 1;
+}
+
+.vault__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.field__input--bad {
+  border-color: var(--danger) !important;
+  animation: login-shake 0.35s ease;
+}
+
+.vault--open .panel {
+  border-color: color-mix(in srgb, var(--neon) 35%, var(--line));
+  box-shadow: 0 0 24px rgba(57, 255, 20, 0.08);
+}

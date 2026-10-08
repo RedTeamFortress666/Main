@@ -1,0 +1,54 @@
+.module-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  min-height: 6.4rem;
+  padding: 0.75rem 0.7rem;
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(160deg, color-mix(in srgb, var(--neon) 8%, transparent), transparent 55%),
+    color-mix(in srgb, var(--panel) 88%, black);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.module-card:hover,
+.module-card:focus-visible {
+  border-color: color-mix(in srgb, var(--neon) 55%, var(--line));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--neon) 18%, transparent);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.module-card__top {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.module-card__icon {
+  color: var(--neon);
+}
+
+.module-card__arrow {
+  color: var(--muted);
+  opacity: 0.7;
+}
+
+.module-card__title {
+  color: var(--neon);
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  line-height: 1.15;
+}
+
+.module-card__desc {
+  color: var(--text-dim);
+  font-size: 0.68rem;
+  line-height: 1.35;
+}

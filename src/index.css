@@ -1,25 +1,58 @@
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap');
+
 :root {
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial,
-    sans-serif;
-  line-height: 1.5;
-  color: #1f2933;
-  background: linear-gradient(160deg, #eef2ff 0%, #f8fafc 45%, #ecfeff 100%);
-  -webkit-font-smoothing: antialiased;
+  --bg: #140a0a;
+  --bg-deep: #0b0606;
+  --panel: #1a1010;
+  --line: #3a2424;
+  --neon: #39ff14;
+  --cyan: #39d0c8;
+  --warn: #ff9800;
+  --danger: #ff3b3b;
+  --text: #d8ffd0;
+  --text-dim: #b7c89a;
+  --muted: #7f8f70;
+  --font-display: 'VT323', 'Share Tech Mono', monospace;
+  --font-mono: 'Share Tech Mono', 'Courier New', monospace;
+  color-scheme: dark;
 }
 
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
 }
 
 body {
   margin: 0;
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  padding: 3rem 1rem;
+  font-family: var(--font-mono);
+  color: var(--text);
+  background:
+    linear-gradient(rgba(57, 255, 20, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(57, 255, 20, 0.035) 1px, transparent 1px),
+    radial-gradient(ellipse at top, #2a1010, var(--bg-deep) 60%);
+  background-size: 28px 28px, 28px 28px, auto;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-#root {
-  width: 100%;
-  max-width: 520px;
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--neon) 35%, transparent);
+  color: #041004;
 }
