@@ -1,0 +1,132 @@
+{
+  "id": "crypt3x_os_lite",
+  "label": "CRYPT3X OS LITE",
+  "lunch": "lineage_r36s_crypt3x_lite-userdebug",
+  "version": "20260815-1244",
+  "packageDir": "CRYPT3X_OS_LITE",
+  "etcherFolder": "CRYPT3X_ETCHER",
+  "bundledInApk": false,
+  "githubDir": "https://github.com/RedTeamFortress666/Main/raw/cursor/r36s-polybius-product-0346/polybius/dist/crypt3x-os-lite",
+  "note": "8 GiB GPT image is too large for an APK. Pick a staged .img/.img.zip, or PREPARE ETCHER / RUFUS KIT to concatenate part00–part11 onto a USB stick as CRYPT3X_ETCHER/. Flash the card with balenaEtcher, Rufus DD, or dd. Do not commit the 8 GiB binary. Zip parts live on GitHub under polybius/dist/crypt3x-os-lite/ (logged-in raw URLs).",
+  "image": {
+    "fileName": "lineage-18.1-20260815-1244-r36s-crypt3x-lite.img",
+    "bytes": 8589934592,
+    "displaySize": "8.0 GiB",
+    "sha256": "ece3a41fe3d5fed083c788a75cb912dc5c7013af9be26f52d7b4ecb94b95abcc"
+  },
+  "zip": {
+    "fileName": "lineage-18.1-20260815-1244-r36s-crypt3x-lite.img.zip",
+    "bytes": 965250113,
+    "displaySize": "921 MiB",
+    "sha256": "67493055e6bfad6a3c14b40b2723d19550eef99fde16cc23bf0250fdd7b61b38",
+    "contains": ["lineage-18.1-20260815-1244-r36s-crypt3x-lite.img"]
+  },
+  "kitZip": {
+    "fileName": "CRYPT3X_OS_LITE-r36s-20260815.zip",
+    "bytes": 965251465,
+    "displaySize": "921 MiB",
+    "sha256": "e79ac4225e702c3b5b5dc353198522be2141c2d6f20c8ec9df6f8cb548428f93",
+    "contains": [
+      "lineage-18.1-20260815-1244-r36s-crypt3x-lite.img",
+      "FLASH_R36S.txt",
+      "SHA256SUMS.txt"
+    ]
+  },
+  "flash": {
+    "requiresExfatForRawImg": true,
+    "fat32MaxBytes": 4294967295,
+    "dd": "sudo dd if=lineage-18.1-20260815-1244-r36s-crypt3x-lite.img of=/dev/sdX bs=4M status=progress conv=fsync",
+    "etcher": "balenaEtcher or Raspberry Pi Imager: select the assembled zip or the raw .img, then the microSD.",
+    "rufus": "Rufus: unzip on a PC (exFAT if writing the 8 GiB .img to USB), select the .img, DD Image mode."
+  },
+  "partBytes": 83886080,
+  "parts": [
+    {
+      "index": 0,
+      "fileName": "CRYPT3X_OS_LITE-r36s-20260815.zip.part00",
+      "altFileName": "crypt3x_lite_img_zip.part00",
+      "bytes": 83886080,
+      "sha256": "81160e23e4ed231f7a7c91b63bbc39bf322d35d519f8b3c11f6106a31f3d4b54"
+    },
+    {
+      "index": 1,
+      "fileName": "CRYPT3X_OS_LITE-r36s-20260815.zip.part01",
+      "altFileName": "crypt3x_lite_img_zip.part01",
+      "bytes": 83886080,
+      "sha256": "c0d6dc5e7f0015d04d63827ede18edbd8f342fc40d694f71660cf18f254475a0"
+    },
+    {
+      "index": 2,
+      "fileName": "CRYPT3X_OS_LITE-r36s-20260815.zip.part02",
+      "altFileName": "crypt3x_lite_img_zip.part02",
+      "bytes": 83886080,
+      "sha256": "6a245290b75f14c64ac95fc789647b6f997adfcbc908ffb143233fcc9ba0fcce"
+    },
+    {
+      "index": 3,
+      "fileName": "CRYPT3X_OS_LITE-r36s-20260815.zip.part03",
+      "altFileName": "crypt3x_lite_img_zip.part03",
+      "bytes": 83886080,
+      "sha256": "1df4fa8cd27a353700d5d0f621edf5ef851c65f2f82eaf70f5f42ffa22f87a7f"
+    },
+    {
+      "index": 4,
+      "fileName": "CRYPT3X_OS_LITE-r36s-20260815.zip.part04",
+      "altFileName": "crypt3x_lite_img_zip.part04",
+      "bytes": 83886080,
+      "sha256": "49a3183015b1ab1576531c13599712dc0f143b1c70e5c49faabb239773756d55"
+    },
+    {
+      "index": 5,
+      "fileName": "CRYPT3X_OS_LITE-r36s-20260815.zip.part05",
+      "altFileName": "crypt3x_lite_img_zip.part05",
+      "bytes": 83886080,
+      "sha256": "f4aa5a1aab9455e0b3078335aa63ba63dcfb4fa8b2117aa732f3c157aba66f45"
+    },
+    {
+      "index": 6,
+      "fileName": "CRYPT3X_OS_LITE-r36s-20260815.zip.part06",
+      "altFileName": "crypt3x_lite_img_zip.part06",
+      "bytes": 83886080,
+      "sha256": "f8f8904b885453b67415fb4515f1d4fa04309f8d5212140fdbcb758dc7255f3d"
+    },
+    {
+      "index": 7,
+      "fileName": "CRYPT3X_OS_LITE-r36s-20260815.zip.part07",
+      "altFileName": "crypt3x_lite_img_zip.part07",
+      "bytes": 83886080,
+      "sha256": "a85cb0a426eb8b45b0a074ebb6b98bc8c0f7e41665479ac24417464848bee4c2"
+    },
+    {
+      "index": 8,
+      "fileName": "CRYPT3X_OS_LITE-r36s-20260815.zip.part08",
+      "altFileName": "crypt3x_lite_img_zip.part08",
+      "bytes": 83886080,
+      "sha256": "65ca8ad3608734eb0169e26b94f74845135126867e294ef3309ce4157f1aa176"
+    },
+    {
+      "index": 9,
+      "fileName": "CRYPT3X_OS_LITE-r36s-20260815.zip.part09",
+      "altFileName": "crypt3x_lite_img_zip.part09",
+      "bytes": 83886080,
+      "sha256": "3b22e9f942724ff9d3d5ac117ac9526e4422b9d1fdb91c02383d1a5a782c5634"
+    },
+    {
+      "index": 10,
+      "fileName": "CRYPT3X_OS_LITE-r36s-20260815.zip.part10",
+      "altFileName": "crypt3x_lite_img_zip.part10",
+      "bytes": 83886080,
+      "sha256": "1d423c9f1d7bb2096ec7468114f62ad15b269eef6147d20c05fc85e5a0b7443d"
+    },
+    {
+      "index": 11,
+      "fileName": "CRYPT3X_OS_LITE-r36s-20260815.zip.part11",
+      "altFileName": "crypt3x_lite_img_zip.part11",
+      "bytes": 42504585,
+      "sha256": "d609f1a9d04646b4ea14aba8529588ff2c3a311350b9d4f3c494f8878a7b8294",
+      "altSha256": "906366f5252ca2510f26abbaa1c23b8e243b917719fd544808c009473ea89c9e",
+      "altBytes": 42503233,
+      "note": "part11 differs between the kit zip (img + FLASH_R36S.txt + SHA256SUMS.txt) and the official img-only zip."
+    }
+  ]
+}

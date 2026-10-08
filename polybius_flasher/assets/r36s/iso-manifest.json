@@ -1,0 +1,42 @@
+{
+  "id": "polybius_r36s_port",
+  "packageFileName": "polybius-r36s-port.zip",
+  "label": "R36S PortMaster zip",
+  "version": "r36s-port-1.0",
+  "bytes": 12096478,
+  "sha256": "58f7ae8a90f4fc0d74e51c0931949cd5e698a9f62663c4d65c777978765e2493",
+  "githubUrl": "https://github.com/RedTeamFortress666/Main/raw/cursor/r36s-polybius-product-0346/polybius/dist/polybius-r36s-port.zip",
+  "githubBackupUrl": "https://github.com/RedTeamFortress666/Main/raw/cursor/r36s-polybius-product-0346/polybius_flasher/assets/r36s/polybius-r36s-port.zip",
+  "bundledInApk": true,
+  "verifyMustExist": [
+    "ports/Polybius.sh",
+    "ports/polybius/polybius",
+    "ports/polybius/lib/libapp.so",
+    "ports/polybius/lib/libflutter_linux_gtk.so"
+  ],
+  "files": [
+    { "path": "ports/Polybius.sh", "role": "PortMaster launcher (required)", "required": true },
+    { "path": "ports/polybius/polybius", "role": "ARM64 game binary (required)", "required": true },
+    { "path": "ports/polybius/polybius.gptk", "role": "Gamepad map (required)", "required": true },
+    { "path": "ports/polybius/README.txt", "role": "On-device install notes", "required": true },
+    { "path": "ports/polybius/lib/libapp.so", "role": "Flutter app library (required)", "required": true },
+    { "path": "ports/polybius/lib/libflutter_linux_gtk.so", "role": "Flutter engine (required)", "required": true },
+    { "path": "ports/polybius/lib/libaudioplayers_linux_plugin.so", "role": "Audio plugin", "required": true },
+    { "path": "ports/polybius/lib/libgamepads_linux_plugin.so", "role": "Gamepad plugin", "required": true },
+    { "path": "ports/polybius/lib/liburl_launcher_linux_plugin.so", "role": "URL launcher plugin", "required": true },
+    { "path": "ports/polybius/lib/libflutter_secure_storage_linux_plugin.so", "role": "Secure storage plugin", "required": true },
+    { "path": "ports/polybius/data/icudtl.dat", "role": "ICU data (required)", "required": true },
+    { "path": "ports/polybius/data/flutter_assets/AssetManifest.bin", "role": "Asset index", "required": true },
+    { "path": "ports/polybius/data/flutter_assets/AssetManifest.bin.json", "role": "Asset index JSON", "required": true },
+    { "path": "ports/polybius/data/flutter_assets/FontManifest.json", "role": "Font index", "required": true },
+    { "path": "ports/polybius/data/flutter_assets/NativeAssetsManifest.json", "role": "Native asset index", "required": true },
+    { "path": "ports/polybius/data/flutter_assets/version.json", "role": "Engine version stamp", "required": true },
+    { "path": "ports/polybius/data/flutter_assets/NOTICES", "role": "License notices", "required": true },
+    { "path": "ports/polybius/data/flutter_assets/NOTICES.Z", "role": "Compressed notices", "required": true },
+    { "path": "ports/polybius/data/flutter_assets/fonts/MaterialIcons-Regular.otf", "role": "Material icons font", "required": true },
+    { "path": "ports/polybius/data/flutter_assets/packages/cupertino_icons/assets/CupertinoIcons.ttf", "role": "Cupertino icons font", "required": true },
+    { "path": "ports/polybius/data/flutter_assets/shaders/ink_sparkle.frag", "role": "Ink sparkle shader", "required": true },
+    { "path": "ports/polybius/data/flutter_assets/shaders/stretch_effect.frag", "role": "Stretch shader", "required": true },
+    { "path": "ports/polybius/data/flutter_assets/assets/audio/polybius_theme.wav", "role": "Theme audio", "required": true }
+  ]
+}
