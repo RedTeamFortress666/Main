@@ -17,6 +17,15 @@ gpg --import polybius-pool-pubkey.asc
 gpg --verify ADMIN_USER_POOL.txt.asc
 ```
 
+## V1 Stable iOS (Safari web portable)
+
+| Build | Zip | QR |
+| --- | --- | --- |
+| **EMOJINIGMA HQ** (dev/admin) | [../polybius-v1-stable-hq-web-portable.zip](../polybius-v1-stable-hq-web-portable.zip) | [v1-stable-hq-ios-qr.png](./v1-stable-hq-ios-qr.png) |
+| **V1 USER** (operators/agents) | [../polybius-v1-stable-user-web-portable.zip](../polybius-v1-stable-user-web-portable.zip) | [v1-stable-user-ios-qr.png](./v1-stable-user-ios-qr.png) |
+
+Details + account mapping: [V1_STABLE_IOS.md](./V1_STABLE_IOS.md)
+
 ## Specialised identity cards
 
 | Operator | Tier | Code | Card |

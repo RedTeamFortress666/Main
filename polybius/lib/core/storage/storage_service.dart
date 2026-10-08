@@ -34,20 +34,15 @@ class StorageService {
 
   Future<void> _bootstrapDeveloper() async {
     final box = Hive.box(accountsBox);
-    if (!box.containsKey(AppConstants.developerUsername)) {
-      final dev = UserAccount(
-        username: AppConstants.developerUsername,
-        passwordHash: EncryptionService.hashPassword('developer'),
-        pinHash: EncryptionService.hashPin(AppConstants.developerDefaultPin),
-        tier: UserTier.developer,
-        createdAt: DateTime.now(),
+    // V1 Stable: DEVELOPER / developer is stricken — purge if an older install
+    // left the beta bootstrap account behind.
+    if (box.containsKey(AppConstants.retiredDeveloperUsername)) {
+      await deleteAccount(AppConstants.retiredDeveloperUsername);
+      await logAudit(
+        'BOOTSTRAP',
+        AppConstants.retiredDeveloperUsername,
+        'DEVELOPER account stricken for V1 Stable',
       );
-      await box.put(
-        dev.username,
-        _encryption.encrypt(_encodeJson(dev.toJson())),
-      );
-      await logAudit('BOOTSTRAP', AppConstants.developerUsername,
-          'DEVELOPER account created on first install');
     }
     // Operator admin account: RedTeam01, dev code B1-66-3R, dev number 816639.
     if (!box.containsKey(AppConstants.adminUsername)) {
@@ -265,6 +260,24 @@ class StorageService {
     } catch (_) {
       return null;
     }
+  }
+
+  /// Resolves a login field to a bootstrapped account by stored username
+  /// (case-insensitive) or by display name (e.g. `Art3mas` → `ARTEM3S`).
+  Future<UserAccount?> resolveLoginAccount(String login) async {
+    final trimmed = login.trim();
+    if (trimmed.isEmpty) return null;
+    final byKey = await getAccount(trimmed.toUpperCase());
+    if (byKey != null) return byKey;
+    final needle = trimmed.toUpperCase();
+    for (final key in Hive.box(accountsBox).keys) {
+      final account = await getAccount(key as String);
+      final display = account?.displayName;
+      if (display != null && display.toUpperCase() == needle) {
+        return account;
+      }
+    }
+    return null;
   }
 
   Future<void> saveAccount(UserAccount account) async {

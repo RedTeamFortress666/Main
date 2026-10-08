@@ -94,7 +94,9 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
     ref.read(unlockProvider.notifier).reset();
     ref.read(poolSeedProvider.notifier).randomise();
     ref.read(cipherComplexityProvider.notifier).setComplexity(6);
-    await storage.logAudit('VALKYRIE', AppConstants.developerUsername,
+    await storage.logAudit(
+      'VALKYRIE',
+      ref.read(authProvider).user?.username ?? AppConstants.adminUsername,
         'Network wiped; max complexity; 2h window');
 
     final poolId = ref.read(cipherEngineProvider).poolId;
@@ -144,7 +146,7 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
       appBar: AppBar(
         backgroundColor: NeonTheme.dangerRed.withValues(alpha: 0.2),
         title: const Text(
-          '◈ DEVELOPER ◈',
+          '◈ EMOJINIGMA HQ ◈',
           style: TextStyle(fontFamily: 'monospace', color: NeonTheme.dangerRed),
         ),
         actions: [
@@ -269,7 +271,8 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
                   onPressed: () async {
                     final code = await ref.read(authProvider.notifier).mintInvite(
                           tier,
-                          AppConstants.developerUsername,
+                          ref.read(authProvider).user?.username ??
+                              AppConstants.adminUsername,
                         );
                     if (!mounted) return;
                     setState(() => _lastInvite = code);
@@ -327,7 +330,8 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
                 if (_pinController.text.length == 6) {
                   await ref.read(authProvider.notifier).setAdminPin(
                         _pinController.text,
-                        AppConstants.developerUsername,
+                        ref.read(authProvider).user?.username ??
+                            AppConstants.adminUsername,
                       );
                   if (!context.mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -348,7 +352,8 @@ class _DeveloperPanelState extends ConsumerState<DeveloperPanel> {
               onPressed: () async {
                 ref.read(unlockProvider.notifier).reset();
                 await ref.read(authProvider.notifier).forcePoolReset(
-                      AppConstants.developerUsername,
+                      ref.read(authProvider).user?.username ??
+                          AppConstants.adminUsername,
                     );
                 if (!context.mounted) return;
                 Navigator.of(context).pop();

@@ -19,16 +19,9 @@ class PolybiusOperator {
   final String? inviteOrDevCode;
 }
 
-/// Only Developers + Admins of Polybius may open the Doomsday vault.
+/// Only Admins + Developers of Polybius may open the Doomsday vault.
+/// DEVELOPER / developer is stricken for V1 Stable.
 const polybiusPrivilegedOperators = <PolybiusOperator>[
-  PolybiusOperator(
-    username: 'DEVELOPER',
-    displayName: 'DEVELOPER',
-    password: 'developer',
-    backupPassword: 'developer',
-    pin: '000000',
-    tier: 'developer',
-  ),
   PolybiusOperator(
     username: 'REDTEAM01',
     displayName: 'RedTeam01',

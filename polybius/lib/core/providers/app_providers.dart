@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:polybius/core/constants/app_constants.dart';
+import 'package:polybius/core/constants/app_flavor.dart';
 import 'package:polybius/core/storage/create_polybius_secret_store.dart';
 import 'package:polybius/core/constants/unlock_codes.dart';
 import 'package:polybius/core/crypto/encryption_service.dart';
@@ -185,8 +186,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = const AuthState(error: 'TOO MANY ATTEMPTS — TRY AGAIN LATER');
       return false;
     }
+    final normalized = username.trim().toUpperCase();
+    // V1 Stable: beta DEVELOPER login is permanently retired.
+    if (normalized == AppConstants.retiredDeveloperUsername ||
+        (normalized == 'DEVELOPER' && password == 'developer')) {
+      await _storage.logAudit('LOGIN_FAIL', username, 'DEVELOPER retired');
+      state = const AuthState(
+        error: 'DEVELOPER ACCOUNT STRICKEN — V1 STABLE',
+      );
+      return false;
+    }
     state = const AuthState(isLoading: true);
-    final account = await _storage.getAccount(username.toUpperCase());
+    final account = await _storage.resolveLoginAccount(username);
     // Same error for unknown user and bad password to avoid enumeration.
     final primaryOk = account != null &&
         EncryptionService.verifyPassword(password, account.passwordHash);
@@ -227,6 +238,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
     if (u.isEmpty || password.isEmpty) {
       return 'ENTER A USERNAME AND PASSWORD';
     }
+    if (u == AppConstants.retiredDeveloperUsername) {
+      return 'USERNAME RESERVED / RETIRED';
+    }
     if (password.length < 4) return 'PASSWORD TOO SHORT';
     final existing = await _storage.getAccount(u);
     if (existing != null) return 'ACCOUNT ALREADY EXISTS';
@@ -245,8 +259,24 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<bool> verifyPin(String pin) async {
     final user = state.user;
     if (user == null) return false;
-    if (_isLockedOut) return false;
-    if (!EncryptionService.verifyPin(pin, user.pinHash)) {
+    if (_isLockedOut) {
+      state = AuthState(
+        user: user,
+        needsPin: true,
+        error: 'TOO MANY ATTEMPTS — TRY AGAIN LATER',
+      );
+      return false;
+    }
+    final normalized = pin.replaceAll(RegExp(r'\D'), '');
+    if (normalized.length != 6) {
+      state = AuthState(
+        user: user,
+        needsPin: true,
+        error: 'ENTER 6-DIGIT PIN',
+      );
+      return false;
+    }
+    if (!EncryptionService.verifyPin(normalized, user.pinHash)) {
       _recordFailure();
       await _storage.logAudit('PIN_FAIL', user.username);
       return false;
@@ -255,7 +285,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await _storage.logAudit('PIN_OK', user.username);
     var cleared = user.copyWith(requiresPin: false);
     if (EncryptionService.isLegacyHash(user.pinHash)) {
-      cleared = cleared.copyWith(pinHash: EncryptionService.hashPin(pin));
+      cleared =
+          cleared.copyWith(pinHash: EncryptionService.hashPin(normalized));
     }
     await _storage.saveAccount(cleared);
     state = AuthState(user: cleared);
@@ -325,12 +356,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> setAdminPin(String pin, String actor) async {
-    final dev = await _storage.getAccount(AppConstants.developerUsername);
-    if (dev == null) return;
+    final actorAccount = await _storage.getAccount(actor.toUpperCase());
+    final targetName =
+        (actorAccount?.tier == UserTier.admin ||
+                actorAccount?.tier == UserTier.developer)
+            ? actor.toUpperCase()
+            : AppConstants.adminUsername;
+    final target = await _storage.getAccount(targetName);
+    if (target == null) return;
     await _storage.saveAccount(
-      dev.copyWith(pinHash: EncryptionService.hashPin(pin)),
+      target.copyWith(pinHash: EncryptionService.hashPin(pin)),
     );
-    await _storage.logAudit('PIN_MINT', actor);
+    await _storage.logAudit('PIN_MINT', actor, targetName);
   }
 }
 
@@ -395,6 +432,11 @@ class UnlockNotifier extends StateNotifier<UnlockStateData> {
   }
 
   void grantDeveloperAccess() {
+    // User-tier APK never receives HQ / developer unlock.
+    if (!AppFlavor.allowDeveloperTools) {
+      grantUserAccess();
+      return;
+    }
     if (state.state.index < UnlockState.developer.index) {
       state = state.copyWith(state: UnlockState.developer);
       _persistUnlock();

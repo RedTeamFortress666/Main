@@ -1,23 +1,26 @@
-# PØLYBĪUS + companions — account & download roster
+# PØLYBĪUS + companions — account & download roster (V1 Stable)
 
-Branch: `cursor/polybius-flutter-app-a932`  
-Base: `https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/`
+Branch: `cursor/polybius-v1-stable-8c69`  
+Base: `https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-v1-stable-8c69/polybius/dist/`
 
 ## Companion apps
 
 | App | Link |
 | --- | --- |
-| **PØLYBĪUS Android (all accounts)** | [polybius-1.0.0-beta.2-android-arm64.apk](https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/polybius-1.0.0-beta.2-android-arm64.apk) |
+| **PØLYBĪUS-V1-STABLE EMOJINIGMA HQ** | [polybius-v1-stable-hq-android-arm64.apk](https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-v1-stable-8c69/polybius/dist/polybius-v1-stable-hq-android-arm64.apk) |
+| **PØLYBĪUS-V1-STABLE User** | [polybius-v1-stable-user-android-arm64.apk](https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-v1-stable-8c69/polybius/dist/polybius-v1-stable-user-android-arm64.apk) |
 | **DARTH CHERRY** screen dimmer | [darth-cherry-1.0.2-android-arm64.apk](https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/darth-cherry-1.0.2-android-arm64.apk) |
 | **DOOMSDAY CLOCK 2.0** | [doomsday-clock-2.0.0-android-arm64.apk](https://github.com/RedTeamFortress666/Main/raw/cursor/polybius-flutter-app-a932/polybius/dist/doomsday_clock/doomsday-clock-2.0.0-android-arm64.apk) |
 
-Doomsday Clock vault login uses the **same developer/admin** Polybius credentials. Alarm → hold eye with DARTH CHERRY installed → **GRØK-REBEL 6.0**.
+Doomsday Clock vault login uses Polybius **admin/developer** credentials (~~DEVELOPER~~ stricken). Alarm → hold eye with DARTH CHERRY installed → **GRØK-REBEL 6.0**.
+
+In-app cards: CONNECT → OPERATOR IDENTITY CARDS (secrets under Darth Cherry).
 
 ## Specialised operators
 
 | Login | Tier | Invite / Dev | PIN | Password | Backup | Card |
 | --- | --- | --- | --- | --- | --- | --- |
-| DEVELOPER | developer | — | 000000 | developer | developer | — |
+| ~~DEVELOPER~~ | — | — | — | ~~developer~~ | **STRICKEN** | — |
 | RedTeam01 | admin | B1-66-3R | 816639 | 816639 | 816639 | — |
 | SpamKat2 | developer | W1-66-3R | 810739 | Ev1l-Schm33 | LilB1tScary99 | [spamkat2.md](./spamkat2.md) |
 | Gam3.0n | developer | B1-66-3R | 816639 | Dig1tal.Ra1n99 | 01-p0lyb1u5-10 | [gameon.md](./gameon.md) |
