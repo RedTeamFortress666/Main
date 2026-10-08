@@ -15,12 +15,27 @@ class FloatingGlyphKeyboard extends StatefulWidget {
     this.columns = 6,
     this.interactive = false,
     this.onChar,
+/// Floating Polybius-square keyboard.
+///
+/// Each glyph occupies a keycap, spins while the pulse is visible, then fades
+/// out. While invisible the arrangement is replaced by an unpredictable
+/// scramble so the next layout cannot be inferred from the last one. Pulse
+/// length is re-rolled in 0.8–1.3s every cycle.
+class FloatingGlyphKeyboard extends StatefulWidget {
+  const FloatingGlyphKeyboard({
+    super.key,
+    this.columns = 5,
+    this.interactive = false,
+    this.onGlyph,
     this.shift,
   });
 
   final int columns;
   final bool interactive;
   final ValueChanged<String>? onChar;
+  final ValueChanged<String>? onGlyph;
+
+  /// Optional engine (tests inject a seeded [UnpredictableShift]).
   final UnpredictableShift? shift;
 
   @override
@@ -59,6 +74,16 @@ class FloatingGlyphKeyboardState extends State<FloatingGlyphKeyboard>
       for (var i = 0; i < _glyphs.length; i++) _shift.nextSpinRadiansPerSecond(),
     ];
     _floatPhase = [for (var i = 0; i < _glyphs.length; i++) i * 0.73];
+    _glyphs = _shift.scramble(
+      PolybiusSquareGlyphs.keys,
+      canonical: PolybiusSquareGlyphs.keys,
+    );
+    _spinRates = [
+      for (var i = 0; i < _glyphs.length; i++) _shift.nextSpinRadiansPerSecond(),
+    ];
+    _floatPhase = [
+      for (var i = 0; i < _glyphs.length; i++) i * 0.73,
+    ];
 
     _pulse = AnimationController(vsync: this, duration: _shift.nextPulse())
       ..addStatusListener(_onPulseStatus);
@@ -66,6 +91,7 @@ class FloatingGlyphKeyboardState extends State<FloatingGlyphKeyboard>
       vsync: this,
       duration: const Duration(seconds: 8),
     )..repeat();
+
     _pulse.forward();
   }
 
@@ -84,6 +110,8 @@ class FloatingGlyphKeyboardState extends State<FloatingGlyphKeyboard>
         canonical: PolybiusSquareGlyphs.cherryKeys,
       );
       _map = _shift.latinMap(_glyphs, latin);
+        canonical: PolybiusSquareGlyphs.keys,
+      );
       _spinRates = [
         for (var i = 0; i < _glyphs.length; i++)
           _shift.nextSpinRadiansPerSecond(),
@@ -99,6 +127,7 @@ class FloatingGlyphKeyboardState extends State<FloatingGlyphKeyboard>
     super.dispose();
   }
 
+  /// Triangle-like visibility: hidden at 0 and 1, fully visible at mid-pulse.
   double get visibility {
     final t = _pulse.value;
     return sin(pi * t).clamp(0.0, 1.0);
@@ -108,6 +137,7 @@ class FloatingGlyphKeyboardState extends State<FloatingGlyphKeyboard>
   Widget build(BuildContext context) {
     return Semantics(
       label: 'Darth Cherry v3 disappearing glyph keyboard',
+      label: 'A POLYBĪUS SQU\\R3 floating glyph keyboard',
       child: AnimatedBuilder(
         animation: Listenable.merge([_pulse, _spin]),
         builder: (context, _) {
@@ -122,6 +152,9 @@ class FloatingGlyphKeyboardState extends State<FloatingGlyphKeyboard>
               mainAxisSpacing: 5,
               crossAxisSpacing: 5,
               childAspectRatio: 1.1,
+              mainAxisSpacing: 6,
+              crossAxisSpacing: 6,
+              childAspectRatio: 1.15,
             ),
             itemBuilder: (context, index) {
               final glyph = _glyphs[index];
@@ -139,6 +172,9 @@ class FloatingGlyphKeyboardState extends State<FloatingGlyphKeyboard>
                         final ch = _map[glyph];
                         if (ch != null) widget.onChar?.call(ch);
                       }
+                color: _colorFor(glyph),
+                onTap: widget.interactive
+                    ? () => widget.onGlyph?.call(glyph)
                     : null,
               );
             },
@@ -146,6 +182,18 @@ class FloatingGlyphKeyboardState extends State<FloatingGlyphKeyboard>
         },
       ),
     );
+  }
+
+  static Color _colorFor(String glyph) {
+    const palette = [
+      NeonTheme.neonCyan,
+      NeonTheme.neonPink,
+      NeonTheme.neonGreen,
+      NeonTheme.neonYellow,
+      NeonTheme.neonPurple,
+      NeonTheme.neonOrange,
+    ];
+    return palette[glyph.codeUnitAt(0) % palette.length];
   }
 }
 
@@ -174,6 +222,7 @@ class _GlyphKey extends StatelessWidget {
         offset: Offset(0, bob),
         child: Padding(
           padding: const EdgeInsets.all(3),
+          padding: const EdgeInsets.all(5),
           child: Transform.rotate(
             angle: angle,
             child: DecoratedBox(
@@ -186,6 +235,14 @@ class _GlyphKey extends StatelessWidget {
                 boxShadow: [
                   BoxShadow(
                     color: color.withValues(alpha: 0.4 * opacity),
+                color: color.withValues(alpha: 0.08),
+                border: Border.all(
+                  color: color.withValues(alpha: 0.85),
+                  width: 1.4,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.35 * opacity),
                     blurRadius: 10,
                   ),
                 ],
@@ -196,6 +253,7 @@ class _GlyphKey extends StatelessWidget {
                   style: TextStyle(
                     fontFamily: 'monospace',
                     fontSize: 16,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: color,
                     shadows: [Shadow(color: color, blurRadius: 8)],
@@ -207,6 +265,7 @@ class _GlyphKey extends StatelessWidget {
         ),
       ),
     );
+
     if (onTap == null) return keycap;
     return GestureDetector(onTap: onTap, child: keycap);
   }

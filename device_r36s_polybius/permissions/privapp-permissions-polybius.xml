@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<permissions>
+    <privapp-permissions package="com.polybius.doomsday_clock">
+        <permission name="android.permission.WRITE_SECURE_SETTINGS"/>
+        <permission name="android.permission.CHANGE_COMPONENT_ENABLED_STATE"/>
+        <permission name="android.permission.INTERACT_ACROSS_USERS"/>
+        <permission name="android.permission.START_ACTIVITIES_FROM_BACKGROUND"/>
+        <permission name="android.permission.WRITE_SETTINGS"/>
+        <permission name="android.permission.MANAGE_ROLE_HOLDERS"/>
+        <permission name="android.permission.OBSERVE_ROLE_HOLDERS"/>
+        <permission name="android.permission.MASTER_CLEAR"/>
+        <permission name="android.permission.FACTORY_RESET"/>
+        <permission name="android.permission.REBOOT"/>
+    </privapp-permissions>
+
+    <privapp-permissions package="com.polybius.polybius.user">
+        <permission name="android.permission.BLUETOOTH"/>
+        <permission name="android.permission.BLUETOOTH_ADMIN"/>
+        <permission name="android.permission.BLUETOOTH_CONNECT"/>
+        <permission name="android.permission.BLUETOOTH_SCAN"/>
+        <permission name="android.permission.BLUETOOTH_ADVERTISE"/>
+        <permission name="android.permission.ACCESS_FINE_LOCATION"/>
+        <permission name="android.permission.ACCESS_NETWORK_STATE"/>
+        <permission name="android.permission.CAMERA"/>
+        <permission name="android.permission.INTERNET"/>
+        <permission name="android.permission.NEARBY_WIFI_DEVICES"/>
+        <permission name="android.permission.CHANGE_WIFI_STATE"/>
+        <permission name="android.permission.CHANGE_WIFI_MULTICAST_STATE"/>
+        <permission name="android.permission.FOREGROUND_SERVICE"/>
+    </privapp-permissions>
+
+    <privapp-permissions package="com.polybius.polybius.hq">
+        <permission name="android.permission.BLUETOOTH"/>
+        <permission name="android.permission.BLUETOOTH_ADMIN"/>
+        <permission name="android.permission.BLUETOOTH_CONNECT"/>
+        <permission name="android.permission.BLUETOOTH_SCAN"/>
+        <permission name="android.permission.BLUETOOTH_ADVERTISE"/>
+        <permission name="android.permission.ACCESS_FINE_LOCATION"/>
+        <permission name="android.permission.ACCESS_NETWORK_STATE"/>
+        <permission name="android.permission.CAMERA"/>
+        <permission name="android.permission.INTERNET"/>
+        <permission name="android.permission.NEARBY_WIFI_DEVICES"/>
+        <permission name="android.permission.CHANGE_WIFI_STATE"/>
+        <permission name="android.permission.CHANGE_WIFI_MULTICAST_STATE"/>
+        <permission name="android.permission.FOREGROUND_SERVICE"/>
+    </privapp-permissions>
+
+    <privapp-permissions package="org.torproject.android">
+        <permission name="android.permission.BIND_VPN_SERVICE"/>
+    </privapp-permissions>
+
+    <privapp-permissions package="com.wireguard.android">
+        <permission name="android.permission.BIND_VPN_SERVICE"/>
+    </privapp-permissions>
+</permissions>

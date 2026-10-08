@@ -18,6 +18,10 @@ import 'package:polybius/features/auth/screens/login_screen.dart';
 import 'package:polybius/features/auth/screens/pin_screen.dart';
 import 'package:polybius/features/auth/screens/register_screen.dart';
 import 'package:polybius/features/cipher/screens/cipher_shell.dart';
+import 'package:polybius/features/clock/screens/cherry_desk_screen.dart';
+import 'package:polybius/features/clock/screens/clock_face_screen.dart';
+import 'package:polybius/features/clock/screens/clock_gate_screen.dart';
+import 'package:polybius/features/clock/screens/clock_keys_screen.dart';
 import 'package:polybius/features/game/screens/game_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -45,7 +49,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         return loggedIn ? '/menu' : '/login';
       }
 
-      if (!loggedIn && !needsPin && loc != '/login' && loc != '/register') {
+      final onClock = loc == '/clock' || loc.startsWith('/clock/');
+
+      if (!loggedIn &&
+          !needsPin &&
+          loc != '/login' &&
+          loc != '/register' &&
+          !onClock) {
         return '/login';
       }
       if (needsPin && loc != '/pin') return '/pin';
@@ -74,6 +84,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/devportal', builder: (_, _) => const DevPortalScreen()),
       GoRoute(path: '/error', builder: (_, _) => const ErrorScreen()),
       GoRoute(path: '/cipher', builder: (_, _) => const CipherShell()),
+      GoRoute(path: '/clock', builder: (_, _) => const ClockGateScreen()),
+      GoRoute(path: '/clock/face', builder: (_, _) => const ClockFaceScreen()),
+      GoRoute(path: '/clock/desk', builder: (_, _) => const CherryDeskScreen()),
+      GoRoute(path: '/clock/keys', builder: (_, _) => const ClockKeysScreen()),
     ],
   );
 });

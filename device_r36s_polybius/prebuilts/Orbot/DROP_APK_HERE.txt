@@ -1,0 +1,6 @@
+Optional. Copy Orbot APK here as Orbot.apk
+
+  https://github.com/guardianproject/orbot/releases
+
+Use VPN mode + Android always-on VPN to force all IP traffic through Tor.
+Cromite can also be pointed at SOCKS 127.0.0.1:9050 without system-wide Tor.
