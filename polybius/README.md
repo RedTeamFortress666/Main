@@ -56,9 +56,10 @@ Multi-rotor Enigma variant. Each character → 2 emojis from a daily 560-emoji p
 
 ## Cipher Tabs
 
-- **🔒 ENCRYPT** — plaintext → emoji ciphertext
-- **🔓 DECRYPT** — emoji → plaintext
+- **🔒 ENCRYPT** — plaintext → emoji ciphertext; **T3MP LINK** mints a temp.sh URL
+- **🔓 DECRYPT** — emoji or a t3mp URL → plaintext
 - **🎲 POOL** — today's 560-emoji cipher pool
+- **🔗 SYNC** — randomise pool, QR, **T3MP LINK** (not GitHub gists)
 - **📡 CONNECT** — device info, Bluetooth placeholder, logout
 - **⚙ Rotor Gear** — live rotor positions and step counts
 
@@ -78,6 +79,9 @@ flutter build web        # Web / emulation devices
 ```bash
 flutter test
 ```
+
+Sideload builds are shared as **t3mp** (`temp.sh`) links, not GitHub Releases.
+See `RELEASES.md` and `downloads.html`.
 
 ## Security Notes
 

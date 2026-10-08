@@ -1,8 +1,9 @@
 name: Build Polybius downloads
 
 # Produces downloadable PØLYBĪUS builds. Run manually (Actions -> this workflow
-# -> Run workflow) to get artifacts, or push a tag like `v1.0.0-beta.1` to also
-# publish a GitHub Release with the files attached.
+# -> Run workflow) or push a tag like `v1.0.0-beta.1`. Artifacts stay on the
+# run for the operator; shareable links are minted on temp.sh (t3mp), not as a
+# GitHub Release.
 on:
   workflow_dispatch:
   push:
@@ -10,7 +11,7 @@ on:
       - 'v*'
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   FLUTTER_CHANNEL: stable
@@ -150,7 +151,7 @@ jobs:
           name: polybius-ios-unsigned
           path: polybius-ios-unsigned.zip
 
-  release:
+  t3mp:
     needs: [web, android, linux, linux-arm64, ios]
     if: |
       startsWith(github.ref, 'refs/tags/') &&
@@ -162,9 +163,27 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
-      - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: artifacts/**/*
-          draft: true
-          generate_release_notes: true
+      - name: Mint t3mp drops (not GitHub Releases)
+        run: |
+          set -euo pipefail
+          {
+            echo "## PØLYBĪUS t3mp links"
+            echo
+            echo "Anonymous [temp.sh](https://temp.sh) drops — **not** GitHub Releases or raw GitHub URLs."
+            echo "Files expire after **3 days**. Open the page, then **Click here to download**."
+            echo "Direct: \`curl -X POST -O -J <url>\`"
+            echo
+            echo "| Artifact | t3mp URL |"
+            echo "| --- | --- |"
+            found=0
+            while IFS= read -r -d '' file; do
+              found=1
+              url=$(curl -sS -F "file=@${file}" https://temp.sh/upload | tr -d '\r')
+              url="${url%%$'\n'*}"
+              name=$(basename "$file")
+              echo "| \`$name\` | $url |"
+            done < <(find artifacts -type f -print0)
+            if [[ "$found" -eq 0 ]]; then
+              echo "| _none_ | build jobs produced no files |"
+            fi
+          } | tee -a "$GITHUB_STEP_SUMMARY"
